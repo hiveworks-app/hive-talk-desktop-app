@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/* ── Design System Colors (from hiveworks-mobile/src/theme/colors.ts) ── */
+:root {
+  /* Light Theme Semantic Tokens */
+  --color-primary: #3B82F6;
+  --color-on-primary: #FFFFFF;
+  --color-background: #FFFFFF;
+  --color-container: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-pressed: #F5F5F5;
+  --color-disabled: #F5F5F5;
+  --color-outline: #EFEFEF;
+  --color-divider: #F5F5F5;
+
+  /* States */
+  --color-state-primary: #3B82F6;
+  --color-state-primary-pressed: #2563EB;
+  --color-state-primary-disabled: #E8E8E8;
+  --color-state-primary-highlighted: #F3F8FE;
+  --color-state-error: #FF334B;
+  --color-state-error-pressed: #C9162B;
+  --color-state-warning: #FFE500;
+  --color-state-success: #06C755;
+
+  /* Text */
+  --color-text-primary: #000000;
+  --color-text-secondary: #777777;
+  --color-text-tertiary: #949494;
+  --color-text-placeholder: #C8C8C8;
+  --color-text-disabled: #F5F5F5;
+  --color-text-in-bubble: #111111;
+  --color-text-hashtag: #4270ED;
+
+  /* Tag */
+  --color-tag-amber-text: #B45309;
+  --color-tag-amber-border: #F59E0B;
+  --color-tag-amber-bg: #FFFBEB;
+
+  /* Highlight (raw RGB for dynamic opacity) */
+  --highlight-search-rgb: 254, 249, 195;
+  --highlight-tag-rgb: 219, 234, 254;
+}
+
+/* ── Dark Theme (from hiveworks-mobile/src/theme/colors.ts dark) ── */
+/* Activated by class="dark" on <html> or prefers-color-scheme */
+.dark,
+[data-theme="dark"] {
+  --color-primary: #60A5FA;
+  --color-on-primary: #FFFFFF;
+  --color-background: #1A1A1A;
+  --color-container: #242424;
+  --color-surface: #1F1F1F;
+  --color-surface-pressed: #2A2A2A;
+  --color-disabled: #333333;
+  --color-outline: #3F3F3F;
+  --color-divider: #2A2A2A;
+
+  /* States */
+  --color-state-primary: #60A5FA;
+  --color-state-primary-pressed: #3B82F6;
+  --color-state-primary-disabled: #333333;
+  --color-state-primary-highlighted: #1E3A5F;
+  --color-state-error: #FF6B7A;
+  --color-state-error-pressed: #FF334B;
+  --color-state-warning: #FFE500;
+  --color-state-success: #34D399;
+
+  /* Text (from RN dark.text) */
+  --color-text-primary: rgba(255, 255, 255, 1);
+  --color-text-secondary: rgba(255, 255, 255, 0.8);
+  --color-text-tertiary: rgba(255, 255, 255, 0.6);
+  --color-text-placeholder: rgba(255, 255, 255, 0.4);
+  --color-text-disabled: #333333;
+  --color-text-in-bubble: #F5F5F5;
+  --color-text-hashtag: #96B2FF;
+
+  /* Tag */
+  --color-tag-amber-text: #FCD34D;
+  --color-tag-amber-border: #B45309;
+  --color-tag-amber-bg: #422006;
+
+  /* Highlight */
+  --highlight-search-rgb: 113, 63, 18;
+  --highlight-tag-rgb: 30, 58, 95;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not([data-theme="light"]) {
+    --color-primary: #60A5FA;
+    --color-on-primary: #FFFFFF;
+    --color-background: #1A1A1A;
+    --color-container: #242424;
+    --color-surface: #1F1F1F;
+    --color-surface-pressed: #2A2A2A;
+    --color-disabled: #333333;
+    --color-outline: #3F3F3F;
+    --color-divider: #2A2A2A;
+
+    --color-state-primary: #60A5FA;
+    --color-state-primary-pressed: #3B82F6;
+    --color-state-primary-disabled: #333333;
+    --color-state-primary-highlighted: #1E3A5F;
+    --color-state-error: #FF6B7A;
+    --color-state-error-pressed: #FF334B;
+    --color-state-warning: #FFE500;
+    --color-state-success: #34D399;
+
+    --color-text-primary: rgba(255, 255, 255, 1);
+    --color-text-secondary: rgba(255, 255, 255, 0.8);
+    --color-text-tertiary: rgba(255, 255, 255, 0.6);
+    --color-text-placeholder: rgba(255, 255, 255, 0.4);
+    --color-text-disabled: #333333;
+    --color-text-in-bubble: #F5F5F5;
+    --color-text-hashtag: #96B2FF;
+
+    --color-tag-amber-text: #FCD34D;
+    --color-tag-amber-border: #B45309;
+    --color-tag-amber-bg: #422006;
+
+    --highlight-search-rgb: 113, 63, 18;
+    --highlight-tag-rgb: 30, 58, 95;
+  }
+}
+
+@theme inline {
+  /* Primary Palette */
+  --color-primary: var(--color-primary);
+  --color-on-primary: var(--color-on-primary);
+
+  /* Brand Colors */
+  --color-blue-400: #96B2FF;
+  --color-blue-500: #638DFF;
+  --color-blue-600: #4270ED;
+  --color-blue-700: #2F59CC;
+  --color-green: #06C755;
+  --color-red: #FF334B;
+  --color-yellow: #FFE500;
+
+  /* Navy */
+  --color-navy-400: #C8CFDC;
+  --color-navy-500: #98A0B3;
+  --color-navy-600: #707991;
+  --color-navy-700: #464F69;
+  --color-navy-800: #323B54;
+  --color-navy-850: #262F4A;
+  --color-navy-900: #202A43;
+
+  /* Gray Scale */
+  --color-gray-100: #FCFCFC;
+  --color-gray-150: #F5F5F5;
+  --color-gray-200: #EFEFEF;
+  --color-gray-250: #E8E8E8;
+  --color-gray-300: #DFDFDF;
+  --color-gray-350: #C8C8C8;
+  --color-gray-400: #B7B7B7;
+  --color-gray-500: #949494;
+  --color-gray-600: #777777;
+  --color-gray-650: #616161;
+  --color-gray-700: #555555;
+  --color-gray-750: #3F3F3F;
+  --color-gray-800: #2A2A2A;
+  --color-gray-850: #1F1F1F;
+  --color-gray-900: #111111;
+
+  /* Semantic Colors */
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-outline: var(--color-outline);
+  --color-divider: var(--color-divider);
+  --color-disabled: var(--color-disabled);
+
+  /* Text Colors */
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-tertiary: var(--color-text-tertiary);
+  --color-text-placeholder: var(--color-text-placeholder);
+  --color-text-hashtag: var(--color-text-hashtag);
+
+  /* State Colors */
+  --color-state-error: var(--color-state-error);
+  --color-state-success: var(--color-state-success);
+  --color-state-warning: var(--color-state-warning);
+
+  /* Component Sizes */
+  --size-avatar: 42px;
+  --size-touch-target: 40px;
+  --size-form-control: 26px;
+  --size-icon-btn: 22px;
+
+  /* Fonts */
+  --font-sans: var(--font-pretendard, "Pretendard", system-ui, -apple-system, sans-serif);
+}
+
+/* ── Base Styles ── */
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar styling for chat areas */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-300);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-gray-400);
+}
+
+/* Electron: window drag region (title bar replacement) */
+.electron-drag {
+  -webkit-app-region: drag;
+}
+.electron-no-drag {
+  -webkit-app-region: no-drag;
+}

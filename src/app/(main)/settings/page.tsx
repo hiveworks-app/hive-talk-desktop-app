@@ -1,0 +1,198 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { cn } from '@/shared/lib/cn';
+import { useAuthStore } from '@/store/auth/authStore';
+import { useThemeStore } from '@/store/themeStore';
+import { useUIStore } from '@/store';
+import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { showSnackbar } = useUIStore();
+  const [showProfile, setShowProfile] = useState(false);
+
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+    router.replace('/login');
+  };
+
+  const handleSyncMembers = async () => {
+    try {
+      await queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+      await queryClient.refetchQueries({ queryKey: MEMBERS_KEY });
+      showSnackbar({ message: '멤버 목록을 동기화했습니다.', state: 'success' });
+    } catch {
+      showSnackbar({ message: '동기화에 실패했습니다.', state: 'error' });
+    }
+  };
+
+  return (
+    <main className="flex flex-1 flex-col overflow-hidden bg-background">
+      <header className="border-b border-divider px-4 py-3">
+        <h2 className="text-lg font-bold text-text-primary">설정</h2>
+      </header>
+
+      <div className="scrollbar-thin flex-1 overflow-y-auto">
+        {/* 프로필 섹션 */}
+        <section className="border-b border-divider py-2">
+          <h3 className="px-4 py-2 text-xs font-semibold uppercase text-text-tertiary">프로필</h3>
+          <SettingItem
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            }
+            title="내 프로필"
+            description="프로필 정보를 확인하고 수정합니다"
+            onClick={() => setShowProfile(true)}
+          />
+        </section>
+
+        {/* 계정 섹션 */}
+        <section className="border-b border-divider py-2">
+          <h3 className="px-4 py-2 text-xs font-semibold uppercase text-text-tertiary">계정</h3>
+          <SettingItem
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            }
+            title="비밀번호 변경"
+            onClick={() => router.push('/settings/password')}
+          />
+        </section>
+
+        {/* 데이터 섹션 */}
+        <section className="border-b border-divider py-2">
+          <h3 className="px-4 py-2 text-xs font-semibold uppercase text-text-tertiary">데이터</h3>
+          <SettingItem
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                <path d="M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            }
+            title="멤버 목록 동기화"
+            description="서버에서 최신 멤버 목록을 다시 불러옵니다"
+            onClick={handleSyncMembers}
+          />
+        </section>
+
+        {/* 화면 설정 섹션 */}
+        <section className="border-b border-divider py-2">
+          <h3 className="px-4 py-2 text-xs font-semibold uppercase text-text-tertiary">화면</h3>
+          <ThemeSelector />
+        </section>
+
+        {/* 앱 정보 섹션 */}
+        <section className="py-2">
+          <h3 className="px-4 py-2 text-xs font-semibold uppercase text-text-tertiary">앱 정보</h3>
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-sm text-text-primary">앱 버전</span>
+            <span className="text-sm text-text-tertiary">v1.0.0 (Web)</span>
+          </div>
+        </section>
+
+        {/* 로그아웃 */}
+        <div className="px-4 py-4">
+          <button
+            onClick={handleLogout}
+            className="w-full rounded-lg border border-red-200 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
+          >
+            로그아웃
+          </button>
+        </div>
+      </div>
+
+      <MyProfileDialog isOpen={showProfile} onClose={() => setShowProfile(false)} />
+    </main>
+  );
+}
+
+const THEME_OPTIONS = [
+  { value: 'system' as const, label: '시스템' },
+  { value: 'light' as const, label: '라이트' },
+  { value: 'dark' as const, label: '다크' },
+];
+
+function ThemeSelector() {
+  const { mode, setMode } = useThemeStore();
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-text-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </span>
+        <div className="flex-1">
+          <span className="text-sm text-text-primary">테마</span>
+        </div>
+        <div className="flex rounded-lg border border-divider">
+          {THEME_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setMode(opt.value)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                mode === opt.value
+                  ? 'bg-primary text-on-primary'
+                  : 'text-text-secondary hover:bg-surface-pressed',
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingItem({
+  icon,
+  title,
+  description,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    >
+      <span className="text-text-secondary">{icon}</span>
+      <div className="flex-1">
+        <span className="text-sm text-text-primary">{title}</span>
+        {description && (
+          <p className="mt-0.5 text-xs text-text-tertiary">{description}</p>
+        )}
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
+  );
+}

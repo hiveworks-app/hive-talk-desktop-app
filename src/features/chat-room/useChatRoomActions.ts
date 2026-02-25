@@ -1,0 +1,436 @@
+'use client';
+
+import { useCallback } from 'react';
+import { uuidv7 } from 'uuidv7';
+import { useChatFileUpload } from '@/features/chat-room/queries';
+import { IMAGE_UPLOAD_CONCURRENCY, MAX_IMAGES_PER_MESSAGE } from '@/shared/config/constants';
+import {
+  WS_MESSAGE_CONTENT_TYPE,
+  RemoveTagMessageProps,
+  UpdateTagToMessageProps,
+} from '@/shared/types/websocket';
+import { formatKoreanTime } from '@/shared/utils/formatTimeUtils';
+import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
+import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
+import { useAuthStore } from '@/store/auth/authStore';
+import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useUploadProgressStore } from '@/store/chat/uploadProgressStore';
+
+type ChatScrollDirection = 'before' | 'after';
+
+/**
+ * 배열을 size 단위로 쪼개는 유틸
+ */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const res: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));
+  return res;
+}
+
+/**
+ * 동시성 제한 병렬 실행기
+ */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>,
+  onDone?: (done: number, total: number) => void,
+): Promise<R[]> {
+  const total = items.length;
+  const results: R[] = new Array(total);
+  let nextIndex = 0;
+  let done = 0;
+
+  const runners = Array.from({ length: Math.min(limit, total) }, async () => {
+    while (true) {
+      const current = nextIndex;
+      if (current >= total) break;
+      nextIndex += 1;
+      results[current] = await worker(items[current]);
+      done += 1;
+      onDone?.(done, total);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+}
+
+/**
+ * 250ms 스로틀러 (업로드 진행률 UI 부하 방지)
+ */
+function makeProgressThrottler() {
+  let lastAt = 0;
+  let pending: { done: number; total: number } | null = null;
+  let raf: number | null = null;
+
+  return (next: { done: number; total: number }, commit: (p: typeof next) => void) => {
+    pending = next;
+    const now = Date.now();
+    if (now - lastAt > 250) {
+      lastAt = now;
+      commit(pending);
+      pending = null;
+      return;
+    }
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = null;
+      if (!pending) return;
+      lastAt = Date.now();
+      commit(pending);
+      pending = null;
+    });
+  };
+}
+
+export const useChatRoomActions = () => {
+  const { send } = useAppWebSocket();
+  const { channelType } = useChatRoomInfo();
+  const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
+  const setLoading = useChatRoomRuntimeStore(s => s.setLoading);
+  const setNextMyTags = useChatRoomRuntimeStore(s => s.setNextMyTags);
+  const addLocalMessage = useChatRoomRuntimeStore(s => s.addLocalMessage);
+  const patchMessageByFileId = useChatRoomRuntimeStore(s => s.patchMessageByFileId);
+  const chatFileUploadMutation = useChatFileUpload();
+  const setTransmissionProgress = useUploadProgressStore(s => s.setTransmissionProgress);
+
+  const {
+    buildFetchBeforeMessage,
+    buildFetchAfterMessage,
+    buildPublishMessage,
+    buildAddTagToMessage,
+    buildRemoveTagToMessage,
+    buildDeleteMessage,
+  } = useWebSocketMessageBuilder({
+    type: channelType,
+    channelId: currentRoomId,
+  });
+
+  // ─── 텍스트 메시지 전송 ───
+  const sendTextMessage = useCallback(
+    (content: string, tagList: string[] = []) => {
+      if (!content.trim()) return;
+
+      if (tagList.length > 0) {
+        setNextMyTags(
+          tagList.map(tagId => ({
+            tagId: Number(tagId),
+            categoryId: 0,
+            categoryCode: '',
+            categoryTitle: '',
+            categoryDescription: '',
+            code: '',
+            title: '',
+            description: '',
+          })),
+        );
+      }
+
+      send(
+        buildPublishMessage({
+          type: WS_MESSAGE_CONTENT_TYPE.TEXT,
+          content,
+          tagList,
+          channelIdOverride: currentRoomId ?? undefined,
+        }),
+      );
+    },
+    [send, buildPublishMessage, currentRoomId, setNextMyTags],
+  );
+
+  // ─── 이전 메시지 더보기 ───
+  const loadMoreBeforeMessage = useCallback(
+    (direction: ChatScrollDirection = 'before') => {
+      const { messages, loading } = useChatRoomRuntimeStore.getState();
+      if (messages.length === 0) return;
+
+      if (direction === 'before') {
+        if (loading.isBeforeLoading || !loading.hasMoreBefore) return;
+        setLoading({ isBeforeLoading: true });
+        const firstId = messages[0]?.id;
+        if (firstId) {
+          send(
+            buildFetchBeforeMessage({
+              currentMessage: firstId,
+              isInclusive: false,
+              channelIdOverride: currentRoomId ?? undefined,
+            }),
+          );
+        }
+      }
+    },
+    [send, buildFetchBeforeMessage, currentRoomId, setLoading],
+  );
+
+  // ─── 이후 메시지 더보기 ───
+  const loadMoreAfterMessage = useCallback(() => {
+    const { messages, loading } = useChatRoomRuntimeStore.getState();
+    if (messages.length === 0) return;
+    if (loading.isAfterLoading || !loading.hasMoreAfter) return;
+
+    setLoading({ isAfterLoading: true });
+    const lastId = messages[messages.length - 1]?.id;
+    if (lastId) {
+      send(
+        buildFetchAfterMessage({
+          currentMessage: lastId,
+          isInclusive: false,
+          channelIdOverride: currentRoomId ?? undefined,
+        }),
+      );
+    }
+  }, [send, buildFetchAfterMessage, currentRoomId, setLoading]);
+
+  // ─── 단일 미디어(이미지/비디오) 업로드 ───
+  const uploadOneMedia = useCallback(
+    async (file: File) => {
+      const isVideo = file.type.startsWith('video/');
+      const mimeType = file.type || (isVideo ? 'video/mp4' : 'image/jpeg');
+
+      // 이미지 썸네일: Canvas로 생성
+      let thumbFileKey: string | undefined;
+      if (!isVideo && file.type.startsWith('image/')) {
+        try {
+          const thumbBlob = await createImageThumbnail(file, 200);
+          const thumbResult = await chatFileUploadMutation.mutateAsync({
+            channelType,
+            file: new File([thumbBlob], `thumb_${file.name}`, { type: 'image/jpeg' }),
+          });
+          thumbFileKey = thumbResult.fileKey;
+        } catch {
+          // 썸네일 실패해도 원본은 진행
+        }
+      }
+
+      // 원본 업로드
+      const originRes = await chatFileUploadMutation.mutateAsync({
+        channelType,
+        file,
+      });
+
+      return {
+        path: originRes.fileKey,
+        meta: {
+          thumbnail: thumbFileKey ?? '',
+          type: mimeType,
+          size: file.size,
+        },
+      };
+    },
+    [chatFileUploadMutation, channelType],
+  );
+
+  // ─── 미디어(이미지/비디오) 메시지 전송 ───
+  const sendMediaMessage = useCallback(
+    async (files: File[]) => {
+      if (!files.length || !currentRoomId) return;
+
+      const loginUserId = useAuthStore.getState().user?.id;
+      const readUserIds = loginUserId ? [String(loginUserId)] : [];
+
+      const images = files.filter(f => f.type.startsWith('image/'));
+      const videos = files.filter(f => f.type.startsWith('video/'));
+
+      // 이미지: MAX_IMAGES_PER_MESSAGE 단위로 묶어 한 메시지
+      const imageChunks = chunk(images, MAX_IMAGES_PER_MESSAGE);
+
+      for (const group of imageChunks) {
+        const fileId = uuidv7();
+        const total = group.length;
+        const createdAt = new Date().toISOString();
+
+        // 낙관적 로컬 메시지 추가
+        addLocalMessage({
+          id: fileId,
+          fileId,
+          isLocal: true,
+          localStatus: 'uploading',
+          dimmed: true,
+          messageContentType: WS_MESSAGE_CONTENT_TYPE.IMAGE,
+          localUris: group.map(f => URL.createObjectURL(f)),
+          text: '',
+          time: formatKoreanTime(createdAt),
+          createdAt,
+          sender: 'me',
+          readUserIds,
+          notReadCount: 0,
+          name: '',
+          tags: [],
+          files: [],
+        });
+
+        try {
+          const throttleProgress = makeProgressThrottler();
+
+          const uploadFileList = await mapWithConcurrency(
+            group,
+            IMAGE_UPLOAD_CONCURRENCY,
+            uploadOneMedia,
+            (done, total) => {
+              throttleProgress({ done, total }, p => {
+                setTransmissionProgress(fileId, {
+                  done: p.done,
+                  total: p.total,
+                  status: p.done === p.total ? 'uploaded' : 'uploading',
+                });
+              });
+            },
+          );
+
+          setTransmissionProgress(fileId, { done: total, total, status: 'publishing' });
+
+          send(
+            buildPublishMessage({
+              type: WS_MESSAGE_CONTENT_TYPE.IMAGE,
+              fileId,
+              tagList: [],
+              items: uploadFileList,
+              channelIdOverride: currentRoomId,
+            }),
+          );
+        } catch (e) {
+          console.warn('sendMediaMessage upload failed:', e);
+          setTransmissionProgress(fileId, { done: 0, total, status: 'failed' });
+          patchMessageByFileId(fileId, { localStatus: 'failed', dimmed: true });
+        }
+      }
+
+      // 비디오: 1개씩 메시지 1개
+      for (const v of videos) {
+        const fileId = uuidv7();
+        const uploaded = await uploadOneMedia(v);
+
+        send(
+          buildPublishMessage({
+            type: WS_MESSAGE_CONTENT_TYPE.MEDIA,
+            fileId,
+            tagList: [],
+            items: [uploaded],
+            channelIdOverride: currentRoomId,
+          }),
+        );
+      }
+    },
+    [
+      currentRoomId,
+      addLocalMessage,
+      uploadOneMedia,
+      send,
+      buildPublishMessage,
+      setTransmissionProgress,
+      patchMessageByFileId,
+    ],
+  );
+
+  // ─── 파일(문서) 메시지 전송 ───
+  const sendDocumentMessage = useCallback(
+    async (files: File[]) => {
+      if (!files.length || !currentRoomId) return;
+
+      for (const file of files) {
+        const mimeType = file.type || 'application/octet-stream';
+
+        const uploadResult = await chatFileUploadMutation.mutateAsync({
+          channelType,
+          file,
+        });
+
+        const uploadFileItem = {
+          path: uploadResult.fileKey,
+          meta: {
+            type: mimeType,
+            size: file.size,
+          },
+        };
+
+        send(
+          buildPublishMessage({
+            type: WS_MESSAGE_CONTENT_TYPE.FILE,
+            tagList: [],
+            items: [uploadFileItem],
+            channelIdOverride: currentRoomId,
+          }),
+        );
+      }
+    },
+    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage],
+  );
+
+  // ─── 메시지 삭제 ───
+  const deleteMessage = useCallback(
+    (messageId: string) => {
+      send(buildDeleteMessage({ messageId }));
+    },
+    [send, buildDeleteMessage],
+  );
+
+  // ─── 태그 추가 ───
+  const addTagToMessage = useCallback(
+    (params: UpdateTagToMessageProps) => {
+      send(buildAddTagToMessage(params));
+    },
+    [send, buildAddTagToMessage],
+  );
+
+  // ─── 태그 삭제 ───
+  const removeTagFromMessage = useCallback(
+    (params: RemoveTagMessageProps) => {
+      useChatRoomRuntimeStore.getState().setPendingRemoveTagMessageId(params.messageId);
+      send(buildRemoveTagToMessage(params));
+    },
+    [send, buildRemoveTagToMessage],
+  );
+
+  return {
+    sendTextMessage,
+    loadMoreBeforeMessage,
+    loadMoreAfterMessage,
+    sendMediaMessage,
+    sendDocumentMessage,
+    deleteMessage,
+    addTagToMessage,
+    removeTagFromMessage,
+  };
+};
+
+// ─── Canvas 기반 이미지 썸네일 생성 유틸 ───
+function createImageThumbnail(file: File, maxSize: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+
+      if (width > height) {
+        if (width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        }
+      } else {
+        if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Canvas context unavailable'));
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        blob => {
+          if (blob) resolve(blob);
+          else reject(new Error('Thumbnail generation failed'));
+        },
+        'image/jpeg',
+        0.7,
+      );
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
