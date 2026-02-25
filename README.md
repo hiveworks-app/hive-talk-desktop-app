@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HiveTalk Desktop
+
+Next.js 16 + Electron 40 기반 실시간 채팅 데스크톱 애플리케이션
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router, standalone output)
+- **Runtime:** React 19, TypeScript 5
+- **Desktop:** Electron 40 (utilityProcess.fork)
+- **Styling:** Tailwind CSS 4
+- **State:** Zustand 5 (client) + TanStack Query 5 (server)
+- **Real-time:** WebSocket (native) + STOMP protocol
+- **UI:** Radix UI primitives, react-virtuoso
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# 의존성 설치
+npm install
+
+# 웹 개발 서버 (localhost:23000)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Electron 개발 모드 (Next.js + Electron 동시 실행)
+npm run electron:dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 프로덕션 빌드 (Next.js build → TypeScript compile → electron-builder)
+npm run electron:build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+빌드 산출물: `release/HiveTalk-{version}-{arch}.dmg`
 
-## Learn More
+### Build Targets
 
-To learn more about Next.js, take a look at the following resources:
+| Platform | Format | Architecture |
+|----------|--------|-------------|
+| macOS | DMG | arm64 |
+| Windows | NSIS | x64 |
+| Linux | AppImage | x64 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # 인증 페이지 (login, signup)
+│   └── (main)/            # 인증 후 메인 (chat, members, settings)
+├── features/              # 비즈니스 기능 단위 (FSD)
+│   ├── auth/              # 인증 (api, queries, type)
+│   ├── chat-room/         # 채팅방 (controller, actions, search, domain)
+│   ├── chat-room-list/    # 채팅방 목록
+│   ├── chat-room-side-panel/
+│   ├── create-chat-room/
+│   ├── external-chat/     # 외부 채팅
+│   ├── external-member/
+│   ├── members/
+│   ├── profile/
+│   └── tag/
+├── shared/                # 공용 모듈
+│   ├── api/               # HTTP 클라이언트 (request, refreshAccessToken)
+│   ├── config/            # 상수, queryKeys
+│   ├── hooks/             # useDebounce, useSearch
+│   ├── types/             # 공용 타입 (websocket, chatRoom, user, etc.)
+│   ├── ui/                # 공용 UI (Button, Input, Badge, etc.)
+│   ├── utils/             # 유틸리티 함수
+│   ├── websocket/         # WebSocketContext, messageBuilder
+│   └── providers/         # ReactQueryProvider
+├── store/                 # Zustand 전역 상태
+│   ├── auth/              # authStore (persist → localStorage)
+│   └── chat/              # chatRoomStore, runtimeStore, uploadProgress
+└── widgets/               # 복합 UI 컴포넌트
+    ├── chat-room/         # ChatInput, MessageBubble, DateSeparator
+    ├── chat-room-list/    # ChatRoomListSidebar
+    ├── create-room/       # CreateRoomDialog
+    ├── nav/               # AppNav
+    ├── profile/           # MyProfileDialog, UserProfileDialog
+    └── side-panel/        # SidePanel
 
-## Deploy on Vercel
+electron/
+├── main.ts                # Electron 메인 프로세스
+├── preload.ts             # IPC 브릿지 (contextBridge)
+└── tsconfig.json          # Electron용 TypeScript 설정
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment Variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+NEXT_PUBLIC_API_URL=       # API 서버 URL
+NEXT_PUBLIC_WS_URL=        # WebSocket 서버 URL
+```
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Next.js 개발 서버 (port 23000) |
+| `npm run build` | Next.js 프로덕션 빌드 |
+| `npm run electron:dev` | Electron + Next.js 동시 개발 |
+| `npm run electron:compile` | Electron TypeScript 컴파일 |
+| `npm run electron:build` | 프로덕션 DMG/NSIS/AppImage 빌드 |
+| `npm run electron:pack` | 빌드 (패키징만, 설치 파일 미생성) |
+| `npm run lint` | ESLint 실행 |
