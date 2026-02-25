@@ -1,11 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateDM } from '@/features/create-chat-room/queries';
+import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
+import { isApiError } from '@/shared/api';
+import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { MemberItem } from '@/shared/types/user';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useUIStore } from '@/store';
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -15,6 +20,8 @@ interface UserProfileDialogProps {
 
 export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialogProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const showSnackbar = useUIStore(state => state.showSnackbar);
   const myUserId = useAuthStore(s => s.user?.id);
   const { mutateAsync: createDM, isPending } = useCreateDM();
 
@@ -27,22 +34,57 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       ? `${member.phoneHead}-${member.phoneMid}-${member.phoneTail}`
       : null;
 
-  const handleStartDM = async () => {
-    if (isMe || isPending) return;
-
-    const res = await createDM(member.userId);
-    const { roomId } = res.payload;
-
+  const navigateToRoom = (roomId: string, lastMessage: WebSocketPublishItem | null = null) => {
     useChatRoomInfo.getState().setChatRoomInfo({
       roomId,
       roomName: member.name,
       channelType: WS_CHANNEL_TYPE.DIRECT_MESSAGE,
       totalUserCount: 2,
       otherUserIsExit: false,
+      lastMessage,
     });
-
     onClose();
     router.push(`/chat/${roomId}`);
+  };
+
+  const findExistingRoom = () => {
+    const dmRooms = queryClient.getQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY) ?? [];
+    return dmRooms.find(room => {
+      const uid = String(member.userId);
+      if (String(room.roomModel.participantDetail?.userId) === uid) return true;
+      return room.roomModel.participants?.some(p => String(p.userId) === uid) ?? false;
+    });
+  };
+
+  const handleStartDM = async () => {
+    if (isMe || isPending) return;
+
+    // 캐시에서 기존 방 확인
+    const existing = findExistingRoom();
+    if (existing) {
+      navigateToRoom(existing.roomModel.roomId, existing.messageList[0] ?? null);
+      return;
+    }
+
+    try {
+      const res = await createDM(member.userId);
+      navigateToRoom(res.payload.roomId);
+    } catch (err) {
+      if (!isApiError(err)) {
+        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
+        return;
+      }
+
+      // 409 Conflict: 이미 존재하는 방 → 목록 새로 조회 후 이동
+      await queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
+      const refetched = findExistingRoom();
+      if (refetched) {
+        navigateToRoom(refetched.roomModel.roomId, refetched.messageList[0] ?? null);
+        showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
+      } else {
+        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
+      }
+    }
   };
 
   return (

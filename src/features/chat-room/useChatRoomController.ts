@@ -76,6 +76,7 @@ export const useChatRoomController = () => {
   const handleWsMessageRef = useRef<(data: WebSocketEnvelope) => void>(() => {});
 
   const {
+    buildSubscribeMessage,
     buildViewInMessageRoom,
     buildViewOutMessageRoom,
     buildFetchBeforeMessage,
@@ -514,6 +515,9 @@ export const useChatRoomController = () => {
 
     isMountedRef.current = true;
 
+    // 새로 생성된 방은 WS 서버에 구독 등록이 안 되어 있으므로 SUB 전송
+    // (기존 방은 이미 구독 중이라 idempotent하게 무시됨)
+    send(buildSubscribeMessage({ channelIdOverride: currentRoomId }));
     addListener(currentRoomId, (data: WebSocketEnvelope) => handleWsMessageRef.current(data));
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';
@@ -599,9 +603,15 @@ export const useChatRoomController = () => {
           channelIdOverride: currentRoomId,
         }),
       );
+    } else {
+      return;
     }
 
     didInitialSyncRef.current = true;
+
+    return () => {
+      didInitialSyncRef.current = false;
+    };
   }, [currentRoomId, lastMessage?.message?.id, buildFetchAfterMessage, buildFetchBeforeMessage]);
 
   // 4. visibilitychange (AppState 대체)
@@ -634,6 +644,7 @@ export const useChatRoomController = () => {
     if (!isConnected || !currentRoomId) return;
     if (!isMountedRef.current) return;
 
+    send(buildSubscribeMessage({ channelIdOverride: currentRoomId }));
     addListener(currentRoomId, (data: WebSocketEnvelope) => handleWsMessageRef.current(data));
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';

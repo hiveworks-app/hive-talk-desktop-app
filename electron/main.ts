@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
 import path from 'path';
 import net from 'net';
 
@@ -109,11 +109,15 @@ async function startNextServer(): Promise<string> {
 // ------------------------------------------------------------------
 
 function createWindow(serverUrl: string) {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
   mainWindow = new BrowserWindow({
-    width: 940,
+    width: 400,
     height: 640,
     minWidth: 400,
     minHeight: 500,
+    maxWidth: screenWidth,
+    maxHeight: screenHeight,
     title: 'HiveTalk',
     icon: getIconPath(),
     webPreferences: {

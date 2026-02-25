@@ -213,7 +213,26 @@ body {
   background-color: var(--color-gray-400);
 }
 
-/* Electron: window drag region (title bar replacement) */
+/* Electron: 전체 윈도우 드래그 (타이틀바 없는 frameless window) */
+body {
+  -webkit-app-region: drag;
+}
+
+/* 인터랙티브 요소는 드래그 제외 */
+button, a, input, textarea, select, label,
+[role="button"], [role="link"], [role="checkbox"], [role="radio"],
+[contenteditable="true"] {
+  -webkit-app-region: no-drag;
+}
+
+/* 스크롤 가능한 콘텐츠 영역은 드래그 제외 */
+.scrollbar-thin,
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-app-region: no-drag;
+}
+
+/* 수동 제어용 유틸리티 클래스 */
 .electron-drag {
   -webkit-app-region: drag;
 }

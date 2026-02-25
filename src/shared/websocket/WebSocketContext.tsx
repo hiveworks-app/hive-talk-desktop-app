@@ -290,17 +290,17 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           // 채팅방 목록 React Query 캐시 갱신
           const targetQueryKey = getTargetQueryKey(currentChannelType);
           if (targetQueryKey) {
-            queryClient.setQueryData<GetChatRoomListItemType[]>(targetQueryKey, prev => {
-              const list = prev ?? [];
-              const hasRoom = list.some(room => room.roomModel.roomId === roomId);
+            const prevList = queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey) ?? [];
+            const hasRoom = prevList.some(room => room.roomModel.roomId === roomId);
 
-              if (!hasRoom) {
-                queryClient.invalidateQueries({ queryKey: targetQueryKey });
-                return list;
-              }
-
-              return upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive });
-            });
+            if (!hasRoom) {
+              queryClient.invalidateQueries({ queryKey: targetQueryKey });
+            } else {
+              queryClient.setQueryData<GetChatRoomListItemType[]>(
+                targetQueryKey,
+                prev => upsertChatRoomListWithMessage(prev, normalizedPayload, { isRoomActive }),
+              );
+            }
           }
 
           // 웹 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)

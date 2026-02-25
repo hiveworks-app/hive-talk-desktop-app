@@ -3,14 +3,13 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { apiGetDMLastMessage, apiGetGMLastMessage, apiGetEMLastMessage } from '@/features/chat-room/api';
+import { apiGetDMLastMessage, apiGetGMLastMessage } from '@/features/chat-room/api';
 import {
   useGetDMRoomList,
   useGetGMRoomList,
-  useGetEMRoomList,
 } from '@/features/chat-room-list/queries';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
-import { DM_LAST_MESSAGE_KEY, GM_LAST_MESSAGE_KEY, EM_LAST_MESSAGE_KEY } from '@/shared/config/queryKeys';
+import { DM_LAST_MESSAGE_KEY, GM_LAST_MESSAGE_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/Badge';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -21,7 +20,7 @@ import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { CreateRoomDialog } from '@/widgets/create-room/CreateRoomDialog';
 
-type Tab = 'dm' | 'gm' | 'em';
+type Tab = 'dm' | 'gm';
 
 export function ChatRoomListSidebar() {
   const [activeTab, setActiveTab] = useState<Tab>('dm');
@@ -29,10 +28,9 @@ export function ChatRoomListSidebar() {
   const user = useAuthStore(s => s.user);
   const { data: dmRooms = [], isLoading: dmLoading } = useGetDMRoomList();
   const { data: gmRooms = [], isLoading: gmLoading } = useGetGMRoomList();
-  const { data: emRooms = [], isLoading: emLoading } = useGetEMRoomList();
 
-  const rooms = activeTab === 'dm' ? dmRooms : activeTab === 'gm' ? gmRooms : emRooms;
-  const isLoading = activeTab === 'dm' ? dmLoading : activeTab === 'gm' ? gmLoading : emLoading;
+  const rooms = activeTab === 'dm' ? dmRooms : gmRooms;
+  const isLoading = activeTab === 'dm' ? dmLoading : gmLoading;
 
   return (
     <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
@@ -56,7 +54,7 @@ export function ChatRoomListSidebar() {
 
       {/* 탭 */}
       <div className="flex border-b border-divider">
-        {(['dm', 'gm', 'em'] as const).map(tab => (
+        {(['dm', 'gm'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -67,7 +65,7 @@ export function ChatRoomListSidebar() {
                 : 'text-text-tertiary hover:text-text-secondary',
             )}
           >
-            {tab === 'dm' ? '1:1' : tab === 'gm' ? '그룹' : '외부'}
+            {tab === 'dm' ? '1:1' : '그룹'}
           </button>
         ))}
       </div>
@@ -92,9 +90,7 @@ export function ChatRoomListSidebar() {
               channelType={
                 activeTab === 'dm'
                   ? WS_CHANNEL_TYPE.DIRECT_MESSAGE
-                  : activeTab === 'gm'
-                    ? WS_CHANNEL_TYPE.GROUP_MESSAGE
-                    : WS_CHANNEL_TYPE.EXTERNAL_MESSAGE
+                  : WS_CHANNEL_TYPE.GROUP_MESSAGE
               }
             />
           ))
@@ -136,16 +132,12 @@ function ChatRoomItem({
     const lastMessageQueryKey =
       channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
         ? DM_LAST_MESSAGE_KEY(roomModel.roomId)
-        : channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE
-          ? GM_LAST_MESSAGE_KEY(roomModel.roomId)
-          : EM_LAST_MESSAGE_KEY(roomModel.roomId);
+        : GM_LAST_MESSAGE_KEY(roomModel.roomId);
 
     const lastMessageApi =
       channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
         ? apiGetDMLastMessage
-        : channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE
-          ? apiGetGMLastMessage
-          : apiGetEMLastMessage;
+        : apiGetGMLastMessage;
 
     const lastMsg = lastMessage ?? await queryClient
       .fetchQuery({
@@ -163,12 +155,8 @@ function ChatRoomItem({
       channelType,
       totalUserCount,
       otherUserIsExit: roomModel.participantDetail?.isExit ?? false,
+      lastMessage: lastMsg ?? null,
     });
-
-    // lastMessage를 chatRoomStore에 저장
-    if (lastMsg) {
-      useChatRoomInfo.setState({ lastMessage: lastMsg });
-    }
 
     router.push(`/chat/${roomModel.roomId}`);
   };

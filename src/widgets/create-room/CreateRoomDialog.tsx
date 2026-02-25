@@ -2,13 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateDM, useCreateGM } from '@/features/create-chat-room/queries';
+import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { useGetMembers } from '@/features/members/queries';
+import { isApiError } from '@/shared/api';
 import { cn } from '@/shared/lib/cn';
+import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { MemberItem } from '@/shared/types/user';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useUIStore } from '@/store';
 
 type Mode = 'dm' | 'gm';
 
@@ -19,6 +24,8 @@ interface CreateRoomDialogProps {
 
 export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const showSnackbar = useUIStore(state => state.showSnackbar);
   const myUserId = useAuthStore(s => s.user?.id);
   const { data: members = [], isLoading } = useGetMembers();
   const { mutateAsync: createDM, isPending: dmPending } = useCreateDM();
@@ -78,42 +85,92 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       ? selectedIds.size === 1
       : selectedIds.size >= 2 && gmTitle.trim().length > 0;
 
+  const navigateToRoom = (
+    roomId: string,
+    roomName: string,
+    channelType: typeof WS_CHANNEL_TYPE.DIRECT_MESSAGE | typeof WS_CHANNEL_TYPE.GROUP_MESSAGE,
+    totalUserCount: number,
+    lastMessage: WebSocketPublishItem | null = null,
+  ) => {
+    useChatRoomInfo.getState().setChatRoomInfo({
+      roomId,
+      roomName,
+      channelType,
+      totalUserCount,
+      otherUserIsExit: false,
+      lastMessage,
+    });
+    onClose();
+    router.push(`/chat/${roomId}`);
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || isPending) return;
 
     if (mode === 'dm') {
       const userId = [...selectedIds][0];
-      const res = await createDM(userId);
-      const { roomId } = res.payload;
       const member = otherMembers.find(m => m.userId === userId);
 
-      useChatRoomInfo.getState().setChatRoomInfo({
-        roomId,
-        roomName: member?.name ?? '채팅방',
-        channelType: WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-        totalUserCount: 2,
-        otherUserIsExit: false,
-      });
+      // 이미 존재하는 DM 방이면 API 호출 없이 바로 이동
+      const existingRoom = findExistingDMRoom(queryClient, userId);
+      if (existingRoom) {
+        navigateToRoom(
+          existingRoom.roomModel.roomId,
+          existingRoom.roomModel.participantDetail?.name
+            || existingRoom.roomModel.participants?.find(p => String(p.userId) === String(userId))?.name
+            || member?.name || '채팅방',
+          WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+          existingRoom.roomModel.participants?.length ?? 2,
+          existingRoom.messageList[0] ?? null,
+        );
+        showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
+        return;
+      }
 
-      onClose();
-      router.push(`/chat/${roomId}`);
+      try {
+        const res = await createDM(userId);
+        const { roomId } = res.payload;
+        navigateToRoom(roomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2);
+      } catch (err) {
+        if (!isApiError(err)) {
+          showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
+          return;
+        }
+
+        console.log('[CreateRoom] DM 생성 에러:', { code: err.code, message: err.message, payload: err.payload, rawBody: err.rawBody });
+
+        // 에러 응답에서 roomId 추출 시도
+        const existingRoomId = extractRoomIdFromError(err);
+        if (existingRoomId) {
+          navigateToRoom(existingRoomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2);
+          showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
+          return;
+        }
+
+        // DM 목록을 새로 조회 후 재검색
+        await queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
+        const refetchedRoom = findExistingDMRoom(queryClient, userId);
+        if (refetchedRoom) {
+          navigateToRoom(
+            refetchedRoom.roomModel.roomId,
+            refetchedRoom.roomModel.participantDetail?.name || member?.name || '채팅방',
+            WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+            2,
+            refetchedRoom.messageList[0] ?? null,
+          );
+          showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
+          return;
+        }
+
+        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
+      }
     } else {
       const res = await createGM({
         title: gmTitle.trim(),
         userIdList: [...selectedIds],
       });
       const { roomId } = res.payload;
-
-      useChatRoomInfo.getState().setChatRoomInfo({
-        roomId,
-        roomName: gmTitle.trim(),
-        channelType: WS_CHANNEL_TYPE.GROUP_MESSAGE,
-        totalUserCount: selectedIds.size + 1,
-        otherUserIsExit: false,
-      });
-
-      onClose();
-      router.push(`/chat/${roomId}`);
+      navigateToRoom(roomId, gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1);
     }
   };
 
@@ -286,4 +343,41 @@ function MemberRow({
       </div>
     </button>
   );
+}
+
+function findExistingDMRoom(
+  queryClient: ReturnType<typeof useQueryClient>,
+  targetUserId: string,
+): GetChatRoomListItemType | undefined {
+  const dmRooms = queryClient.getQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY) ?? [];
+  return dmRooms.find(room => {
+    const uid = String(targetUserId);
+    // participantDetail (1:1 상대방 정보)
+    if (String(room.roomModel.participantDetail?.userId) === uid) return true;
+    // participants 배열에서 검색
+    return room.roomModel.participants?.some(p => String(p.userId) === uid) ?? false;
+  });
+}
+
+function extractRoomIdFromError(err: { payload?: unknown; rawBody?: string }): string | null {
+  // 1. err.payload.payload.roomId (ApiResponse 구조)
+  const body = err.payload as Record<string, unknown> | null;
+  if (body?.payload && typeof body.payload === 'object') {
+    const inner = body.payload as Record<string, unknown>;
+    if (typeof inner.roomId === 'string') return inner.roomId;
+  }
+
+  // 2. err.payload.roomId (flat 구조)
+  if (body && typeof body.roomId === 'string') return body.roomId;
+
+  // 3. rawBody에서 roomId JSON 파싱 시도
+  if (err.rawBody) {
+    try {
+      const parsed = JSON.parse(err.rawBody);
+      const roomId = parsed?.payload?.roomId ?? parsed?.roomId;
+      if (typeof roomId === 'string') return roomId;
+    } catch { /* ignore */ }
+  }
+
+  return null;
 }
