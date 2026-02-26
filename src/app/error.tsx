@@ -23,13 +23,13 @@ export default function Error({
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h2 className="text-lg font-bold text-text-primary">오류가 발생했습니다</h2>
-        <p className="max-w-md text-sm text-text-secondary">
+        <h2 className="text-heading-md font-bold text-text-primary">오류가 발생했습니다</h2>
+        <p className="max-w-md text-sub text-text-secondary">
           예기치 못한 오류가 발생했습니다. 다시 시도해 주세요.
         </p>
         <button
           onClick={reset}
-          className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
+          className="rounded-lg bg-primary px-6 py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
         >
           다시 시도
         </button>

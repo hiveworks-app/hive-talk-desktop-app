@@ -2,42 +2,42 @@
 
 /* ── Design System Colors (from hiveworks-mobile/src/theme/colors.ts) ── */
 :root {
-  /* Light Theme Semantic Tokens */
-  --color-primary: #3B82F6;
+  /* Light Theme Semantic Tokens (RN light.* 동일) */
+  --color-primary: #007AFF;
   --color-on-primary: #FFFFFF;
   --color-background: #FFFFFF;
   --color-container: #FFFFFF;
   --color-surface: #FFFFFF;
-  --color-surface-pressed: #F5F5F5;
-  --color-disabled: #F5F5F5;
-  --color-outline: #EFEFEF;
-  --color-divider: #F5F5F5;
+  --color-surface-pressed: #F8F9FA;
+  --color-disabled: #F8F9FA;
+  --color-outline: #E5E8EB;
+  --color-divider: #F8F9FA;
 
-  /* States */
-  --color-state-primary: #3B82F6;
-  --color-state-primary-pressed: #2563EB;
-  --color-state-primary-disabled: #E8E8E8;
-  --color-state-primary-highlighted: #F3F8FE;
-  --color-state-error: #FF334B;
-  --color-state-error-pressed: #C9162B;
-  --color-state-warning: #FFE500;
-  --color-state-success: #06C755;
+  /* States (RN light.states.* 동일) */
+  --color-state-primary: #007AFF;
+  --color-state-primary-pressed: #0059B8;
+  --color-state-primary-disabled: #E5E8EB;
+  --color-state-primary-highlighted: #E6F3FF;
+  --color-state-error: #F04452;
+  --color-state-error-pressed: #BB222E;
+  --color-state-warning: #FFD900;
+  --color-state-success: #03C75A;
 
-  /* Text */
-  --color-text-primary: #000000;
-  --color-text-secondary: #777777;
-  --color-text-tertiary: #949494;
-  --color-text-placeholder: #C8C8C8;
-  --color-text-disabled: #F5F5F5;
-  --color-text-in-bubble: #111111;
-  --color-text-hashtag: #4270ED;
+  /* Text (RN light.text.* 동일) */
+  --color-text-primary: #1A1F27;
+  --color-text-secondary: #6B7684;
+  --color-text-tertiary: #8B95A1;
+  --color-text-placeholder: #ADB5BD;
+  --color-text-disabled: #D2D5D9;
+  --color-text-in-bubble: #1A1F27;
+  --color-text-hashtag: #007AFF;
 
-  /* Tag */
+  /* Tag (RN light.tag.amber 동일) */
   --color-tag-amber-text: #B45309;
   --color-tag-amber-border: #F59E0B;
   --color-tag-amber-bg: #FFFBEB;
 
-  /* Highlight (raw RGB for dynamic opacity) */
+  /* Highlight (RN light.highlight 동일) */
   --highlight-search-rgb: 254, 249, 195;
   --highlight-tag-rgb: 219, 234, 254;
 }
@@ -46,7 +46,7 @@
 /* Activated by class="dark" on <html> or prefers-color-scheme */
 .dark,
 [data-theme="dark"] {
-  --color-primary: #60A5FA;
+  --color-primary: #66B3FF;
   --color-on-primary: #FFFFFF;
   --color-background: #1A1A1A;
   --color-container: #242424;
@@ -56,15 +56,15 @@
   --color-outline: #3F3F3F;
   --color-divider: #2A2A2A;
 
-  /* States */
-  --color-state-primary: #60A5FA;
-  --color-state-primary-pressed: #3B82F6;
+  /* States (brand.sub1 기반) */
+  --color-state-primary: #66B3FF;
+  --color-state-primary-pressed: #007AFF;
   --color-state-primary-disabled: #333333;
   --color-state-primary-highlighted: #1E3A5F;
   --color-state-error: #FF6B7A;
-  --color-state-error-pressed: #FF334B;
-  --color-state-warning: #FFE500;
-  --color-state-success: #34D399;
+  --color-state-error-pressed: #F04452;
+  --color-state-warning: #FFD900;
+  --color-state-success: #86E5A5;
 
   /* Text (from RN dark.text) */
   --color-text-primary: rgba(255, 255, 255, 1);
@@ -73,7 +73,7 @@
   --color-text-placeholder: rgba(255, 255, 255, 0.4);
   --color-text-disabled: #333333;
   --color-text-in-bubble: #F5F5F5;
-  --color-text-hashtag: #96B2FF;
+  --color-text-hashtag: #66B3FF;
 
   /* Tag */
   --color-tag-amber-text: #FCD34D;
@@ -87,7 +87,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light):not([data-theme="light"]) {
-    --color-primary: #60A5FA;
+    --color-primary: #66B3FF;
     --color-on-primary: #FFFFFF;
     --color-background: #1A1A1A;
     --color-container: #242424;
@@ -97,14 +97,14 @@
     --color-outline: #3F3F3F;
     --color-divider: #2A2A2A;
 
-    --color-state-primary: #60A5FA;
-    --color-state-primary-pressed: #3B82F6;
+    --color-state-primary: #66B3FF;
+    --color-state-primary-pressed: #007AFF;
     --color-state-primary-disabled: #333333;
     --color-state-primary-highlighted: #1E3A5F;
     --color-state-error: #FF6B7A;
-    --color-state-error-pressed: #FF334B;
-    --color-state-warning: #FFE500;
-    --color-state-success: #34D399;
+    --color-state-error-pressed: #F04452;
+    --color-state-warning: #FFD900;
+    --color-state-success: #86E5A5;
 
     --color-text-primary: rgba(255, 255, 255, 1);
     --color-text-secondary: rgba(255, 255, 255, 0.8);
@@ -112,7 +112,7 @@
     --color-text-placeholder: rgba(255, 255, 255, 0.4);
     --color-text-disabled: #333333;
     --color-text-in-bubble: #F5F5F5;
-    --color-text-hashtag: #96B2FF;
+    --color-text-hashtag: #66B3FF;
 
     --color-tag-amber-text: #FCD34D;
     --color-tag-amber-border: #B45309;
@@ -128,14 +128,17 @@
   --color-primary: var(--color-primary);
   --color-on-primary: var(--color-on-primary);
 
-  /* Brand Colors */
-  --color-blue-400: #96B2FF;
-  --color-blue-500: #638DFF;
-  --color-blue-600: #4270ED;
-  --color-blue-700: #2F59CC;
-  --color-green: #06C755;
-  --color-red: #FF334B;
-  --color-yellow: #FFE500;
+  /* Brand Sub1 (Blue) - RN brand.sub1 */
+  --color-blue-100: #E6F3FF;
+  --color-blue-300: #66B3FF;
+  --color-blue-500: #007AFF;
+  --color-blue-700: #0059B8;
+  --color-blue-900: #004DA6;
+
+  /* Brand Shorthand */
+  --color-green: #03C75A;
+  --color-red: #F04452;
+  --color-yellow: #FFD900;
 
   /* Navy */
   --color-navy-400: #C8CFDC;
@@ -146,26 +149,29 @@
   --color-navy-850: #262F4A;
   --color-navy-900: #202A43;
 
-  /* Gray Scale */
-  --color-gray-100: #FCFCFC;
-  --color-gray-150: #F5F5F5;
-  --color-gray-200: #EFEFEF;
-  --color-gray-250: #E8E8E8;
-  --color-gray-300: #DFDFDF;
-  --color-gray-350: #C8C8C8;
-  --color-gray-400: #B7B7B7;
-  --color-gray-500: #949494;
-  --color-gray-600: #777777;
-  --color-gray-650: #616161;
-  --color-gray-700: #555555;
-  --color-gray-750: #3F3F3F;
-  --color-gray-800: #2A2A2A;
-  --color-gray-850: #1F1F1F;
-  --color-gray-900: #111111;
+  /* Gray Scale (RN gray - cool-toned) */
+  --color-gray-50: #FAFBFC;
+  --color-gray-100: #F8F9FA;
+  --color-gray-150: #EFF1F3;
+  --color-gray-200: #E5E8EB;
+  --color-gray-250: #DCDFE2;
+  --color-gray-300: #D2D5D9;
+  --color-gray-350: #C0C5CB;
+  --color-gray-400: #ADB5BD;
+  --color-gray-500: #8B95A1;
+  --color-gray-600: #6B7684;
+  --color-gray-650: #5D6876;
+  --color-gray-700: #4E5968;
+  --color-gray-750: #3D4652;
+  --color-gray-800: #2B323D;
+  --color-gray-850: #232932;
+  --color-gray-900: #1A1F27;
 
   /* Semantic Colors */
   --color-background: var(--color-background);
+  --color-container: var(--color-container);
   --color-surface: var(--color-surface);
+  --color-surface-pressed: var(--color-surface-pressed);
   --color-outline: var(--color-outline);
   --color-divider: var(--color-divider);
   --color-disabled: var(--color-disabled);
@@ -175,10 +181,17 @@
   --color-text-secondary: var(--color-text-secondary);
   --color-text-tertiary: var(--color-text-tertiary);
   --color-text-placeholder: var(--color-text-placeholder);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-in-bubble: var(--color-text-in-bubble);
   --color-text-hashtag: var(--color-text-hashtag);
 
   /* State Colors */
+  --color-state-primary: var(--color-state-primary);
+  --color-state-primary-pressed: var(--color-state-primary-pressed);
+  --color-state-primary-disabled: var(--color-state-primary-disabled);
+  --color-state-primary-highlighted: var(--color-state-primary-highlighted);
   --color-state-error: var(--color-state-error);
+  --color-state-error-pressed: var(--color-state-error-pressed);
   --color-state-success: var(--color-state-success);
   --color-state-warning: var(--color-state-warning);
 
@@ -190,6 +203,57 @@
 
   /* Fonts */
   --font-sans: var(--font-pretendard, "Pretendard", system-ui, -apple-system, sans-serif);
+
+  /* Typography Scale (from NativeWind config - RN과 동일) */
+  /* Tailwind v4: --text-* namespace → text-* 유틸리티 생성 */
+
+  /* Heading */
+  --text-heading-xl: 24px;
+  --text-heading-xl--line-height: 34px;
+  --text-heading-xl--letter-spacing: -0.72px;
+
+  --text-heading-lg: 20px;
+  --text-heading-lg--line-height: 28px;
+  --text-heading-lg--letter-spacing: -0.6px;
+
+  --text-heading-md: 18px;
+  --text-heading-md--line-height: 26px;
+  --text-heading-md--letter-spacing: -0.36px;
+
+  --text-heading-sm: 16px;
+  --text-heading-sm--line-height: 26px;
+  --text-heading-sm--letter-spacing: -0.32px;
+
+  /* Label */
+  --text-label: 15px;
+  --text-label--line-height: 22px;
+  --text-label--letter-spacing: -0.3px;
+
+  /* Body */
+  --text-body-lg: 17px;
+  --text-body-lg--line-height: 26px;
+  --text-body-lg--letter-spacing: -0.34px;
+
+  --text-body: 15px;
+  --text-body--line-height: 24px;
+  --text-body--letter-spacing: -0.15px;
+
+  /* Sub */
+  --text-sub: 14px;
+  --text-sub--line-height: 20px;
+  --text-sub--letter-spacing: -0.14px;
+
+  --text-sub-sm: 13px;
+  --text-sub-sm--line-height: 18px;
+
+  /* Caption */
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0.22px;
+
+  --text-caption-sm: 10.5px;
+  --text-caption-sm--line-height: 14px;
+  --text-caption-sm--letter-spacing: -0.21px;
 }
 
 /* ── Base Styles ── */
@@ -213,10 +277,57 @@ body {
   background-color: var(--color-gray-400);
 }
 
-/* Electron: window drag region (title bar replacement) */
+/* Electron: 전체 윈도우 드래그 (타이틀바 없는 frameless window) */
+body {
+  -webkit-app-region: drag;
+}
+
+/* 인터랙티브 요소는 드래그 제외 */
+button, a, input, textarea, select, label,
+[role="button"], [role="link"], [role="checkbox"], [role="radio"],
+[contenteditable="true"] {
+  -webkit-app-region: no-drag;
+}
+
+/* 스크롤 가능한 콘텐츠 영역은 드래그 제외 */
+.scrollbar-thin,
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-app-region: no-drag;
+}
+
+/* 수동 제어용 유틸리티 클래스 */
 .electron-drag {
   -webkit-app-region: drag;
 }
 .electron-no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* Toast 진입 애니메이션 */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out;
+}
+
+/* LoadingOverlay indeterminate bar (RN LoadingOverlay 동일 패턴) */
+@keyframes indeterminate-slide {
+  0% {
+    transform: translateX(-80px);
+  }
+  100% {
+    transform: translateX(240px);
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate-slide 1.2s ease-in-out infinite;
 }

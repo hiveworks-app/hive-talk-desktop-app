@@ -84,9 +84,9 @@ export function ChatImageGrid({
         className={cn('overflow-hidden rounded-lg', dimmed && 'opacity-50')}
         style={{ maxWidth }}
       >
-        {src.isVideo ? (
-          <div className="relative">
-            <video src={src.src} className="max-h-48 max-w-full rounded-lg object-cover" preload="metadata" />
+        <div className="relative">
+          <img src={src.src} alt="" loading="lazy" className="max-h-48 max-w-full rounded-lg object-cover" />
+          {src.isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -94,10 +94,8 @@ export function ChatImageGrid({
                 </svg>
               </div>
             </div>
-          </div>
-        ) : (
-          <img src={src.src} alt="" loading="lazy" className="max-h-48 max-w-full rounded-lg object-cover" />
-        )}
+          )}
+        </div>
       </button>
     );
   }
@@ -132,13 +130,14 @@ export function ChatImageGrid({
                     marginRight: colIndex < row.columns - 1 ? GAP_PX : 0,
                   }}
                 >
-                  {item.isVideo ? (
-                    <div className="relative h-full w-full">
-                      <video
-                        src={item.src}
-                        className="h-full w-full object-cover"
-                        preload="metadata"
-                      />
+                  <div className="relative h-full w-full">
+                    <img
+                      src={item.src}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                    {item.isVideo && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
@@ -146,15 +145,8 @@ export function ChatImageGrid({
                           </svg>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <img
-                      src={item.src}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  )}
+                    )}
+                  </div>
                 </button>
               );
             })}

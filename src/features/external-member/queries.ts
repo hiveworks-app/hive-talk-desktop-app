@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EXTERNAL_MEMBERS_KEY } from '@/shared/config/queryKeys';
 import { useUIStore } from '@/store';
+import { useAuthStore } from '@/store/auth/authStore';
 import {
   apiGetExternalMembers,
   apiInviteExternalUser,
@@ -11,12 +12,15 @@ import {
 import type { InviteExternalUserRequest } from './type';
 
 export const useGetExternalMembers = (search?: string) => {
+  const { user } = useAuthStore();
+
   return useQuery({
     queryKey: EXTERNAL_MEMBERS_KEY(search),
     queryFn: async () => {
       const res = await apiGetExternalMembers(search);
       return res.payload.items;
     },
+    enabled: !!user?.id,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });

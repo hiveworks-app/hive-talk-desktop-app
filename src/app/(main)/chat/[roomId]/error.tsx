@@ -26,20 +26,20 @@ export default function ChatRoomError({
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h3 className="text-base font-bold text-text-primary">채팅방 오류</h3>
-        <p className="max-w-sm text-sm text-text-secondary">
+        <h3 className="text-heading-sm font-bold text-text-primary">채팅방 오류</h3>
+        <p className="max-w-sm text-sub text-text-secondary">
           채팅방을 불러오는 중 오류가 발생했습니다.
         </p>
         <div className="flex gap-2">
           <button
             onClick={() => router.replace('/chat')}
-            className="rounded-lg border border-divider px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-gray-50"
+            className="rounded-lg border border-divider px-4 py-2 text-sub text-text-secondary transition-colors hover:bg-gray-50"
           >
             채팅 목록으로
           </button>
           <button
             onClick={reset}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
+            className="rounded-lg bg-primary px-4 py-2 text-sub font-semibold text-on-primary"
           >
             다시 시도
           </button>

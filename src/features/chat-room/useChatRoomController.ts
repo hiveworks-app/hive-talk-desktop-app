@@ -76,6 +76,7 @@ export const useChatRoomController = () => {
   const handleWsMessageRef = useRef<(data: WebSocketEnvelope) => void>(() => {});
 
   const {
+    buildSubscribeMessage,
     buildViewInMessageRoom,
     buildViewOutMessageRoom,
     buildFetchBeforeMessage,
@@ -514,22 +515,30 @@ export const useChatRoomController = () => {
 
     isMountedRef.current = true;
 
+    // 새로 생성된 방은 WS 서버에 구독 등록이 안 되어 있으므로 SUB 전송
+    // (기존 방은 이미 구독 중이라 idempotent하게 무시됨)
+    send(buildSubscribeMessage({ channelIdOverride: currentRoomId }));
     addListener(currentRoomId, (data: WebSocketEnvelope) => handleWsMessageRef.current(data));
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';
 
-    participantsManager
-      .ensureParticipants(currentRoomId, channelType)
-      .then(participants => {
-        if (!isMountedRef.current) return;
-        if (participants.length > 0) {
-          useChatRoomInfo.getState().setChatRoomInfo({ totalUserCount: participants.length });
-        }
-        recalculateAllMessagesNotReadCount(participants);
-      })
-      .catch(error => {
-        console.error('[WS] 채팅방 진입 시 참여자 목록 조회 실패:', error);
-      });
+    // 모바일 패턴: 신규 방(invitedUserIds가 남아있는 경우)은 INVITE 전이므로
+    // participants 조회를 건너뜀. INVITE 후 sendInviteIfNeeded에서 조회 트리거.
+    const { invitedUserIds } = useChatRoomInfo.getState();
+    if (invitedUserIds.length === 0) {
+      participantsManager
+        .ensureParticipants(currentRoomId, channelType)
+        .then(participants => {
+          if (!isMountedRef.current) return;
+          if (participants.length > 0) {
+            useChatRoomInfo.getState().setChatRoomInfo({ totalUserCount: participants.length });
+          }
+          recalculateAllMessagesNotReadCount(participants);
+        })
+        .catch(error => {
+          console.warn('[WS] 참여자 목록 조회 실패:', error);
+        });
+    }
 
     return () => {
       isMountedRef.current = false;
@@ -556,53 +565,34 @@ export const useChatRoomController = () => {
   }, [saveRoomId, currentRoomId, replaceMessages, setRunTimeRoomId]);
 
   // 3. 초기 메시지 fetch
+  // 재진입 시 기존 메시지를 비우고 fresh presigned URL을 가진 데이터로 다시 받아옴
   useEffect(() => {
     if (!currentRoomId) return;
     if (didInitialSyncRef.current) return;
 
     const { messages } = useChatRoomRuntimeStore.getState();
-    if (messages.length > 0) {
-      const lastLocalId = messages[messages.length - 1]?.id;
-      const firstLocalId = messages[0]?.id;
+    const anchorId = messages[messages.length - 1]?.id ?? lastMessage?.message?.id;
 
-      if (lastLocalId) {
-        send(
-          buildFetchAfterMessage({
-            currentMessage: lastLocalId,
-            isInclusive: false,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-        send(
-          buildFetchBeforeMessage({
-            currentMessage: lastLocalId,
-            isInclusive: true,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-      }
+    if (!anchorId) return;
 
-      if (firstLocalId) {
-        send(
-          buildFetchBeforeMessage({
-            currentMessage: firstLocalId,
-            isInclusive: false,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-      }
-    } else if (lastMessage?.message?.id) {
-      send(
-        buildFetchBeforeMessage({
-          currentMessage: lastMessage.message.id,
-          isInclusive: true,
-          channelIdOverride: currentRoomId,
-        }),
-      );
-    }
+    // 기존 메시지 비움 → presigned URL 만료 문제 방지
+    replaceMessages([]);
+    setLoading({ hasMoreBefore: true, hasMoreAfter: true });
+
+    send(
+      buildFetchBeforeMessage({
+        currentMessage: anchorId,
+        isInclusive: true,
+        channelIdOverride: currentRoomId,
+      }),
+    );
 
     didInitialSyncRef.current = true;
-  }, [currentRoomId, lastMessage?.message?.id, buildFetchAfterMessage, buildFetchBeforeMessage]);
+
+    return () => {
+      didInitialSyncRef.current = false;
+    };
+  }, [currentRoomId, lastMessage?.message?.id, buildFetchBeforeMessage, send, replaceMessages, setLoading]);
 
   // 4. visibilitychange (AppState 대체)
   useEffect(() => {
@@ -634,6 +624,7 @@ export const useChatRoomController = () => {
     if (!isConnected || !currentRoomId) return;
     if (!isMountedRef.current) return;
 
+    send(buildSubscribeMessage({ channelIdOverride: currentRoomId }));
     addListener(currentRoomId, (data: WebSocketEnvelope) => handleWsMessageRef.current(data));
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';

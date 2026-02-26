@@ -19,6 +19,7 @@ import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import {
   WS_CHANNEL_TYPE,
+  WS_OPERATION,
   WebSocketChannelTypes,
   WebSocketEnvelope,
   WebSocketReceiveReadItemProps,
@@ -32,6 +33,7 @@ import {
   isReadMessage,
   isRemoveTagBroadcast,
   isRoomInvite,
+  parseSocketResponseType,
 } from '@/shared/types/websocket';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -142,8 +144,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (isBroadcast(envelope)) {
+          // response 본문의 channelType 우선, 없으면 socketResponseType 문자열에서 파싱 (방어 코드)
           const { channelType } = envelope.response;
-          globalChannelType = channelType;
+          globalChannelType =
+            channelType ||
+            (parseSocketResponseType(envelope.socketResponseType)?.channelType as WebSocketChannelTypes | undefined);
         }
 
         // 초대받은 경우 자동 구독
@@ -256,7 +261,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           const pubPayload = envelope.response.payload as WebSocketSingleMessagePayload;
           const roomId = pubPayload.message.roomId;
           const currentChannelType = globalChannelType || envelope.response.channelType;
-
           const rawReadItems: WebSocketReceiveReadItemProps[] = Array.isArray(pubPayload.readItems)
             ? (pubPayload.readItems as unknown as WebSocketReceiveReadItemProps[])
             : (pubPayload.readItems?.items ?? []);
@@ -287,20 +291,27 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             listener(envelope);
           }
 
-          // 채팅방 목록 React Query 캐시 갱신
+          // 채팅방 목록 React Query 캐시 갱신 (RN 패턴과 동일: setQueryData 내부에서 원자적 처리)
           const targetQueryKey = getTargetQueryKey(currentChannelType);
           if (targetQueryKey) {
-            queryClient.setQueryData<GetChatRoomListItemType[]>(targetQueryKey, prev => {
-              const list = prev ?? [];
-              const hasRoom = list.some(room => room.roomModel.roomId === roomId);
+            // setQueryData 밖에서 먼저 캐시 확인
+            // (invalidateQueries를 setQueryData 내부에서 호출하면
+            //  setQueryData의 success 액션이 isInvalidated 플래그를 초기화해서 refetch가 안 됨)
+            const prev = queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey);
+            const list = prev ?? [];
+            const hasRoom = list.some(room => room.roomModel.roomId === roomId);
 
-              if (!hasRoom) {
-                queryClient.invalidateQueries({ queryKey: targetQueryKey });
-                return list;
-              }
-
-              return upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive });
-            });
+            if (hasRoom) {
+              queryClient.setQueryData<GetChatRoomListItemType[]>(
+                targetQueryKey,
+                upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive }),
+              );
+            } else {
+              // 새 방: 서버에서 목록 다시 가져오기
+              queryClient.invalidateQueries({ queryKey: targetQueryKey });
+            }
+          } else {
+            console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
           }
 
           // 웹 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
@@ -384,7 +395,8 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         Object.values(listenersRef.current).forEach(listener => listener(envelope));
       };
 
-      ws.onerror = () => {
+      ws.onerror = (err) => {
+        console.error('[WS] ❌ 에러:', err);
         isConnectingRef.current = false;
       };
 
@@ -398,20 +410,24 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         const reason = e.reason ?? '';
 
-        if (reason.includes('401')) {
+        // 401 명시 또는 code 1006(비정상 종료, 만료 토큰 포함) → 토큰 갱신 후 재연결
+        if (reason.includes('401') || e.code === 1006) {
           try {
             const newToken = await refreshAccessToken();
             if (newToken) {
               connectWebSocket(newToken);
-            } else {
-              useAuthStore.getState().logout();
-              window.location.href = '/login';
+              return;
             }
           } catch {
+            // refresh 실패 → 아래 재연결 로직으로 진행
+          }
+
+          // reason에 401이 명시된 경우에만 강제 로그아웃
+          if (reason.includes('401')) {
             useAuthStore.getState().logout();
             window.location.href = '/login';
+            return;
           }
-          return;
         }
 
         if (wasForce) return;
@@ -426,9 +442,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
         reconnectAttemptRef.current = attempt + 1;
-        reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = setTimeout(async () => {
           if (!forceCloseRef.current && isPageVisible) {
-            connectWebSocket();
+            // 재연결 전 토큰 갱신 시도
+            const freshToken = await refreshAccessToken().catch(() => null);
+            connectWebSocket(freshToken ?? undefined);
           }
         }, delay);
       };
@@ -492,6 +510,39 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       disconnectWebSocket();
     };
   }, [WS_URL, isPageVisible, disconnectWebSocket, connectWebSocket]);
+
+  // WebSocket (재)연결 시 채팅방 목록 갱신 + 전체 방 구독(SUB) 복원
+  // WebSocket 구독은 세션 기반이라 재연결 시 모든 구독이 사라짐
+  // 캐시된 방 목록을 기반으로 SUB를 보내서 broadcast 수신을 보장
+  const prevConnectedRef = useRef(false);
+  useEffect(() => {
+    if (isConnected && !prevConnectedRef.current) {
+      // 1. 캐시된 모든 방에 SUB 전송 (broadcast 수신 보장)
+      const channelTypes = [
+        { key: DM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.DIRECT_MESSAGE },
+        { key: GM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.GROUP_MESSAGE },
+        { key: EM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE },
+      ] as const;
+
+      channelTypes.forEach(({ key, type }) => {
+        const rooms = queryClient.getQueryData<GetChatRoomListItemType[]>(key) ?? [];
+        rooms.forEach(room => {
+          send({
+            operationType: WS_OPERATION.SUB,
+            channelType: type,
+            channelId: room.roomModel.roomId,
+            payload: null,
+          });
+        });
+      });
+
+      // 2. 서버에서 최신 목록 가져오기 (놓친 메시지 반영)
+      queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: GM_ROOM_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: EM_ROOM_LIST_KEY });
+    }
+    prevConnectedRef.current = isConnected;
+  }, [isConnected, queryClient, send]);
 
   const value: WebSocketContextValue = { send, addListener, removeListener, isConnected };
 

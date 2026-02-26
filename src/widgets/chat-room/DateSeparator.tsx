@@ -4,7 +4,7 @@ export function DateSeparator({ dateStr }: { dateStr: string }) {
   return (
     <div className="my-4 flex items-center gap-2">
       <div className="flex-1 border-t border-divider" />
-      <span className="text-xs text-text-tertiary">{formatted}</span>
+      <span className="text-sub-sm text-text-tertiary">{formatted}</span>
       <div className="flex-1 border-t border-divider" />
     </div>
   );

@@ -1,8 +1,17 @@
+import { del } from "idb-keyval";
 import { useAuthStore } from "@/store/auth/authStore";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
+
+/** auth store에 deviceInfo가 없을 때 로그인 시 생성한 localStorage 값으로 fallback */
+function getFallbackDeviceInfo() {
+  if (typeof window === "undefined") return null;
+  const deviceId = localStorage.getItem("hive-device-id");
+  if (!deviceId) return null;
+  return { deviceId, deviceType: "DESKTOP" as const };
+}
 
 /**
  * refresh 요청용 fetch
@@ -11,7 +20,12 @@ let refreshPromise: Promise<string | null> | null = null;
 export async function refreshAccessToken(): Promise<string | null> {
   const { refreshToken, user, deviceInfo, setAuth } = useAuthStore.getState();
 
-  if (!refreshToken || !user || !deviceInfo) {
+  if (!refreshToken || !user) {
+    return null;
+  }
+
+  const effectiveDeviceInfo = deviceInfo ?? getFallbackDeviceInfo();
+  if (!effectiveDeviceInfo) {
     return null;
   }
 
@@ -24,8 +38,8 @@ export async function refreshAccessToken(): Promise<string | null> {
   refreshPromise = (async () => {
     try {
       const body = {
-        deviceType: deviceInfo.deviceType,
-        deviceId: deviceInfo.deviceId,
+        deviceType: effectiveDeviceInfo.deviceType,
+        deviceId: effectiveDeviceInfo.deviceId,
         userId: user.id,
         refreshToken,
         deviceToken: "web-no-fcm",
@@ -64,6 +78,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 
 function handleForceLogout() {
   useAuthStore.getState().logout();
+  del("hiveworks-query-cache");           // IndexedDB 영속 캐시 삭제
   document.cookie = "has-auth=; max-age=0; path=/";
   if (typeof window !== "undefined") {
     window.location.href = "/login";

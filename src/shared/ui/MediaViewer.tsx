@@ -93,10 +93,10 @@ export function MediaViewer({
       >
         <div className="flex items-center gap-3">
           {item.author && (
-            <span className="text-sm text-white/80">{item.author}</span>
+            <span className="text-sub text-white/80">{item.author}</span>
           )}
           {items.length > 1 && (
-            <span className="text-sm text-white/60">
+            <span className="text-sub text-white/60">
               {currentIndex + 1} / {items.length}
             </span>
           )}

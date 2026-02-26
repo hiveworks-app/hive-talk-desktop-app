@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { uuidv7 } from 'uuidv7';
+import { getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
 import { useChatFileUpload } from '@/features/chat-room/queries';
 import { IMAGE_UPLOAD_CONCURRENCY, MAX_IMAGES_PER_MESSAGE } from '@/shared/config/constants';
 import {
@@ -86,6 +88,7 @@ function makeProgressThrottler() {
 }
 
 export const useChatRoomActions = () => {
+  const queryClient = useQueryClient();
   const { send } = useAppWebSocket();
   const { channelType } = useChatRoomInfo();
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -97,6 +100,7 @@ export const useChatRoomActions = () => {
   const setTransmissionProgress = useUploadProgressStore(s => s.setTransmissionProgress);
 
   const {
+    buildInviteMessage,
     buildFetchBeforeMessage,
     buildFetchAfterMessage,
     buildPublishMessage,
@@ -108,10 +112,45 @@ export const useChatRoomActions = () => {
     channelId: currentRoomId,
   });
 
-  // ─── 텍스트 메시지 전송 ───
+  // 🔹 사용자 초대 (모바일 패턴과 동일)
+  const sendInvite = useCallback(
+    (userIds: string[], roomId?: string) => {
+      if (!userIds || userIds.length === 0) return;
+      if (userIds.length === 1) {
+        send(buildInviteMessage({ inviteUserId: userIds[0], channelIdOverride: roomId }));
+      } else {
+        send(buildInviteMessage({ inviteUserIdArray: userIds, channelIdOverride: roomId }));
+      }
+    },
+    [buildInviteMessage, send],
+  );
+
+  // ─── 신규 방 INVITE (모바일 ensureRoomId 패턴 - PUB 전 호출) ───
+  // 데스크톱은 방을 미리 생성하므로 ensureRoomId가 불필요하지만,
+  // 신규 방에서 첫 메시지 시 INVITE를 보내는 역할은 동일
+  const sendNewRoomInviteIfNeeded = useCallback(
+    (roomId: string) => {
+      const { invitedUserIds, otherUserIsExit } = useChatRoomInfo.getState();
+      // 신규 방: invitedUserIds 있고 otherUserIsExit 아님
+      if (invitedUserIds.length > 0 && !otherUserIsExit) {
+        sendInvite(invitedUserIds, roomId);
+        useChatRoomInfo.setState({ invitedUserIds: [] });
+
+        // INVITE 후 participants prefetch (서버 처리 시간 고려)
+        setTimeout(() => {
+          queryClient
+            .prefetchQuery(getSidePanelParticipantsQuery(roomId, channelType))
+            .catch(() => {});
+        }, 500);
+      }
+    },
+    [sendInvite, queryClient, channelType],
+  );
+
+  // ─── 텍스트 메시지 전송 (모바일 handleSendText 패턴) ───
   const sendTextMessage = useCallback(
     (content: string, tagList: string[] = []) => {
-      if (!content.trim()) return;
+      if (!content.trim() || !currentRoomId) return;
 
       if (tagList.length > 0) {
         setNextMyTags(
@@ -128,16 +167,27 @@ export const useChatRoomActions = () => {
         );
       }
 
+      // 1) 신규 방: PUB 전 INVITE (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
+
+      // 2) PUB
       send(
         buildPublishMessage({
           type: WS_MESSAGE_CONTENT_TYPE.TEXT,
           content,
           tagList,
-          channelIdOverride: currentRoomId ?? undefined,
+          channelIdOverride: currentRoomId,
         }),
       );
+
+      // 3) 기존 방 상대 나감: PUB 후 INVITE (모바일 handleSendText 패턴)
+      const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
+      if (otherUserIsExit && invitedUserIds.length > 0) {
+        sendInvite(invitedUserIds, currentRoomId);
+        useChatRoomInfo.setState({ otherUserIsExit: false });
+      }
     },
-    [send, buildPublishMessage, currentRoomId, setNextMyTags],
+    [send, buildPublishMessage, currentRoomId, setNextMyTags, sendNewRoomInviteIfNeeded, sendInvite],
   );
 
   // ─── 이전 메시지 더보기 ───
@@ -189,19 +239,24 @@ export const useChatRoomActions = () => {
       const isVideo = file.type.startsWith('video/');
       const mimeType = file.type || (isVideo ? 'video/mp4' : 'image/jpeg');
 
-      // 이미지 썸네일: Canvas로 생성
+      // 썸네일 생성 (이미지: Canvas 리사이즈, 동영상: 첫 프레임 캡처)
       let thumbFileKey: string | undefined;
-      if (!isVideo && file.type.startsWith('image/')) {
-        try {
-          const thumbBlob = await createImageThumbnail(file, 200);
+      try {
+        const thumbBlob = isVideo
+          ? await createVideoThumbnail(file, 200)
+          : file.type.startsWith('image/')
+            ? await createImageThumbnail(file, 200)
+            : null;
+
+        if (thumbBlob) {
           const thumbResult = await chatFileUploadMutation.mutateAsync({
             channelType,
-            file: new File([thumbBlob], `thumb_${file.name}`, { type: 'image/jpeg' }),
+            file: new File([thumbBlob], `thumb_${file.name.replace(/\.\w+$/, '.jpg')}`, { type: 'image/jpeg' }),
           });
           thumbFileKey = thumbResult.fileKey;
-        } catch {
-          // 썸네일 실패해도 원본은 진행
         }
+      } catch (err) {
+        console.warn('[Upload] 썸네일 생성 실패 (원본은 계속 진행):', err);
       }
 
       // 원본 업로드
@@ -222,10 +277,13 @@ export const useChatRoomActions = () => {
     [chatFileUploadMutation, channelType],
   );
 
-  // ─── 미디어(이미지/비디오) 메시지 전송 ───
+  // ─── 미디어(이미지/비디오) 메시지 전송 (모바일: ensureRoomId만, otherUserIsExit 체크 없음) ───
   const sendMediaMessage = useCallback(
     async (files: File[]) => {
       if (!files.length || !currentRoomId) return;
+
+      // 신규 방 INVITE만 (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
 
       const loginUserId = useAuthStore.getState().user?.id;
       const readUserIds = loginUserId ? [String(loginUserId)] : [];
@@ -321,13 +379,17 @@ export const useChatRoomActions = () => {
       buildPublishMessage,
       setTransmissionProgress,
       patchMessageByFileId,
+      sendNewRoomInviteIfNeeded,
     ],
   );
 
-  // ─── 파일(문서) 메시지 전송 ───
+  // ─── 파일(문서) 메시지 전송 (모바일: ensureRoomId만, otherUserIsExit 체크 없음) ───
   const sendDocumentMessage = useCallback(
     async (files: File[]) => {
       if (!files.length || !currentRoomId) return;
+
+      // 신규 방 INVITE만 (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
 
       for (const file of files) {
         const mimeType = file.type || 'application/octet-stream';
@@ -355,7 +417,7 @@ export const useChatRoomActions = () => {
         );
       }
     },
-    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage],
+    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage, sendNewRoomInviteIfNeeded],
   );
 
   // ─── 메시지 삭제 ───
@@ -394,6 +456,75 @@ export const useChatRoomActions = () => {
     removeTagFromMessage,
   };
 };
+
+// ─── Video 첫 프레임 기반 썸네일 생성 유틸 (모바일 expo-video-thumbnails 대체) ───
+async function createVideoThumbnail(file: File, maxSize: number): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  // DOM에 삽입해야 Chromium이 프레임을 디코딩함
+  video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  const cleanup = () => {
+    URL.revokeObjectURL(url);
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    if (video.parentNode) document.body.removeChild(video);
+  };
+
+  try {
+    video.src = url;
+
+    // 1단계: 데이터 로딩 대기
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error('Video load error'));
+    });
+    // 2단계: 첫 프레임 근처로 seek (duration이 짧은 영상 대비)
+    video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+    await new Promise<void>((resolve) => {
+      video.onseeked = () => resolve();
+    });
+
+    // 3단계: 프레임이 실제로 렌더링될 때까지 약간 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 4단계: Canvas로 캡처
+    let { videoWidth: w, videoHeight: h } = video;
+    if (!w || !h) throw new Error(`Video dimensions unavailable (${w}x${h})`);
+
+    if (w > h) {
+      if (w > maxSize) { h = (h * maxSize) / w; w = maxSize; }
+    } else {
+      if (h > maxSize) { w = (w * maxSize) / h; h = maxSize; }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+
+    ctx.drawImage(video, 0, 0, w, h);
+
+    // 5단계: Blob 생성
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('toBlob returned null')),
+        'image/jpeg',
+        0.7,
+      );
+    });
+
+    return blob;
+  } finally {
+    cleanup();
+  }
+}
 
 // ─── Canvas 기반 이미지 썸네일 생성 유틸 ───
 function createImageThumbnail(file: File, maxSize: number): Promise<Blob> {
