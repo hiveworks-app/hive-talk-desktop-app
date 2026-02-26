@@ -417,20 +417,24 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         const reason = e.reason ?? '';
 
-        if (reason.includes('401')) {
+        // 401 명시 또는 code 1006(비정상 종료, 만료 토큰 포함) → 토큰 갱신 후 재연결
+        if (reason.includes('401') || e.code === 1006) {
           try {
             const newToken = await refreshAccessToken();
             if (newToken) {
               connectWebSocket(newToken);
-            } else {
-              useAuthStore.getState().logout();
-              window.location.href = '/login';
+              return;
             }
           } catch {
+            // refresh 실패 → 아래 재연결 로직으로 진행
+          }
+
+          // reason에 401이 명시된 경우에만 강제 로그아웃
+          if (reason.includes('401')) {
             useAuthStore.getState().logout();
             window.location.href = '/login';
+            return;
           }
-          return;
         }
 
         if (wasForce) return;
@@ -445,9 +449,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
         reconnectAttemptRef.current = attempt + 1;
-        reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = setTimeout(async () => {
           if (!forceCloseRef.current && isPageVisible) {
-            connectWebSocket();
+            // 재연결 전 토큰 갱신 시도
+            const freshToken = await refreshAccessToken().catch(() => null);
+            connectWebSocket(freshToken ?? undefined);
           }
         }, delay);
       };

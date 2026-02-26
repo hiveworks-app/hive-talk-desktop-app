@@ -241,19 +241,24 @@ export const useChatRoomActions = () => {
       const isVideo = file.type.startsWith('video/');
       const mimeType = file.type || (isVideo ? 'video/mp4' : 'image/jpeg');
 
-      // 이미지 썸네일: Canvas로 생성
+      // 썸네일 생성 (이미지: Canvas 리사이즈, 동영상: 첫 프레임 캡처)
       let thumbFileKey: string | undefined;
-      if (!isVideo && file.type.startsWith('image/')) {
-        try {
-          const thumbBlob = await createImageThumbnail(file, 200);
+      try {
+        const thumbBlob = isVideo
+          ? await createVideoThumbnail(file, 200)
+          : file.type.startsWith('image/')
+            ? await createImageThumbnail(file, 200)
+            : null;
+
+        if (thumbBlob) {
           const thumbResult = await chatFileUploadMutation.mutateAsync({
             channelType,
-            file: new File([thumbBlob], `thumb_${file.name}`, { type: 'image/jpeg' }),
+            file: new File([thumbBlob], `thumb_${file.name.replace(/\.\w+$/, '.jpg')}`, { type: 'image/jpeg' }),
           });
           thumbFileKey = thumbResult.fileKey;
-        } catch {
-          // 썸네일 실패해도 원본은 진행
         }
+      } catch (err) {
+        console.warn('[Upload] 썸네일 생성 실패 (원본은 계속 진행):', err);
       }
 
       // 원본 업로드
@@ -453,6 +458,80 @@ export const useChatRoomActions = () => {
     removeTagFromMessage,
   };
 };
+
+// ─── Video 첫 프레임 기반 썸네일 생성 유틸 (모바일 expo-video-thumbnails 대체) ───
+async function createVideoThumbnail(file: File, maxSize: number): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  // DOM에 삽입해야 Chromium이 프레임을 디코딩함
+  video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  const cleanup = () => {
+    URL.revokeObjectURL(url);
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    if (video.parentNode) document.body.removeChild(video);
+  };
+
+  try {
+    video.src = url;
+
+    // 1단계: 데이터 로딩 대기
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error('Video load error'));
+    });
+    console.info('[Thumbnail] ✅ 1단계: loadeddata 완료, duration:', video.duration);
+
+    // 2단계: 첫 프레임 근처로 seek (duration이 짧은 영상 대비)
+    video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+    await new Promise<void>((resolve) => {
+      video.onseeked = () => resolve();
+    });
+    console.info('[Thumbnail] ✅ 2단계: seeked 완료, dimensions:', video.videoWidth, 'x', video.videoHeight);
+
+    // 3단계: 프레임이 실제로 렌더링될 때까지 약간 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 4단계: Canvas로 캡처
+    let { videoWidth: w, videoHeight: h } = video;
+    if (!w || !h) throw new Error(`Video dimensions unavailable (${w}x${h})`);
+
+    if (w > h) {
+      if (w > maxSize) { h = (h * maxSize) / w; w = maxSize; }
+    } else {
+      if (h > maxSize) { w = (w * maxSize) / h; h = maxSize; }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+
+    ctx.drawImage(video, 0, 0, w, h);
+    console.info('[Thumbnail] ✅ 3단계: drawImage 완료');
+
+    // 5단계: Blob 생성
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('toBlob returned null')),
+        'image/jpeg',
+        0.7,
+      );
+    });
+
+    console.info('[Thumbnail] ✅ 완료: blob size:', blob.size);
+    return blob;
+  } finally {
+    cleanup();
+  }
+}
 
 // ─── Canvas 기반 이미지 썸네일 생성 유틸 ───
 function createImageThumbnail(file: File, maxSize: number): Promise<Blob> {
