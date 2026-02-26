@@ -28,6 +28,10 @@ export function MessageBubble({
     message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE ||
     message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT;
   const isDeleted = message.isDeleted;
+  const isMediaType =
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE ||
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA ||
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
 
   const showDateSeparator =
     !prevMessage || message.createdAt.slice(0, 10) !== prevMessage.createdAt.slice(0, 10);
@@ -73,18 +77,24 @@ export function MessageBubble({
             <span className="mb-1 text-xs font-medium text-text-secondary">{message.name}</span>
           )}
           <div className={cn('flex items-end gap-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
-            <div
-              className={cn(
-                'rounded-xl px-3 py-2 text-sm',
-                isDeleted
-                  ? 'bg-gray-100 italic text-text-tertiary'
-                  : isMe
+            {isDeleted ? (
+              <div className="rounded-xl bg-gray-100 px-3 py-2 text-sm italic text-text-tertiary">
+                {IS_DELETE_MESSAGE_COMMENTS}
+              </div>
+            ) : isMediaType ? (
+              renderMessageContent(message, onOpenMedia)
+            ) : (
+              <div
+                className={cn(
+                  'rounded-xl px-3 py-2 text-sm',
+                  isMe
                     ? 'bg-primary text-on-primary'
                     : 'bg-gray-100 text-text-primary',
-              )}
-            >
-              {isDeleted ? IS_DELETE_MESSAGE_COMMENTS : renderMessageContent(message, onOpenMedia)}
-            </div>
+                )}
+              >
+                {renderMessageContent(message, onOpenMedia)}
+              </div>
+            )}
             <div className="flex shrink-0 flex-col items-end gap-0.5">
               {message.notReadCount > 0 && (
                 <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>

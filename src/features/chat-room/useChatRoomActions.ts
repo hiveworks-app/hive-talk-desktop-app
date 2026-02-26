@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { uuidv7 } from 'uuidv7';
+import { getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
 import { useChatFileUpload } from '@/features/chat-room/queries';
 import { IMAGE_UPLOAD_CONCURRENCY, MAX_IMAGES_PER_MESSAGE } from '@/shared/config/constants';
 import {
@@ -86,6 +88,7 @@ function makeProgressThrottler() {
 }
 
 export const useChatRoomActions = () => {
+  const queryClient = useQueryClient();
   const { send } = useAppWebSocket();
   const { channelType } = useChatRoomInfo();
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -97,6 +100,7 @@ export const useChatRoomActions = () => {
   const setTransmissionProgress = useUploadProgressStore(s => s.setTransmissionProgress);
 
   const {
+    buildInviteMessage,
     buildFetchBeforeMessage,
     buildFetchAfterMessage,
     buildPublishMessage,
@@ -108,10 +112,46 @@ export const useChatRoomActions = () => {
     channelId: currentRoomId,
   });
 
-  // ─── 텍스트 메시지 전송 ───
+  // 🔹 사용자 초대 (모바일 패턴과 동일)
+  const sendInvite = useCallback(
+    (userIds: string[], roomId?: string) => {
+      if (!userIds || userIds.length === 0) return;
+      if (userIds.length === 1) {
+        send(buildInviteMessage({ inviteUserId: userIds[0], channelIdOverride: roomId }));
+      } else {
+        send(buildInviteMessage({ inviteUserIdArray: userIds, channelIdOverride: roomId }));
+      }
+    },
+    [buildInviteMessage, send],
+  );
+
+  // ─── 신규 방 INVITE (모바일 ensureRoomId 패턴 - PUB 전 호출) ───
+  // 데스크톱은 방을 미리 생성하므로 ensureRoomId가 불필요하지만,
+  // 신규 방에서 첫 메시지 시 INVITE를 보내는 역할은 동일
+  const sendNewRoomInviteIfNeeded = useCallback(
+    (roomId: string) => {
+      const { invitedUserIds, otherUserIsExit } = useChatRoomInfo.getState();
+      // 신규 방: invitedUserIds 있고 otherUserIsExit 아님
+      if (invitedUserIds.length > 0 && !otherUserIsExit) {
+        console.info('[ChatActions] ✅ 신규 방 INVITE:', { userIds: invitedUserIds, roomId });
+        sendInvite(invitedUserIds, roomId);
+        useChatRoomInfo.setState({ invitedUserIds: [] });
+
+        // INVITE 후 participants prefetch (서버 처리 시간 고려)
+        setTimeout(() => {
+          queryClient
+            .prefetchQuery(getSidePanelParticipantsQuery(roomId, channelType))
+            .catch(() => {});
+        }, 500);
+      }
+    },
+    [sendInvite, queryClient, channelType],
+  );
+
+  // ─── 텍스트 메시지 전송 (모바일 handleSendText 패턴) ───
   const sendTextMessage = useCallback(
     (content: string, tagList: string[] = []) => {
-      if (!content.trim()) return;
+      if (!content.trim() || !currentRoomId) return;
 
       if (tagList.length > 0) {
         setNextMyTags(
@@ -128,16 +168,28 @@ export const useChatRoomActions = () => {
         );
       }
 
+      // 1) 신규 방: PUB 전 INVITE (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
+
+      // 2) PUB
       send(
         buildPublishMessage({
           type: WS_MESSAGE_CONTENT_TYPE.TEXT,
           content,
           tagList,
-          channelIdOverride: currentRoomId ?? undefined,
+          channelIdOverride: currentRoomId,
         }),
       );
+
+      // 3) 기존 방 상대 나감: PUB 후 INVITE (모바일 handleSendText 패턴)
+      const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
+      if (otherUserIsExit && invitedUserIds.length > 0) {
+        console.info('[ChatActions] ✅ 상대 나감 INVITE:', { userIds: invitedUserIds, roomId: currentRoomId });
+        sendInvite(invitedUserIds, currentRoomId);
+        useChatRoomInfo.setState({ otherUserIsExit: false });
+      }
     },
-    [send, buildPublishMessage, currentRoomId, setNextMyTags],
+    [send, buildPublishMessage, currentRoomId, setNextMyTags, sendNewRoomInviteIfNeeded, sendInvite],
   );
 
   // ─── 이전 메시지 더보기 ───
@@ -222,10 +274,13 @@ export const useChatRoomActions = () => {
     [chatFileUploadMutation, channelType],
   );
 
-  // ─── 미디어(이미지/비디오) 메시지 전송 ───
+  // ─── 미디어(이미지/비디오) 메시지 전송 (모바일: ensureRoomId만, otherUserIsExit 체크 없음) ───
   const sendMediaMessage = useCallback(
     async (files: File[]) => {
       if (!files.length || !currentRoomId) return;
+
+      // 신규 방 INVITE만 (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
 
       const loginUserId = useAuthStore.getState().user?.id;
       const readUserIds = loginUserId ? [String(loginUserId)] : [];
@@ -321,13 +376,17 @@ export const useChatRoomActions = () => {
       buildPublishMessage,
       setTransmissionProgress,
       patchMessageByFileId,
+      sendNewRoomInviteIfNeeded,
     ],
   );
 
-  // ─── 파일(문서) 메시지 전송 ───
+  // ─── 파일(문서) 메시지 전송 (모바일: ensureRoomId만, otherUserIsExit 체크 없음) ───
   const sendDocumentMessage = useCallback(
     async (files: File[]) => {
       if (!files.length || !currentRoomId) return;
+
+      // 신규 방 INVITE만 (모바일 ensureRoomId 패턴)
+      sendNewRoomInviteIfNeeded(currentRoomId);
 
       for (const file of files) {
         const mimeType = file.type || 'application/octet-stream';
@@ -355,7 +414,7 @@ export const useChatRoomActions = () => {
         );
       }
     },
-    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage],
+    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage, sendNewRoomInviteIfNeeded],
   );
 
   // ─── 메시지 삭제 ───

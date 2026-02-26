@@ -34,7 +34,11 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       ? `${member.phoneHead}-${member.phoneMid}-${member.phoneTail}`
       : null;
 
-  const navigateToRoom = (roomId: string, lastMessage: WebSocketPublishItem | null = null) => {
+  const navigateToRoom = (
+    roomId: string,
+    lastMessage: WebSocketPublishItem | null = null,
+    invitedUserIds: string[] = [],
+  ) => {
     useChatRoomInfo.getState().setChatRoomInfo({
       roomId,
       roomName: member.name,
@@ -42,6 +46,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       totalUserCount: 2,
       otherUserIsExit: false,
       lastMessage,
+      invitedUserIds,
     });
     onClose();
     router.push(`/chat/${roomId}`);
@@ -68,7 +73,8 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
 
     try {
       const res = await createDM(member.userId);
-      navigateToRoom(res.payload.roomId);
+      // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
+      navigateToRoom(res.payload.roomId, null, [member.userId]);
     } catch (err) {
       if (!isApiError(err)) {
         showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });

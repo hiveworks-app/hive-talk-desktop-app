@@ -96,7 +96,9 @@ export default function MembersPage() {
     [members],
   );
 
-  const isLoading = membersLoading || externalLoading;
+  // 현재 활성 탭에 해당하는 데이터만 로딩 상태로 판단
+  // → external members API 실패가 전체 페이지를 블로킹하지 않도록 분리
+  const isLoading = activeChip === 'external' ? externalLoading : membersLoading;
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-100">

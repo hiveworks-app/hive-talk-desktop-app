@@ -522,18 +522,23 @@ export const useChatRoomController = () => {
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';
 
-    participantsManager
-      .ensureParticipants(currentRoomId, channelType)
-      .then(participants => {
-        if (!isMountedRef.current) return;
-        if (participants.length > 0) {
-          useChatRoomInfo.getState().setChatRoomInfo({ totalUserCount: participants.length });
-        }
-        recalculateAllMessagesNotReadCount(participants);
-      })
-      .catch(error => {
-        console.error('[WS] 채팅방 진입 시 참여자 목록 조회 실패:', error);
-      });
+    // 모바일 패턴: 신규 방(invitedUserIds가 남아있는 경우)은 INVITE 전이므로
+    // participants 조회를 건너뜀. INVITE 후 sendInviteIfNeeded에서 조회 트리거.
+    const { invitedUserIds } = useChatRoomInfo.getState();
+    if (invitedUserIds.length === 0) {
+      participantsManager
+        .ensureParticipants(currentRoomId, channelType)
+        .then(participants => {
+          if (!isMountedRef.current) return;
+          if (participants.length > 0) {
+            useChatRoomInfo.getState().setChatRoomInfo({ totalUserCount: participants.length });
+          }
+          recalculateAllMessagesNotReadCount(participants);
+        })
+        .catch(error => {
+          console.warn('[WS] 참여자 목록 조회 실패:', error);
+        });
+    }
 
     return () => {
       isMountedRef.current = false;

@@ -41,29 +41,42 @@ const initAuthState = {
   user: null,
 };
 
+const AUTH_COOKIE = 'has-auth=1; path=/; max-age=604800; SameSite=Lax';
+
+function syncAuthCookie(hasToken: boolean) {
+  if (typeof document === 'undefined') return;
+  document.cookie = hasToken ? AUTH_COOKIE : 'has-auth=; max-age=0; path=/';
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     set => ({
       ...initAuthState,
       setAuth: ({ accessToken, refreshToken, deviceInfo, user }) =>
-        set(state => ({
-          ...state,
-          accessToken: accessToken ?? state.accessToken,
-          refreshToken: refreshToken ?? state.refreshToken,
-          deviceInfo: deviceInfo ?? state.deviceInfo,
-          user: user ?? state.user,
-        })),
+        set(state => {
+          const newToken = accessToken ?? state.accessToken;
+          if (newToken) syncAuthCookie(true);
+          return {
+            ...state,
+            accessToken: newToken,
+            refreshToken: refreshToken ?? state.refreshToken,
+            deviceInfo: deviceInfo ?? state.deviceInfo,
+            user: user ?? state.user,
+          };
+        }),
       logout: () => {
         set({ ...initAuthState });
-        // middleware 보조 쿠키 삭제
-        if (typeof document !== 'undefined') {
-          document.cookie = 'has-auth=; max-age=0; path=/';
-        }
+        syncAuthCookie(false);
       },
     }),
     {
       name: 'user-auth',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => state => {
+        // localStorage → Zustand 복원 완료 후 쿠키 동기화
+        // 새로고침 시 쿠키가 누락되었더라도 여기서 복구됨
+        syncAuthCookie(!!state?.accessToken);
+      },
     },
   ),
 );

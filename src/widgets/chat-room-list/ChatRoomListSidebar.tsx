@@ -148,14 +148,24 @@ function ChatRoomItem({
       .catch(() => null);
 
     const totalUserCount = roomModel.participants?.length ?? 2;
+    const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
+
+    // DM + 상대 나감: invitedUserIds 설정 → 메시지 전송 시 INVITE 발동 (모바일 패턴)
+    const invitedUserIds =
+      channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE &&
+      isOtherUserExit &&
+      roomModel.participantDetail?.userId
+        ? [String(roomModel.participantDetail.userId)]
+        : [];
 
     useChatRoomInfo.getState().setChatRoomInfo({
       roomId: roomModel.roomId,
       roomName: displayName,
       channelType,
       totalUserCount,
-      otherUserIsExit: roomModel.participantDetail?.isExit ?? false,
+      otherUserIsExit: isOtherUserExit,
       lastMessage: lastMsg ?? null,
+      invitedUserIds,
     });
 
     router.push(`/chat/${roomModel.roomId}`);

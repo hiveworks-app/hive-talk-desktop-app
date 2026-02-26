@@ -19,6 +19,7 @@ import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import {
   WS_CHANNEL_TYPE,
+  WS_OPERATION,
   WebSocketChannelTypes,
   WebSocketEnvelope,
   WebSocketReceiveReadItemProps,
@@ -118,6 +119,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       );
 
       ws.onopen = () => {
+        console.info('[WS] ✅ 연결 성공');
         wsRef.current = ws;
         reconnectAttemptRef.current = 0;
         setIsConnected(true);
@@ -135,6 +137,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           envelope = JSON.parse(event.data) as WebSocketEnvelope;
+          console.info('[WS] 📩 수신:', envelope.socketResponseType);
         } catch {
           Object.values(listenersRef.current).forEach(listener =>
             listener(event.data as WebSocketEnvelope),
@@ -260,6 +263,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           const pubPayload = envelope.response.payload as WebSocketSingleMessagePayload;
           const roomId = pubPayload.message.roomId;
           const currentChannelType = globalChannelType || envelope.response.channelType;
+          console.info('[WS] 📨 PUB 수신:', { roomId, channelType: currentChannelType, sender: pubPayload.sender?.name });
 
           const rawReadItems: WebSocketReceiveReadItemProps[] = Array.isArray(pubPayload.readItems)
             ? (pubPayload.readItems as unknown as WebSocketReceiveReadItemProps[])
@@ -294,19 +298,26 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           // 채팅방 목록 React Query 캐시 갱신 (RN 패턴과 동일: setQueryData 내부에서 원자적 처리)
           const targetQueryKey = getTargetQueryKey(currentChannelType);
           if (targetQueryKey) {
-            queryClient.setQueryData<GetChatRoomListItemType[]>(targetQueryKey, prev => {
-              const list = prev ?? [];
-              const hasRoom = list.some(room => room.roomModel.roomId === roomId);
+            // setQueryData 밖에서 먼저 캐시 확인
+            // (invalidateQueries를 setQueryData 내부에서 호출하면
+            //  setQueryData의 success 액션이 isInvalidated 플래그를 초기화해서 refetch가 안 됨)
+            const prev = queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey);
+            const list = prev ?? [];
+            const hasRoom = list.some(room => room.roomModel.roomId === roomId);
 
-              if (!hasRoom) {
-                queryClient.invalidateQueries({ queryKey: targetQueryKey });
-                return list;
-              }
+            console.info('[WS] 📋 캐시 업데이트:', { queryKey: targetQueryKey, prevLength: list.length, hasRoom });
 
-              return upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive });
-            });
+            if (hasRoom) {
+              queryClient.setQueryData<GetChatRoomListItemType[]>(
+                targetQueryKey,
+                upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive }),
+              );
+            } else {
+              // 새 방: 서버에서 목록 다시 가져오기
+              queryClient.invalidateQueries({ queryKey: targetQueryKey });
+            }
           } else {
-            console.warn(`[WS] PUB: 알 수 없는 채널 타입 — ${currentChannelType}`);
+            console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
           }
 
           // 웹 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
@@ -390,11 +401,13 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         Object.values(listenersRef.current).forEach(listener => listener(envelope));
       };
 
-      ws.onerror = () => {
+      ws.onerror = (err) => {
+        console.error('[WS] ❌ 에러:', err);
         isConnectingRef.current = false;
       };
 
       ws.onclose = async e => {
+        console.info('[WS] 🔌 연결 종료:', { code: e.code, reason: e.reason });
         wsRef.current = null;
         setIsConnected(false);
         isConnectingRef.current = false;
@@ -458,6 +471,8 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
+        const payload = data as Record<string, unknown>;
+        console.info('[WS] 📤 전송:', payload.operationType, payload.channelType, payload.channelId);
         ws.send(JSON.stringify(data));
       } catch (error) {
         console.error('[WS] send 에러:', error);
@@ -499,17 +514,38 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [WS_URL, isPageVisible, disconnectWebSocket, connectWebSocket]);
 
-  // WebSocket (재)연결 시 채팅방 목록 갱신
-  // Electron 창 숨김 → 복원, 네트워크 끊김 → 재연결 등에서 놓친 메시지 반영
+  // WebSocket (재)연결 시 채팅방 목록 갱신 + 전체 방 구독(SUB) 복원
+  // WebSocket 구독은 세션 기반이라 재연결 시 모든 구독이 사라짐
+  // 캐시된 방 목록을 기반으로 SUB를 보내서 broadcast 수신을 보장
   const prevConnectedRef = useRef(false);
   useEffect(() => {
     if (isConnected && !prevConnectedRef.current) {
+      // 1. 캐시된 모든 방에 SUB 전송 (broadcast 수신 보장)
+      const channelTypes = [
+        { key: DM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.DIRECT_MESSAGE },
+        { key: GM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.GROUP_MESSAGE },
+        { key: EM_ROOM_LIST_KEY, type: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE },
+      ] as const;
+
+      channelTypes.forEach(({ key, type }) => {
+        const rooms = queryClient.getQueryData<GetChatRoomListItemType[]>(key) ?? [];
+        rooms.forEach(room => {
+          send({
+            operationType: WS_OPERATION.SUB,
+            channelType: type,
+            channelId: room.roomModel.roomId,
+            payload: null,
+          });
+        });
+      });
+
+      // 2. 서버에서 최신 목록 가져오기 (놓친 메시지 반영)
       queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
       queryClient.invalidateQueries({ queryKey: GM_ROOM_LIST_KEY });
       queryClient.invalidateQueries({ queryKey: EM_ROOM_LIST_KEY });
     }
     prevConnectedRef.current = isConnected;
-  }, [isConnected, queryClient]);
+  }, [isConnected, queryClient, send]);
 
   const value: WebSocketContextValue = { send, addListener, removeListener, isConnected };
 

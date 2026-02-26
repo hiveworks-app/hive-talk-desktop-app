@@ -130,10 +130,10 @@ function createWindow(serverUrl: string) {
     trafficLightPosition: { x: 16, y: 16 },
   });
 
-  // CORS 우회: treefrog.kr 도메인에 대해서만 CORS 헤더를 재설정
+  // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
   // URL 필터를 사용하여 localhost 페이지/에셋 로딩에 영향을 주지 않음
   session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.treefrog.kr/*', '*://treefrog.kr/*'] },
+    { urls: ['*://*.treefrog.kr/*', '*://treefrog.kr/*', '*://*.ncloudstorage.com/*'] },
     (details, callback) => {
       const headers = { ...details.responseHeaders };
 
@@ -150,7 +150,12 @@ function createWindow(serverUrl: string) {
       headers['Access-Control-Allow-Methods'] = ['GET, POST, PUT, PATCH, DELETE, OPTIONS'];
       headers['Access-Control-Allow-Credentials'] = ['true'];
 
-      callback({ responseHeaders: headers });
+      // OPTIONS preflight: NCloud에 CORS가 미설정이면 403/405 응답 → 강제 200으로 변환
+      if (details.method === 'OPTIONS') {
+        callback({ responseHeaders: headers, statusLine: 'HTTP/1.1 200 OK' });
+      } else {
+        callback({ responseHeaders: headers });
+      }
     },
   );
 

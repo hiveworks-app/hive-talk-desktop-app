@@ -1,3 +1,4 @@
+import { del } from "idb-keyval";
 import { useAuthStore } from "@/store/auth/authStore";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -77,6 +78,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 
 function handleForceLogout() {
   useAuthStore.getState().logout();
+  del("hiveworks-query-cache");           // IndexedDB 영속 캐시 삭제
   document.cookie = "has-auth=; max-age=0; path=/";
   if (typeof window !== "undefined") {
     window.location.href = "/login";

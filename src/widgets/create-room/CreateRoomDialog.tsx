@@ -91,6 +91,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
     channelType: typeof WS_CHANNEL_TYPE.DIRECT_MESSAGE | typeof WS_CHANNEL_TYPE.GROUP_MESSAGE,
     totalUserCount: number,
     lastMessage: WebSocketPublishItem | null = null,
+    invitedUserIds: string[] = [],
   ) => {
     useChatRoomInfo.getState().setChatRoomInfo({
       roomId,
@@ -98,6 +99,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       channelType,
       totalUserCount,
       otherUserIsExit: false,
+      invitedUserIds,
       lastMessage,
     });
     onClose();
@@ -130,7 +132,9 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       try {
         const res = await createDM(userId);
         const { roomId } = res.payload;
-        navigateToRoom(roomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2);
+
+        // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
+        navigateToRoom(roomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, null, [userId]);
       } catch (err) {
         if (!isApiError(err)) {
           showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
@@ -170,7 +174,9 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
         userIdList: [...selectedIds],
       });
       const { roomId } = res.payload;
-      navigateToRoom(roomId, gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1);
+
+      // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
+      navigateToRoom(roomId, gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1, null, [...selectedIds]);
     }
   };
 
