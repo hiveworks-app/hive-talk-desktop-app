@@ -144,7 +144,7 @@ export default function LoginPage() {
   if (accessToken && !isProcessing) return null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-state-primary-highlighted">
+    <div className="flex min-h-dvh items-center justify-center bg-white">
       <div className="w-full max-w-[400px] rounded-2xl bg-surface p-8 shadow-lg">
         {/* 로고 */}
         <div className="mb-8 text-center">
