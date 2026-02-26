@@ -27,7 +27,7 @@ export const useLogin = () => {
       // middleware 보조 쿠키 설정 (서버사이드 인증 가드용)
       document.cookie = `has-auth=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 
-      router.replace('/chat');
+      router.replace('/members');
     },
     onError: err => {
       if (isApiError<LoginErrorResponse>(err)) {

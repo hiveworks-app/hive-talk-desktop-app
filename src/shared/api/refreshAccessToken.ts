@@ -4,6 +4,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
+/** auth store에 deviceInfo가 없을 때 로그인 시 생성한 localStorage 값으로 fallback */
+function getFallbackDeviceInfo() {
+  if (typeof window === "undefined") return null;
+  const deviceId = localStorage.getItem("hive-device-id");
+  if (!deviceId) return null;
+  return { deviceId, deviceType: "DESKTOP" as const };
+}
+
 /**
  * refresh 요청용 fetch
  * RN 앱과 동일하게 auth store의 deviceInfo를 사용하여 deviceId 일관성 보장
@@ -11,7 +19,12 @@ let refreshPromise: Promise<string | null> | null = null;
 export async function refreshAccessToken(): Promise<string | null> {
   const { refreshToken, user, deviceInfo, setAuth } = useAuthStore.getState();
 
-  if (!refreshToken || !user || !deviceInfo) {
+  if (!refreshToken || !user) {
+    return null;
+  }
+
+  const effectiveDeviceInfo = deviceInfo ?? getFallbackDeviceInfo();
+  if (!effectiveDeviceInfo) {
     return null;
   }
 
@@ -24,8 +37,8 @@ export async function refreshAccessToken(): Promise<string | null> {
   refreshPromise = (async () => {
     try {
       const body = {
-        deviceType: deviceInfo.deviceType,
-        deviceId: deviceInfo.deviceId,
+        deviceType: effectiveDeviceInfo.deviceType,
+        deviceId: effectiveDeviceInfo.deviceId,
         userId: user.id,
         refreshToken,
         deviceToken: "web-no-fcm",

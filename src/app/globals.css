@@ -190,6 +190,55 @@
 
   /* Fonts */
   --font-sans: var(--font-pretendard, "Pretendard", system-ui, -apple-system, sans-serif);
+
+  /* Typography Scale (from NativeWind config - RN과 동일) */
+  /* Heading */
+  --font-size-heading-xl: 24px;
+  --font-size-heading-xl--line-height: 34px;
+  --font-size-heading-xl--letter-spacing: -0.72px;
+
+  --font-size-heading-lg: 20px;
+  --font-size-heading-lg--line-height: 28px;
+  --font-size-heading-lg--letter-spacing: -0.4px;
+
+  --font-size-heading-md: 18px;
+  --font-size-heading-md--line-height: 26px;
+  --font-size-heading-md--letter-spacing: -0.36px;
+
+  --font-size-heading-sm: 16px;
+  --font-size-heading-sm--line-height: 26px;
+  --font-size-heading-sm--letter-spacing: -0.32px;
+
+  /* Label */
+  --font-size-label: 15px;
+  --font-size-label--line-height: 22px;
+  --font-size-label--letter-spacing: -0.3px;
+
+  /* Body */
+  --font-size-body-lg: 16px;
+  --font-size-body-lg--line-height: 26px;
+  --font-size-body-lg--letter-spacing: -0.32px;
+
+  --font-size-body: 15px;
+  --font-size-body--line-height: 24px;
+  --font-size-body--letter-spacing: -0.15px;
+
+  /* Sub */
+  --font-size-sub: 14px;
+  --font-size-sub--line-height: 20px;
+  --font-size-sub--letter-spacing: -0.14px;
+
+  --font-size-sub-sm: 13px;
+  --font-size-sub-sm--line-height: 18px;
+
+  /* Caption */
+  --font-size-caption: 11px;
+  --font-size-caption--line-height: 16px;
+  --font-size-caption--letter-spacing: 0.22px;
+
+  --font-size-caption-sm: 10.5px;
+  --font-size-caption-sm--line-height: 14px;
+  --font-size-caption-sm--letter-spacing: -0.21px;
 }
 
 /* ── Base Styles ── */
