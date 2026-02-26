@@ -133,7 +133,6 @@ export const useChatRoomActions = () => {
       const { invitedUserIds, otherUserIsExit } = useChatRoomInfo.getState();
       // 신규 방: invitedUserIds 있고 otherUserIsExit 아님
       if (invitedUserIds.length > 0 && !otherUserIsExit) {
-        console.info('[ChatActions] ✅ 신규 방 INVITE:', { userIds: invitedUserIds, roomId });
         sendInvite(invitedUserIds, roomId);
         useChatRoomInfo.setState({ invitedUserIds: [] });
 
@@ -184,7 +183,6 @@ export const useChatRoomActions = () => {
       // 3) 기존 방 상대 나감: PUB 후 INVITE (모바일 handleSendText 패턴)
       const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
       if (otherUserIsExit && invitedUserIds.length > 0) {
-        console.info('[ChatActions] ✅ 상대 나감 INVITE:', { userIds: invitedUserIds, roomId: currentRoomId });
         sendInvite(invitedUserIds, currentRoomId);
         useChatRoomInfo.setState({ otherUserIsExit: false });
       }
@@ -486,14 +484,11 @@ async function createVideoThumbnail(file: File, maxSize: number): Promise<Blob> 
       video.onloadeddata = () => resolve();
       video.onerror = () => reject(new Error('Video load error'));
     });
-    console.info('[Thumbnail] ✅ 1단계: loadeddata 완료, duration:', video.duration);
-
     // 2단계: 첫 프레임 근처로 seek (duration이 짧은 영상 대비)
     video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
     await new Promise<void>((resolve) => {
       video.onseeked = () => resolve();
     });
-    console.info('[Thumbnail] ✅ 2단계: seeked 완료, dimensions:', video.videoWidth, 'x', video.videoHeight);
 
     // 3단계: 프레임이 실제로 렌더링될 때까지 약간 대기
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -515,7 +510,6 @@ async function createVideoThumbnail(file: File, maxSize: number): Promise<Blob> 
     if (!ctx) throw new Error('Canvas context unavailable');
 
     ctx.drawImage(video, 0, 0, w, h);
-    console.info('[Thumbnail] ✅ 3단계: drawImage 완료');
 
     // 5단계: Blob 생성
     const blob = await new Promise<Blob>((resolve, reject) => {
@@ -526,7 +520,6 @@ async function createVideoThumbnail(file: File, maxSize: number): Promise<Blob> 
       );
     });
 
-    console.info('[Thumbnail] ✅ 완료: blob size:', blob.size);
     return blob;
   } finally {
     cleanup();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetExternalMembers } from '@/features/external-member/queries';
 import type { ExternalMemberItem } from '@/features/external-member/type';
@@ -60,8 +60,15 @@ export default function MembersPage() {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeChip, setActiveChip] = useState<MemberChipType>(isOrgMember ? 'all' : 'external');
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if (isSearchVisible) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    }
+  }, [isSearchVisible]);
 
   // 데이터 조회
   const { data: members = [], isLoading: membersLoading } = useGetMembers();
@@ -102,39 +109,6 @@ export default function MembersPage() {
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-100">
-      {/* 검색 오버레이 */}
-      {isSearchVisible && (
-        <div className="absolute inset-x-0 top-0 z-10 border-b border-divider bg-background px-4 py-3">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              autoFocus
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Escape') {
-                  setSearch('');
-                  setIsSearchVisible(false);
-                }
-              }}
-              placeholder="찾으시는 분의 성함을 입력하세요."
-              className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
-            />
-            <button
-              onClick={() => {
-                setSearch('');
-                setIsSearchVisible(false);
-              }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* TopBar: 타이틀 + 우측 버튼들 (RN: border 없이 bg-gray-100 위에 배치) */}
       <header className="electron-drag">
         <div className="flex items-center justify-between px-4 py-3">
@@ -154,6 +128,46 @@ export default function MembersPage() {
           </div>
         </div>
       </header>
+
+      {/* 검색 바 (헤더 아래 슬라이드 애니메이션) */}
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-out',
+          isSearchVisible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="border-b border-divider bg-background px-4 pb-3 pt-1">
+            <div className="flex items-center gap-2">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') {
+                    setSearch('');
+                    setIsSearchVisible(false);
+                  }
+                }}
+                placeholder="찾으시는 분의 성함을 입력하세요."
+                className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+              />
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setIsSearchVisible(false);
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 내 프로필 헤더 (MembersProfileHeader) */}
       <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
@@ -185,11 +199,11 @@ export default function MembersPage() {
         <div className="scrollbar-thin flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <span className="text-sm text-text-tertiary">로딩 중...</span>
+              <span className="text-sub text-text-tertiary">로딩 중...</span>
             </div>
           ) : displayMembers.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <span className="text-sm text-text-tertiary">멤버가 없습니다</span>
+              <span className="text-sub text-text-tertiary">멤버가 없습니다</span>
             </div>
           ) : (
             <>
@@ -197,7 +211,7 @@ export default function MembersPage() {
               <div className="border-b border-divider pb-3.5">
                 <div className="flex items-end gap-1 px-4">
                   <IconStarFilled width={20} height={20} />
-                  <span className="text-xs text-text-secondary">관심 멤버 (3)</span>
+                  <span className="text-sub-sm text-text-secondary">관심 멤버 (3)</span>
                 </div>
                 <div className="mt-1 flex flex-col">
                   <MemberListItem
@@ -217,8 +231,8 @@ export default function MembersPage() {
 
               {/* 전체멤버 헤더 */}
               <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-xs text-text-secondary">전체멤버</span>
-                <span className="text-xs text-text-secondary">({displayMembers.length})</span>
+                <span className="text-sub-sm text-text-secondary">전체멤버</span>
+                <span className="text-sub-sm text-text-secondary">({displayMembers.length})</span>
               </div>
 
               {/* 멤버 아이템 리스트 */}
@@ -267,7 +281,7 @@ function MyProfileHeader({ onOpenProfile }: { onOpenProfile: () => void }) {
             {name}
           </div>
           {(department || job) && (
-            <div className="flex items-center gap-1 text-xs text-text-primary">
+            <div className="flex items-center gap-1 text-sub-sm text-text-primary">
               <span>{[department, job].filter(Boolean).join(' · ')}</span>
               <IconArrowRightDefault width={14} height={14} className="text-gray-900" />
             </div>
@@ -299,7 +313,7 @@ function Chip({
     <button
       onClick={onClick}
       className={cn(
-        'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+        'rounded-full px-3 py-1 text-sub-sm font-medium transition-colors',
         active
           ? 'bg-primary text-on-primary'
           : 'bg-gray-100 text-text-secondary hover:bg-gray-200',
@@ -325,7 +339,7 @@ function MemberListItem({
       <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} />
       <span className="flex-1 truncate text-sub text-text-primary">{member.name}</span>
       {member.description && (
-        <span className="shrink-0 text-xs text-text-secondary">{member.description}</span>
+        <span className="shrink-0 text-sub-sm text-text-secondary">{member.description}</span>
       )}
     </button>
   );

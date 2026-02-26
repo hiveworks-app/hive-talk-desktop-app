@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ReactQueryProvider } from '@/shared/providers/ReactQueryProvider';
+import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
 import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
 
@@ -48,6 +49,7 @@ export default function RootLayout({
         <ReactQueryProvider>
           {children}
           <ToastContainer />
+          <LoadingOverlay />
         </ReactQueryProvider>
       </body>
     </html>

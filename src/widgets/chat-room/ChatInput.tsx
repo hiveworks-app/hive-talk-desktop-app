@@ -117,7 +117,7 @@ export function ChatInput({ onSend, onSendMedia, onSendDocument }: ChatInputProp
     >
       {isDragging && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-blue-50/80">
-          <span className="text-sm font-medium text-primary">파일을 여기에 놓으세요</span>
+          <span className="text-sub font-medium text-primary">파일을 여기에 놓으세요</span>
         </div>
       )}
       <input
@@ -145,7 +145,7 @@ export function ChatInput({ onSend, onSendMedia, onSendDocument }: ChatInputProp
           onPaste={handlePaste}
           placeholder="메시지를 입력하세요"
           rows={1}
-          className="max-h-32 min-h-[40px] flex-1 resize-none rounded-lg border border-divider bg-gray-50 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+          className="max-h-32 min-h-[40px] flex-1 resize-none rounded-lg border border-divider bg-gray-50 px-3 py-2 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
         />
         <button
           onClick={handleSubmit}

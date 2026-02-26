@@ -153,9 +153,9 @@ export default function ExternalChatRoomPage() {
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
               </button>
-              <h2 className="text-base font-bold text-text-primary">{roomName || '채팅방'}</h2>
+              <h2 className="text-heading-sm font-bold text-text-primary">{roomName || '채팅방'}</h2>
               {totalUserCount > 0 && (
-                <span className="text-xs text-text-tertiary">{totalUserCount}</span>
+                <span className="text-sub-sm text-text-tertiary">{totalUserCount}</span>
               )}
             </div>
             <div className="electron-no-drag flex items-center gap-1">
@@ -204,15 +204,15 @@ export default function ExternalChatRoomPage() {
                   if (e.key === 'Escape') search.exitSearchMode();
                 }}
                 placeholder="메시지 검색..."
-                className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
               />
               {search.totalCount > 0 && (
-                <span className="shrink-0 text-xs text-text-secondary">
+                <span className="shrink-0 text-sub-sm text-text-secondary">
                   {search.displayIndex}/{search.totalCount}
                 </span>
               )}
               {search.isSearching && (
-                <span className="shrink-0 text-xs text-text-tertiary">검색 중...</span>
+                <span className="shrink-0 text-sub-sm text-text-tertiary">검색 중...</span>
               )}
               <div className="flex items-center gap-0.5">
                 <button
@@ -253,7 +253,7 @@ export default function ExternalChatRoomPage() {
         >
           {isBeforeLoading && (
             <div className="flex justify-center py-2">
-              <span className="text-xs text-text-tertiary">불러오는 중...</span>
+              <span className="text-sub-sm text-text-tertiary">불러오는 중...</span>
             </div>
           )}
           {messages.map((msg, idx) => (

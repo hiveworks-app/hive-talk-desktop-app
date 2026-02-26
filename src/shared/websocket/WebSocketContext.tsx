@@ -119,7 +119,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       );
 
       ws.onopen = () => {
-        console.info('[WS] ✅ 연결 성공');
         wsRef.current = ws;
         reconnectAttemptRef.current = 0;
         setIsConnected(true);
@@ -137,7 +136,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           envelope = JSON.parse(event.data) as WebSocketEnvelope;
-          console.info('[WS] 📩 수신:', envelope.socketResponseType);
         } catch {
           Object.values(listenersRef.current).forEach(listener =>
             listener(event.data as WebSocketEnvelope),
@@ -263,8 +261,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           const pubPayload = envelope.response.payload as WebSocketSingleMessagePayload;
           const roomId = pubPayload.message.roomId;
           const currentChannelType = globalChannelType || envelope.response.channelType;
-          console.info('[WS] 📨 PUB 수신:', { roomId, channelType: currentChannelType, sender: pubPayload.sender?.name });
-
           const rawReadItems: WebSocketReceiveReadItemProps[] = Array.isArray(pubPayload.readItems)
             ? (pubPayload.readItems as unknown as WebSocketReceiveReadItemProps[])
             : (pubPayload.readItems?.items ?? []);
@@ -304,8 +300,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             const prev = queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey);
             const list = prev ?? [];
             const hasRoom = list.some(room => room.roomModel.roomId === roomId);
-
-            console.info('[WS] 📋 캐시 업데이트:', { queryKey: targetQueryKey, prevLength: list.length, hasRoom });
 
             if (hasRoom) {
               queryClient.setQueryData<GetChatRoomListItemType[]>(
@@ -407,7 +401,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       };
 
       ws.onclose = async e => {
-        console.info('[WS] 🔌 연결 종료:', { code: e.code, reason: e.reason });
         wsRef.current = null;
         setIsConnected(false);
         isConnectingRef.current = false;
@@ -477,8 +470,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const payload = data as Record<string, unknown>;
-        console.info('[WS] 📤 전송:', payload.operationType, payload.channelType, payload.channelId);
         ws.send(JSON.stringify(data));
       } catch (error) {
         console.error('[WS] send 에러:', error);

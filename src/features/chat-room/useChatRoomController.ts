@@ -565,59 +565,34 @@ export const useChatRoomController = () => {
   }, [saveRoomId, currentRoomId, replaceMessages, setRunTimeRoomId]);
 
   // 3. 초기 메시지 fetch
+  // 재진입 시 기존 메시지를 비우고 fresh presigned URL을 가진 데이터로 다시 받아옴
   useEffect(() => {
     if (!currentRoomId) return;
     if (didInitialSyncRef.current) return;
 
     const { messages } = useChatRoomRuntimeStore.getState();
-    if (messages.length > 0) {
-      const lastLocalId = messages[messages.length - 1]?.id;
-      const firstLocalId = messages[0]?.id;
+    const anchorId = messages[messages.length - 1]?.id ?? lastMessage?.message?.id;
 
-      if (lastLocalId) {
-        send(
-          buildFetchAfterMessage({
-            currentMessage: lastLocalId,
-            isInclusive: false,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-        send(
-          buildFetchBeforeMessage({
-            currentMessage: lastLocalId,
-            isInclusive: true,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-      }
+    if (!anchorId) return;
 
-      if (firstLocalId) {
-        send(
-          buildFetchBeforeMessage({
-            currentMessage: firstLocalId,
-            isInclusive: false,
-            channelIdOverride: currentRoomId,
-          }),
-        );
-      }
-    } else if (lastMessage?.message?.id) {
-      send(
-        buildFetchBeforeMessage({
-          currentMessage: lastMessage.message.id,
-          isInclusive: true,
-          channelIdOverride: currentRoomId,
-        }),
-      );
-    } else {
-      return;
-    }
+    // 기존 메시지 비움 → presigned URL 만료 문제 방지
+    replaceMessages([]);
+    setLoading({ hasMoreBefore: true, hasMoreAfter: true });
+
+    send(
+      buildFetchBeforeMessage({
+        currentMessage: anchorId,
+        isInclusive: true,
+        channelIdOverride: currentRoomId,
+      }),
+    );
 
     didInitialSyncRef.current = true;
 
     return () => {
       didInitialSyncRef.current = false;
     };
-  }, [currentRoomId, lastMessage?.message?.id, buildFetchAfterMessage, buildFetchBeforeMessage]);
+  }, [currentRoomId, lastMessage?.message?.id, buildFetchBeforeMessage, send, replaceMessages, setLoading]);
 
   // 4. visibilitychange (AppState 대체)
   useEffect(() => {

@@ -257,15 +257,15 @@ export default function SignupPage() {
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <h1 className="text-lg font-bold text-primary">HIVE-TALK</h1>
+          <h1 className="text-heading-md font-bold text-primary">HIVE-TALK</h1>
           <div className="w-5" />
         </div>
 
         {/* 단계 표시 */}
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-base font-bold text-text-primary">{stepTitle[step]}</h2>
-            <span className="text-xs text-text-tertiary">
+            <h2 className="text-heading-sm font-bold text-text-primary">{stepTitle[step]}</h2>
+            <span className="text-sub-sm text-text-tertiary">
               {currentStepNum} / {totalSteps}
             </span>
           </div>
@@ -294,7 +294,7 @@ export default function SignupPage() {
               onClick={() => handleSelectType('INDIVIDUAL')}
               disabled={isLoading}
             />
-            {isLoading && <p className="text-center text-xs text-text-tertiary">로딩 중...</p>}
+            {isLoading && <p className="text-center text-sub-sm text-text-tertiary">로딩 중...</p>}
           </div>
         )}
 
@@ -306,7 +306,7 @@ export default function SignupPage() {
               className="mb-3 flex w-full items-center gap-2 rounded-lg border border-divider px-4 py-3 text-left"
             >
               <Checkbox checked={agreedTermIds.size === terms.length} />
-              <span className="text-sm font-medium text-text-primary">전체 동의</span>
+              <span className="text-sub font-medium text-text-primary">전체 동의</span>
             </button>
 
             <div className="max-h-[300px] space-y-2 overflow-y-auto">
@@ -319,13 +319,13 @@ export default function SignupPage() {
                   <Checkbox checked={agreedTermIds.has(term.id)} />
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-text-primary">{term.title}</span>
+                      <span className="text-sub text-text-primary">{term.title}</span>
                       {term.isRequired && (
-                        <span className="text-xs text-red-500">(필수)</span>
+                        <span className="text-sub-sm text-red-500">(필수)</span>
                       )}
                     </div>
                     {term.description && (
-                      <p className="mt-0.5 text-xs text-text-tertiary line-clamp-2">{term.description}</p>
+                      <p className="mt-0.5 text-sub-sm text-text-tertiary line-clamp-2">{term.description}</p>
                     )}
                   </div>
                 </button>
@@ -335,7 +335,7 @@ export default function SignupPage() {
             <button
               onClick={handleTermsNext}
               disabled={!allRequiredAgreed}
-              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
+              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
             >
               다음
             </button>
@@ -354,18 +354,18 @@ export default function SignupPage() {
               <button
                 onClick={handleVerifyBusiness}
                 disabled={isLoading}
-                className="w-full rounded-lg border border-primary py-2.5 text-sm font-semibold text-primary hover:bg-state-primary-highlighted disabled:opacity-50"
+                className="w-full rounded-lg border border-primary py-2.5 text-sub font-semibold text-primary hover:bg-state-primary-highlighted disabled:opacity-50"
               >
                 {isLoading ? '인증 중...' : '사업자 인증'}
               </button>
             ) : (
-              <p className="text-center text-sm font-medium text-green-600">사업자 인증 완료</p>
+              <p className="text-center text-sub font-medium text-green-600">사업자 인증 완료</p>
             )}
 
             <button
               onClick={() => setStep('COMMON_FORM')}
               disabled={!businessVerified}
-              className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
+              className="w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
             >
               다음
             </button>
@@ -377,19 +377,19 @@ export default function SignupPage() {
           <div className="space-y-3">
             {/* 이메일 */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">이메일 <span className="text-red-500">*</span></label>
+              <label className="mb-1 block text-sub-sm font-medium text-text-secondary">이메일 <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setEmailChecked(false); }}
                   placeholder="email@example.com"
-                  className="flex-1 rounded-lg border border-divider bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                  className="flex-1 rounded-lg border border-divider bg-surface px-3 py-2 text-sub text-text-primary outline-none focus:border-primary"
                 />
                 <button
                   onClick={handleCheckEmail}
                   disabled={isLoading || emailChecked}
-                  className="shrink-0 rounded-lg border border-primary px-3 py-2 text-xs font-medium text-primary disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-primary px-3 py-2 text-sub-sm font-medium text-primary disabled:opacity-50"
                 >
                   {emailChecked ? '확인됨' : '중복확인'}
                 </button>
@@ -402,14 +402,14 @@ export default function SignupPage() {
 
             {/* 전화번호 */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">전화번호 <span className="text-red-500">*</span></label>
+              <label className="mb-1 block text-sub-sm font-medium text-text-secondary">전화번호 <span className="text-red-500">*</span></label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="text"
                   value={phoneHead}
                   onChange={e => setPhoneHead(e.target.value)}
                   maxLength={3}
-                  className="w-16 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                  className="w-16 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sub outline-none focus:border-primary"
                 />
                 <span className="text-text-tertiary">-</span>
                 <input
@@ -417,7 +417,7 @@ export default function SignupPage() {
                   value={phoneMid}
                   onChange={e => setPhoneMid(e.target.value)}
                   maxLength={4}
-                  className="w-20 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                  className="w-20 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sub outline-none focus:border-primary"
                 />
                 <span className="text-text-tertiary">-</span>
                 <input
@@ -425,12 +425,12 @@ export default function SignupPage() {
                   value={phoneTail}
                   onChange={e => setPhoneTail(e.target.value)}
                   maxLength={4}
-                  className="w-20 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                  className="w-20 rounded-lg border border-divider bg-surface px-2 py-2 text-center text-sub outline-none focus:border-primary"
                 />
                 <button
                   onClick={smsSent ? handleVerifySms : handleSendSms}
                   disabled={isLoading || smsVerified}
-                  className="shrink-0 rounded-lg border border-primary px-3 py-2 text-xs font-medium text-primary disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-primary px-3 py-2 text-sub-sm font-medium text-primary disabled:opacity-50"
                 >
                   {smsVerified ? '인증됨' : smsSent ? '확인' : '인증'}
                 </button>
@@ -442,7 +442,7 @@ export default function SignupPage() {
                   onChange={e => setSmsCode(e.target.value)}
                   placeholder="인증번호 6자리"
                   maxLength={6}
-                  className="mt-2 w-full rounded-lg border border-divider bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+                  className="mt-2 w-full rounded-lg border border-divider bg-surface px-3 py-2 text-sub outline-none focus:border-primary"
                 />
               )}
             </div>
@@ -453,7 +453,7 @@ export default function SignupPage() {
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="mt-2 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
+              className="mt-2 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled disabled:text-text-placeholder"
             >
               {isLoading ? '가입 중...' : '회원가입'}
             </button>
@@ -483,8 +483,8 @@ function TypeCard({
       disabled={disabled}
       className="w-full rounded-lg border border-divider px-5 py-4 text-left transition-colors hover:border-primary hover:bg-state-primary-highlighted disabled:opacity-50"
     >
-      <div className="text-sm font-bold text-text-primary">{title}</div>
-      <p className="mt-1 text-xs text-text-tertiary">{description}</p>
+      <div className="text-sub font-bold text-text-primary">{title}</div>
+      <p className="mt-1 text-sub-sm text-text-tertiary">{description}</p>
     </button>
   );
 }
@@ -522,7 +522,7 @@ function FormField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-text-secondary">
+      <label className="mb-1 block text-sub-sm font-medium text-text-secondary">
         {label}
         {required && <span className="text-red-500"> *</span>}
       </label>
@@ -531,7 +531,7 @@ function FormField({
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-divider bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+        className="w-full rounded-lg border border-divider bg-surface px-3 py-2 text-sub text-text-primary outline-none focus:border-primary"
       />
     </div>
   );

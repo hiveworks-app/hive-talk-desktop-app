@@ -9,18 +9,26 @@ interface ToastItem {
   duration?: number;
 }
 
+interface LoadingOverlayState {
+  visible: boolean;
+  message?: string;
+  progress?: number; // 0~1: determinate, undefined: indeterminate
+}
+
 interface UIState {
   toasts: ToastItem[];
-  isLoadingOverlay: boolean;
+  loadingOverlay: LoadingOverlayState;
   showToast: (toast: Omit<ToastItem, 'id'>) => void;
   removeToast: (id: string) => void;
   showSnackbar: (params: { message: string; state?: ToastItem['state'] }) => void;
-  showLoadingOverlay: (show: boolean) => void;
+  showLoadingOverlay: (options?: { message?: string; progress?: number }) => void;
+  setLoadingProgress: (progress: number) => void;
+  hideLoadingOverlay: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   toasts: [],
-  isLoadingOverlay: false,
+  loadingOverlay: { visible: false },
   showToast: toast => {
     const id = crypto.randomUUID();
     set(state => ({ toasts: [...state.toasts, { ...toast, id }] }));
@@ -36,5 +44,10 @@ export const useUIStore = create<UIState>((set) => ({
       set(s => ({ toasts: s.toasts.filter(t => t.id !== id) }));
     }, 3000);
   },
-  showLoadingOverlay: show => set({ isLoadingOverlay: show }),
+  showLoadingOverlay: options =>
+    set({ loadingOverlay: { visible: true, message: options?.message, progress: options?.progress } }),
+  setLoadingProgress: progress =>
+    set(s => ({ loadingOverlay: { ...s.loadingOverlay, progress } })),
+  hideLoadingOverlay: () =>
+    set({ loadingOverlay: { visible: false } }),
 }));

@@ -20,17 +20,17 @@ export function ExternalChatSidebar() {
   return (
     <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
       <div className="electron-drag flex items-center justify-between border-b border-divider px-4 pt-4 pb-3">
-        <h2 className="text-lg font-bold text-text-primary">협력채팅</h2>
+        <h2 className="text-heading-md font-bold text-text-primary">협력채팅</h2>
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <p className="text-sm text-text-tertiary">로딩 중...</p>
+            <p className="text-sub text-text-tertiary">로딩 중...</p>
           </div>
         ) : emRooms.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <p className="text-sm text-text-tertiary">채팅방이 없습니다</p>
+            <p className="text-sub text-text-tertiary">채팅방이 없습니다</p>
           </div>
         ) : (
           emRooms.map(room => (
@@ -97,11 +97,11 @@ function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
       <ProfileCircle name={displayName} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium text-text-primary">{displayName}</span>
-          <span className="ml-2 shrink-0 text-xs text-text-tertiary">{time}</span>
+          <span className="truncate text-sub font-medium text-text-primary">{displayName}</span>
+          <span className="ml-2 shrink-0 text-sub-sm text-text-tertiary">{time}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="truncate text-xs text-text-secondary">{preview}</span>
+          <span className="truncate text-sub-sm text-text-secondary">{preview}</span>
           <Badge count={notReadCount} className="ml-2 shrink-0" />
         </div>
       </div>

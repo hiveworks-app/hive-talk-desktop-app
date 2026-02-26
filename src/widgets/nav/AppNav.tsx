@@ -28,33 +28,6 @@ function useTotalUnreadCount() {
   const emUnread = sumUnread(emList);
   const companyChatBadge = dmUnread + gmUnread;
 
-  // DEBUG: 어떤 방에서 unread가 발생하는지 확인
-  const unreadRooms = [
-    ...(dmList ?? [])
-      .filter((r) => r.notReadCount > 0)
-      .map((r) => ({
-        type: "DM",
-        roomId: r.roomModel.roomId,
-        name: r.roomModel.participantDetail?.name ?? r.roomModel.title,
-        count: r.notReadCount,
-      })),
-    ...(gmList ?? [])
-      .filter((r) => r.notReadCount > 0)
-      .map((r) => ({
-        type: "GM",
-        roomId: r.roomModel.roomId,
-        name: r.roomModel.title,
-        count: r.notReadCount,
-      })),
-  ];
-  if (unreadRooms.length > 0) {
-    console.info(
-      "[Nav] 읽지 않은 방:",
-      unreadRooms,
-      `합계: DM=${dmUnread} GM=${gmUnread}`,
-    );
-  }
-
   return { companyChatBadge, externalChatBadge: emUnread };
 }
 

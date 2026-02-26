@@ -148,8 +148,8 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] rounded-2xl bg-surface p-8 shadow-lg">
         {/* 로고 */}
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-primary">HIVE-TALK</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="text-heading-xl font-bold text-primary">HIVE-TALK</h1>
+          <p className="mt-1 text-sub text-text-secondary">
             일상과 업무의 분리, 대화를 통한 데이터 분석
           </p>
         </div>
@@ -184,12 +184,12 @@ export default function LoginPage() {
         </Button>
 
         <div className="mt-4 text-center">
-          <span className="text-xs text-text-tertiary">
+          <span className="text-sub-sm text-text-tertiary">
             계정이 없으신가요?{" "}
           </span>
           <a
             href="/signup"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-sub-sm font-semibold text-primary hover:underline"
           >
             회원가입
           </a>

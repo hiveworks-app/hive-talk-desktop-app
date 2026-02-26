@@ -6,6 +6,7 @@ import { useCreateDM } from '@/features/create-chat-room/queries';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { isApiError } from '@/shared/api';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -99,7 +100,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       <div className="relative z-10 w-full max-w-[360px] rounded-xl bg-background shadow-2xl">
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b border-divider px-5 py-4">
-          <h2 className="text-base font-bold text-text-primary">프로필</h2>
+          <h2 className="text-heading-sm font-bold text-text-primary">프로필</h2>
           <button onClick={onClose} className="text-text-tertiary hover:text-text-secondary">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -110,20 +111,14 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
         <div className="p-5">
           {/* 아바타 + 이름 */}
           <div className="flex flex-col items-center gap-3 pb-5">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-200 text-2xl font-bold text-text-secondary">
-              {member.profilePresignedUrl || member.profileUrl ? (
-                <img
-                  src={member.profilePresignedUrl || member.profileUrl || ''}
-                  alt=""
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                member.name.charAt(0)
-              )}
-            </div>
+            <ProfileCircle
+              name={member.name}
+              storageKey={member.profileUrl || member.thumbnailProfileUrl}
+              className="h-20 w-20"
+            />
             <div className="text-center">
-              <div className="text-lg font-bold text-text-primary">{member.name}</div>
-              <div className="text-sm text-text-secondary">{member.email}</div>
+              <div className="text-heading-md font-bold text-text-primary">{member.name}</div>
+              <div className="text-sub text-text-secondary">{member.email}</div>
             </div>
           </div>
 
@@ -148,7 +143,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
             <button
               onClick={handleStartDM}
               disabled={isPending}
-              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] disabled:bg-disabled"
+              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] disabled:bg-disabled"
             >
               {isPending ? '생성 중...' : '1:1 채팅 시작'}
             </button>
@@ -162,8 +157,8 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-text-tertiary">{label}</span>
-      <span className="text-sm text-text-primary">{value}</span>
+      <span className="text-sub text-text-tertiary">{label}</span>
+      <span className="text-sub text-text-primary">{value}</span>
     </div>
   );
 }

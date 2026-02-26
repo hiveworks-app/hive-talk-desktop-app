@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/cn';
 import { ChatImageGrid } from '@/shared/ui/ChatImageGrid';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { UploadDimOverlay } from '@/shared/ui/UploadDimOverlay';
 import { ChatMessageUI, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { DateSeparator } from './DateSeparator';
 
@@ -47,7 +48,7 @@ export function MessageBubble({
       <>
         {showDateSeparator && <DateSeparator dateStr={message.createdAt} />}
         <div data-msg-index={index} className="my-2 flex justify-center">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-text-tertiary">
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-sub-sm text-text-tertiary">
             {message.text}
           </span>
         </div>
@@ -74,11 +75,11 @@ export function MessageBubble({
 
         <div className={cn('flex max-w-[70%] flex-col', isMe ? 'items-end' : 'items-start')}>
           {!isMe && !isSameSender && (
-            <span className="mb-1 text-xs font-medium text-text-secondary">{message.name}</span>
+            <span className="mb-1 text-sub-sm font-medium text-text-secondary">{message.name}</span>
           )}
           <div className={cn('flex items-end gap-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
             {isDeleted ? (
-              <div className="rounded-xl bg-gray-100 px-3 py-2 text-sm italic text-text-tertiary">
+              <div className="rounded-xl bg-gray-100 px-3 py-2 text-sub italic text-text-tertiary">
                 {IS_DELETE_MESSAGE_COMMENTS}
               </div>
             ) : isMediaType ? (
@@ -86,7 +87,7 @@ export function MessageBubble({
             ) : (
               <div
                 className={cn(
-                  'rounded-xl px-3 py-2 text-sm',
+                  'rounded-xl px-3 py-2 text-sub',
                   isMe
                     ? 'bg-primary text-on-primary'
                     : 'bg-gray-100 text-text-primary',
@@ -124,11 +125,7 @@ function renderMessageContent(
       return (
         <div className="relative">
           <ChatImageGrid sources={sources} dimmed={message.dimmed} />
-          {message.localStatus === 'uploading' && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/20">
-              <span className="text-xs font-medium text-white drop-shadow">업로드 중...</span>
-            </div>
-          )}
+          <UploadDimOverlay fileId={message.fileId} dimmed={message.dimmed} />
         </div>
       );
     }
@@ -163,7 +160,7 @@ function renderMessageContent(
             href={file.presignedUrl || file.path}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm underline"
+            className="flex items-center gap-2 text-sub underline"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />

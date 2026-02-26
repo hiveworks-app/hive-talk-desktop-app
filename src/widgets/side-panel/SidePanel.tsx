@@ -46,7 +46,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
           <div className="flex h-full flex-col">
           {/* 헤더 */}
           <div className="flex items-center justify-between border-b border-divider px-4 py-3">
-            <h3 className="text-sm font-bold text-text-primary">채팅방 정보</h3>
+            <h3 className="text-sub font-bold text-text-primary">채팅방 정보</h3>
             <button
               onClick={onClose}
               className="flex h-6 w-6 items-center justify-center rounded text-text-tertiary hover:bg-gray-100"
@@ -64,7 +64,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'flex-1 py-2 text-xs font-medium transition-colors',
+                  'flex-1 py-2 text-sub-sm font-medium transition-colors',
                   activeTab === tab
                     ? 'border-b-2 border-primary text-primary'
                     : 'text-text-tertiary hover:text-text-secondary',
@@ -106,20 +106,20 @@ function ParticipantsTab({
   );
 
   if (isLoading) {
-    return <div className="px-4 py-3 text-xs text-text-tertiary">로딩 중...</div>;
+    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
   return (
     <div className="py-1">
-      <div className="px-4 py-2 text-xs text-text-tertiary">
+      <div className="px-4 py-2 text-sub-sm text-text-tertiary">
         참여자 {participants.length}명
       </div>
       {participants.map(p => (
         <div key={p.userId} className="flex items-center gap-3 px-4 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-text-secondary">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sub-sm font-medium text-text-secondary">
             {p.name.charAt(0)}
           </div>
-          <span className="text-sm text-text-primary">{p.name}</span>
+          <span className="text-sub text-text-primary">{p.name}</span>
         </div>
       ))}
     </div>
@@ -142,11 +142,11 @@ function MediaTab({
   const allMedia: MediaListType[] = data?.pages.flat() ?? [];
 
   if (isLoading) {
-    return <div className="px-4 py-3 text-xs text-text-tertiary">로딩 중...</div>;
+    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
   if (allMedia.length === 0) {
-    return <div className="px-4 py-8 text-center text-xs text-text-tertiary">사진/동영상이 없습니다</div>;
+    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없습니다</div>;
   }
 
   return (
@@ -173,7 +173,7 @@ function MediaTab({
         <button
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="mt-2 w-full py-2 text-xs text-primary hover:underline disabled:opacity-50"
+          className="mt-2 w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
         >
           {isFetchingNextPage ? '로딩 중...' : '더 보기'}
         </button>
@@ -198,11 +198,11 @@ function FilesTab({
   const allFiles: MediaListType[] = data?.pages.flat() ?? [];
 
   if (isLoading) {
-    return <div className="px-4 py-3 text-xs text-text-tertiary">로딩 중...</div>;
+    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
   if (allFiles.length === 0) {
-    return <div className="px-4 py-8 text-center text-xs text-text-tertiary">파일이 없습니다</div>;
+    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">파일이 없습니다</div>;
   }
 
   return (
@@ -217,15 +217,15 @@ function FilesTab({
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 text-xs text-text-tertiary">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 text-sub-sm text-text-tertiary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-text-primary">{fileName}</div>
-              <div className="text-xs text-text-tertiary">
+              <div className="truncate text-sub text-text-primary">{fileName}</div>
+              <div className="text-sub-sm text-text-tertiary">
                 {file.author} · {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)}KB` : ''}
               </div>
             </div>
@@ -236,7 +236,7 @@ function FilesTab({
         <button
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="w-full py-2 text-xs text-primary hover:underline disabled:opacity-50"
+          className="w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
         >
           {isFetchingNextPage ? '로딩 중...' : '더 보기'}
         </button>
