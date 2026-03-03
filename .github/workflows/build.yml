@@ -112,16 +112,35 @@ jobs:
           APP_PATH=$(find release -name "*.app" -maxdepth 2 | head -1)
           echo "App path: $APP_PATH"
 
-          # 서명 (--deep --force로 모든 바이너리 재서명)
-          echo "=== Starting codesign ==="
-          codesign --deep --force --verbose --options runtime --sign "$IDENTITY" "$APP_PATH"
+          # 1) 내부 바이너리 개별 서명 (안에서 바깥으로)
+          echo "=== Signing internal binaries ==="
+          find "$APP_PATH" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.node" \) | while read f; do
+            echo "  signing: $f"
+            codesign --force --options runtime --sign "$IDENTITY" "$f" 2>/dev/null || true
+          done
+
+          # Frameworks 서명
+          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read f; do
+            echo "  signing framework: $f"
+            codesign --force --options runtime --sign "$IDENTITY" "$f"
+          done
+
+          # Helper 앱 서명
+          find "$APP_PATH" -name "*.app" -not -path "$APP_PATH" | while read f; do
+            echo "  signing helper: $f"
+            codesign --force --options runtime --sign "$IDENTITY" "$f"
+          done
+
+          # 2) 메인 앱 서명
+          echo "=== Signing main app ==="
+          codesign --force --options runtime --sign "$IDENTITY" "$APP_PATH"
           echo "=== Codesign complete ==="
 
           # 서명 확인
-          codesign --verify --verbose "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           echo "=== Verification complete ==="
 
-          # DMG 생성 (이미 있으면 삭제)
+          # DMG 서명
           DMG_PATH=$(find release -name "*.dmg" -maxdepth 1 | head -1)
           if [ -n "$DMG_PATH" ]; then
             echo "=== Signing DMG ==="
@@ -136,7 +155,28 @@ jobs:
               --apple-id "$APPLE_ID" \
               --password "$APPLE_APP_SPECIFIC_PASSWORD" \
               --team-id "$APPLE_TEAM_ID" \
-              --wait --timeout 10m
+              --wait --timeout 10m || NOTARY_FAILED=true
+
+            # 공증 로그 확인 (성공/실패 상관없이)
+            SUBMISSION_ID=$(xcrun notarytool history \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" 2>/dev/null | head -5)
+            echo "Recent submissions: $SUBMISSION_ID"
+
+            if [ "${NOTARY_FAILED:-}" = "true" ]; then
+              echo "=== Fetching notarization log ==="
+              LATEST_ID=$(xcrun notarytool history \
+                --apple-id "$APPLE_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" 2>/dev/null | grep -o '[0-9a-f\-]\{36\}' | head -1)
+              xcrun notarytool log "$LATEST_ID" \
+                --apple-id "$APPLE_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" || true
+              exit 1
+            fi
+
             echo "=== Notarization complete ==="
 
             # Staple
