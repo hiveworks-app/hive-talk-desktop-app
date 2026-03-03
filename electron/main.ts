@@ -84,7 +84,7 @@ async function startNextServer(): Promise<string> {
   const preferred = await isPortAvailable(DEV_PORT);
   const port = preferred ? DEV_PORT : await findFreePort();
 
-  const standaloneDir = path.join(process.resourcesPath, 'standalone', 'hiveworks-web');
+  const standaloneDir = path.join(process.resourcesPath, 'standalone', 'hiveworks', 'hive-talk-desktop-app');
   const serverPath = path.join(standaloneDir, 'server.js');
 
   nextServer = utilityProcess.fork(serverPath, [], {

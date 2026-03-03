@@ -20,11 +20,11 @@ extraResources:
     filter:
       - "**/*"
   - from: .next/static
-    to: standalone/hiveworks-web/.next/static
+    to: standalone/hiveworks/hive-talk-desktop-app/.next/static
     filter:
       - "**/*"
   - from: public
-    to: standalone/hiveworks-web/public
+    to: standalone/hiveworks/hive-talk-desktop-app/public
     filter:
       - "**/*"
   - from: resources
@@ -43,7 +43,7 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  icon: resources/icon.ico
+  icon: resources/icon.png
 
 nsis:
   oneClick: false
