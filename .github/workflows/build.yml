@@ -110,10 +110,10 @@ jobs:
           # 같은 버전의 기존 Release가 있으면 삭제 후 재생성
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
 
+          # 설치 파일만 수집 (yml 메타데이터 제외)
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" \))
+
           # Release 생성 + 설치 파일 업로드
-          gh release create "$TAG" \
-            artifacts/HiveTalk-mac/* \
-            artifacts/HiveTalk-win/* \
-            artifacts/HiveTalk-linux/* \
+          gh release create "$TAG" $FILES \
             --title "$TAG" \
             --generate-notes
