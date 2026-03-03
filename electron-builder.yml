@@ -1,6 +1,6 @@
 appId: com.hiveworks.hivetalk
 productName: HiveTalk
-artifactName: "${productName}-${version}-${arch}.${ext}"
+artifactName: "${productName}-${arch}.${ext}"
 copyright: Copyright (c) 2026 Hiveworks
 
 directories:
