@@ -4,9 +4,18 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { del } from "idb-keyval";
 import { useLogin } from "@/features/auth/queries";
-import { fetchDMRoomList, fetchGMRoomList, fetchEMRoomList } from "@/features/chat-room-list/queries";
+import {
+  fetchDMRoomList,
+  fetchGMRoomList,
+  fetchEMRoomList,
+} from "@/features/chat-room-list/queries";
 import { apiGetMembersList } from "@/features/members/api";
-import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, MEMBERS_KEY } from "@/shared/config/queryKeys";
+import {
+  DM_ROOM_LIST_KEY,
+  GM_ROOM_LIST_KEY,
+  EM_ROOM_LIST_KEY,
+  MEMBERS_KEY,
+} from "@/shared/config/queryKeys";
 import { isApiError } from "@/shared/api";
 import type { UserType } from "@/shared/types/user";
 import { USER_TYPE } from "@/shared/types/user";
@@ -28,8 +37,19 @@ function getBrowserDeviceId(): string {
 function Spinner() {
   return (
     <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
   );
 }
@@ -103,9 +123,18 @@ export default function LoginPage() {
           queryKey: MEMBERS_KEY,
           queryFn: async () => (await apiGetMembersList()).payload.items,
         }),
-        queryClient.prefetchQuery({ queryKey: DM_ROOM_LIST_KEY, queryFn: fetchDMRoomList }),
-        queryClient.prefetchQuery({ queryKey: GM_ROOM_LIST_KEY, queryFn: fetchGMRoomList }),
-        queryClient.prefetchQuery({ queryKey: EM_ROOM_LIST_KEY, queryFn: fetchEMRoomList }),
+        queryClient.prefetchQuery({
+          queryKey: DM_ROOM_LIST_KEY,
+          queryFn: fetchDMRoomList,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: GM_ROOM_LIST_KEY,
+          queryFn: fetchGMRoomList,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: EM_ROOM_LIST_KEY,
+          queryFn: fetchEMRoomList,
+        }),
       ]);
 
       // 5. 모든 데이터 준비 완료 → 풀 페이지 네비게이션
@@ -115,7 +144,9 @@ export default function LoginPage() {
     } catch (err) {
       setIsProcessing(false);
       if (isApiError<LoginErrorResponse>(err)) {
-        const message = err.message || "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        const message =
+          err.message ||
+          "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         showSnackbar({ message, state: "error" });
         return;
       }
@@ -134,7 +165,11 @@ export default function LoginPage() {
   };
 
   // 쿠키 없이 accessToken만 남아있으면 stale 상태 → 정리
-  if (accessToken && typeof document !== 'undefined' && !document.cookie.includes('has-auth')) {
+  if (
+    accessToken &&
+    typeof document !== "undefined" &&
+    !document.cookie.includes("has-auth")
+  ) {
     logout();
   }
 
@@ -147,7 +182,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] rounded-2xl bg-surface p-8 shadow-lg">
         {/* 로고 */}
         <div className="mb-8 text-center">
-          <h1 className="text-heading-xl font-bold text-primary">HIVE-TALK</h1>
+          <h1 className="text-heading-xl font-bold text-primary">HIVE TALK</h1>
           <p className="mt-1 text-sub text-text-secondary">
             일상과 업무의 분리, 대화를 통한 데이터 분석
           </p>
