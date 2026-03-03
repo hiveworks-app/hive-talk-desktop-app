@@ -1,15 +1,19 @@
 name: Build Desktop App
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+  pull_request:
+    branches: [main]
+    types: [closed]
   workflow_dispatch:
 
 jobs:
   build:
+    # PR이 머지됨 + deploy 라벨이 있을 때만 실행 (또는 수동 실행)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.labels.*.name, 'deploy'))
+
     strategy:
       fail-fast: false
       matrix:
@@ -78,3 +82,37 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.yml
+
+  # 빌드 완료 후 GitHub Releases에 설치 파일 자동 업로드
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get version from package.json
+        id: version
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: pkg
+        shell: bash
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: v${{ steps.pkg.outputs.version }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            artifacts/HiveTalk-mac/*
+            artifacts/HiveTalk-win/*
+            artifacts/HiveTalk-linux/*
