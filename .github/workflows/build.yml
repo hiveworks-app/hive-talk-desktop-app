@@ -151,29 +151,28 @@ jobs:
           # 공증
           echo "=== Starting notarization ==="
           if [ -n "$DMG_PATH" ]; then
+            # submit하고 결과를 JSON으로 저장
             xcrun notarytool submit "$DMG_PATH" \
               --apple-id "$APPLE_ID" \
               --password "$APPLE_APP_SPECIFIC_PASSWORD" \
               --team-id "$APPLE_TEAM_ID" \
-              --wait --timeout 10m || NOTARY_FAILED=true
+              --wait --timeout 10m 2>&1 | tee notary_output.txt || true
 
-            # 공증 로그 확인 (성공/실패 상관없이)
-            SUBMISSION_ID=$(xcrun notarytool history \
+            # submission ID 추출
+            SUB_ID=$(grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' notary_output.txt | head -1)
+            echo "Submission ID: $SUB_ID"
+
+            # 항상 공증 상세 로그 출력
+            echo "=== Fetching notarization log ==="
+            xcrun notarytool log "$SUB_ID" \
               --apple-id "$APPLE_ID" \
               --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" 2>/dev/null | head -5)
-            echo "Recent submissions: $SUBMISSION_ID"
+              --team-id "$APPLE_TEAM_ID" developer_log.json 2>&1 || true
+            cat developer_log.json 2>/dev/null || echo "No log file"
 
-            if [ "${NOTARY_FAILED:-}" = "true" ]; then
-              echo "=== Fetching notarization log ==="
-              LATEST_ID=$(xcrun notarytool history \
-                --apple-id "$APPLE_ID" \
-                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-                --team-id "$APPLE_TEAM_ID" 2>/dev/null | grep -o '[0-9a-f\-]\{36\}' | head -1)
-              xcrun notarytool log "$LATEST_ID" \
-                --apple-id "$APPLE_ID" \
-                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-                --team-id "$APPLE_TEAM_ID" || true
+            # Invalid이면 실패 처리
+            if grep -q "Invalid" notary_output.txt; then
+              echo "=== Notarization FAILED ==="
               exit 1
             fi
 
