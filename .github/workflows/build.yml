@@ -116,4 +116,4 @@ jobs:
           # Release 생성 + 설치 파일 업로드
           gh release create "$TAG" $FILES \
             --title "$TAG" \
-            --generate-notes
+            --notes ""

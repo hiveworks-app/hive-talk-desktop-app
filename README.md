@@ -2,6 +2,15 @@
 
 Next.js 16 + Electron 40 기반 실시간 채팅 데스크톱 애플리케이션
 
+## Download
+
+| OS | 다운로드 |
+|----|---------|
+| Mac (Apple Silicon) | [HiveTalk-arm64.dmg](https://github.com/hiveworks-app/hive-talk-desktop-app/releases/latest/download/HiveTalk-arm64.dmg) |
+| Mac (Intel) | [HiveTalk-x64.dmg](https://github.com/hiveworks-app/hive-talk-desktop-app/releases/latest/download/HiveTalk-x64.dmg) |
+| Windows | [HiveTalk-x64.exe](https://github.com/hiveworks-app/hive-talk-desktop-app/releases/latest/download/HiveTalk-x64.exe) |
+| Linux | [HiveTalk-x64.AppImage](https://github.com/hiveworks-app/hive-talk-desktop-app/releases/latest/download/HiveTalk-x64.AppImage) |
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router, standalone output)
@@ -32,13 +41,11 @@ npm run electron:dev
 npm run electron:build
 ```
 
-빌드 산출물: `release/HiveTalk-{version}-{arch}.dmg`
-
 ### Build Targets
 
 | Platform | Format | Architecture |
 |----------|--------|-------------|
-| macOS | DMG | arm64 |
+| macOS | DMG | arm64, x64 |
 | Windows | NSIS | x64 |
 | Linux | AppImage | x64 |
 
