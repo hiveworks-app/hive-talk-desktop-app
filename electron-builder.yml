@@ -40,8 +40,7 @@ mac:
   icon: resources/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-  notarize:
-    teamId: ${env.APPLE_TEAM_ID}
+  notarize: true
 
 win:
   target:
