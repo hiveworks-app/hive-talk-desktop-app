@@ -40,7 +40,8 @@ mac:
   icon: resources/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-  notarize: true
+  # CI에서는 수동 서명/공증 (build.yml에서 처리)
+  identity: null
 
 win:
   target:
