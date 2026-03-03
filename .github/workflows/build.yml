@@ -20,10 +20,11 @@ jobs:
         include:
           - os: macos-latest
             platform: mac
-          - os: windows-latest
-            platform: win
-          - os: ubuntu-latest
-            platform: linux
+          # 공증 테스트 완료 후 복원
+          # - os: windows-latest
+          #   platform: win
+          # - os: ubuntu-latest
+          #   platform: linux
 
     runs-on: ${{ matrix.os }}
 
