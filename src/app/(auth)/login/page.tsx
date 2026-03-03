@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { del } from "idb-keyval";
 import { useLogin } from "@/features/auth/queries";
@@ -42,7 +41,6 @@ export default function LoginPage() {
   const { showSnackbar } = useUIStore();
   const { mutateAsync: login } = useLogin();
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -110,9 +108,12 @@ export default function LoginPage() {
         queryClient.prefetchQuery({ queryKey: EM_ROOM_LIST_KEY, queryFn: fetchEMRoomList }),
       ]);
 
-      // 5. 모든 데이터 준비 완료 → 화면 전환
-      router.replace("/members");
+      // 5. 모든 데이터 준비 완료 → 풀 페이지 네비게이션
+      // Electron standalone에서 router.replace()는 RSC 페이로드 fetch 실패로 동작하지 않을 수 있음
+      // window.location.href는 전체 페이지를 새로 로드하므로 확실히 동작
+      window.location.href = "/members";
     } catch (err) {
+      setIsProcessing(false);
       if (isApiError<LoginErrorResponse>(err)) {
         const message = err.message || "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         showSnackbar({ message, state: "error" });
@@ -123,8 +124,6 @@ export default function LoginPage() {
         return;
       }
       showSnackbar({ message: "로그인 실패", state: "error" });
-    } finally {
-      setIsProcessing(false);
     }
   };
 

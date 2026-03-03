@@ -1,0 +1,80 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_WS_URL: ${{ secrets.NEXT_PUBLIC_WS_URL }}
+
+      # CI에서는 상위 workspace root가 없어 standalone 출력이 flat 구조로 생성됨
+      # electron-builder.yml이 기대하는 nested 구조(hiveworks/hive-talk-desktop-app/)로 변환
+      - name: Normalize standalone structure
+        shell: bash
+        run: |
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "Flat standalone detected — restructuring to nested layout..."
+            NESTED=".next/standalone/hiveworks/hive-talk-desktop-app"
+            mkdir -p "$NESTED"
+            shopt -s dotglob
+            for item in .next/standalone/*; do
+              [ "$(basename "$item")" = "hiveworks" ] && continue
+              mv "$item" "$NESTED/"
+            done
+            echo "Done. server.js is now at $NESTED/server.js"
+          else
+            echo "Nested standalone structure detected — no changes needed."
+          fi
+
+      - name: Compile Electron TypeScript
+        run: npm run electron:compile
+
+      - name: Build Electron app
+        run: npx electron-builder --${{ matrix.platform }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HiveTalk-${{ matrix.platform }}
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage
+            release/*.yml

@@ -1,31 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/signup'];
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // 공개 경로는 인증 불필요
-  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
-  // 정적 리소스 및 API는 패스
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.')
-  ) {
-    return NextResponse.next();
-  }
-
-  // has-auth 쿠키로 인증 여부 판단 (실제 토큰은 클라이언트 localStorage에 저장)
-  const hasAuth = request.cookies.get('has-auth');
-  if (!hasAuth) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
+// Electron standalone 빌드에서 document.cookie로 설정한 쿠키가
+// 서버 요청에 포함되지 않는 문제가 있어, 서버사이드 리다이렉트를 제거.
+// 인증 가드는 클라이언트 사이드에서 처리 (src/app/(main)/layout.tsx)
+export function middleware() {
   return NextResponse.next();
 }
 
