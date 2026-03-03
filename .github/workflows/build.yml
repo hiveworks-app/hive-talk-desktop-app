@@ -112,40 +112,47 @@ jobs:
           APP_PATH=$(find release -name "*.app" -maxdepth 2 | head -1)
           echo "App path: $APP_PATH"
 
-          # 1) 내부 바이너리 개별 서명 (안에서 바깥으로)
-          echo "=== Signing internal binaries ==="
-          find "$APP_PATH" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.node" \) | while read f; do
-            echo "  signing: $f"
-            codesign --force --options runtime --sign "$IDENTITY" "$f" 2>/dev/null || true
+          # 1) 모든 Mach-O 바이너리 찾아서 개별 서명 (안에서 바깥으로)
+          echo "=== Signing all Mach-O binaries ==="
+          find "$APP_PATH" -type f | while read f; do
+            if file "$f" | grep -q "Mach-O"; then
+              echo "  signing: $f"
+              codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
+            fi
           done
 
-          # Frameworks 서명
+          # 2) Framework 번들 서명
+          echo "=== Signing frameworks ==="
           find "$APP_PATH/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read f; do
             echo "  signing framework: $f"
-            codesign --force --options runtime --sign "$IDENTITY" "$f"
+            codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
           done
 
-          # Helper 앱 서명
+          # 3) Helper 앱 서명
+          echo "=== Signing helpers ==="
           find "$APP_PATH" -name "*.app" -not -path "$APP_PATH" | while read f; do
             echo "  signing helper: $f"
-            codesign --force --options runtime --sign "$IDENTITY" "$f"
+            codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
           done
 
-          # 2) 메인 앱 서명
+          # 4) 메인 앱 서명
           echo "=== Signing main app ==="
-          codesign --force --options runtime --sign "$IDENTITY" "$APP_PATH"
+          codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP_PATH"
           echo "=== Codesign complete ==="
 
           # 서명 확인
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           echo "=== Verification complete ==="
 
-          # DMG 서명
+          # DMG 재생성 (서명된 .app으로)
           DMG_PATH=$(find release -name "*.dmg" -maxdepth 1 | head -1)
           if [ -n "$DMG_PATH" ]; then
-            echo "=== Signing DMG ==="
-            codesign --force --sign "$IDENTITY" "$DMG_PATH"
-            echo "=== DMG signed ==="
+            echo "=== Re-creating DMG with signed app ==="
+            DMG_NAME=$(basename "$DMG_PATH")
+            rm "$DMG_PATH"
+            hdiutil create -volname "HiveTalk" -srcfolder "$APP_PATH" -ov -format UDZO "release/$DMG_NAME"
+            codesign --force --timestamp --sign "$IDENTITY" "release/$DMG_NAME"
+            echo "=== DMG created and signed ==="
           fi
 
           # 공증
