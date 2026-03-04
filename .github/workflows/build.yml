@@ -112,12 +112,15 @@ jobs:
           APP_PATH=$(find release -name "*.app" -maxdepth 2 | head -1)
           echo "App path: $APP_PATH"
 
+          # Entitlements 경로
+          ENTITLEMENTS="resources/entitlements.mac.plist"
+
           # 1) 모든 Mach-O 바이너리 찾아서 개별 서명 (안에서 바깥으로)
           echo "=== Signing all Mach-O binaries ==="
           find "$APP_PATH" -type f | while read f; do
             if file "$f" | grep -q "Mach-O"; then
               echo "  signing: $f"
-              codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
+              codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
             fi
           done
 
@@ -125,19 +128,19 @@ jobs:
           echo "=== Signing frameworks ==="
           find "$APP_PATH/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read f; do
             echo "  signing framework: $f"
-            codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
+            codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
           done
 
           # 3) Helper 앱 서명
           echo "=== Signing helpers ==="
           find "$APP_PATH" -name "*.app" -not -path "$APP_PATH" | while read f; do
             echo "  signing helper: $f"
-            codesign --force --options runtime --timestamp --sign "$IDENTITY" "$f"
+            codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
           done
 
           # 4) 메인 앱 서명
           echo "=== Signing main app ==="
-          codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP_PATH"
+          codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP_PATH"
           echo "=== Codesign complete ==="
 
           # 서명 확인
@@ -183,20 +186,20 @@ jobs:
           xcrun stapler staple "$APP_PATH"
           echo "=== Staple complete ==="
 
-          # Staple된 .app으로 설치용 DMG 생성
+          # Staple된 .app으로 설치용 DMG 생성 (create-dmg 사용)
           echo "=== Creating final DMG ==="
-          DMG_NAME="HiveTalk-arm64.dmg"
-          DMG_STAGE="release/dmg-stage"
-          mkdir -p "$DMG_STAGE"
-          cp -R "$APP_PATH" "$DMG_STAGE/"
-          ln -s /Applications "$DMG_STAGE/Applications"
-          hdiutil create -volname "HiveTalk" -srcfolder "$DMG_STAGE" -ov -format UDZO "release/$DMG_NAME"
-          rm -rf "$DMG_STAGE"
-          codesign --force --timestamp --sign "$IDENTITY" "release/$DMG_NAME"
+          npx create-dmg "$APP_PATH" release/ || true
+          # create-dmg는 자동으로 앱 이름으로 DMG를 생성함
+          # 파일명을 통일
+          DMG_CREATED=$(find release -name "*.dmg" -maxdepth 1 | head -1)
+          if [ -n "$DMG_CREATED" ]; then
+            mv "$DMG_CREATED" "release/HiveTalk-arm64.dmg"
+          fi
+          codesign --force --timestamp --sign "$IDENTITY" "release/HiveTalk-arm64.dmg"
           echo "=== DMG created ==="
 
           # 임시 ZIP 삭제
-          rm release/HiveTalk-notarize.zip
+          rm -f release/HiveTalk-notarize.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
