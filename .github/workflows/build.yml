@@ -20,11 +20,10 @@ jobs:
         include:
           - os: macos-latest
             platform: mac
-          # 공증 테스트 완료 후 복원
-          # - os: windows-latest
-          #   platform: win
-          # - os: ubuntu-latest
-          #   platform: linux
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
 
     runs-on: ${{ matrix.os }}
 
@@ -108,98 +107,94 @@ jobs:
           IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | head -1 | grep -o '"[^"]*"' | tr -d '"')
           echo "Signing with: $IDENTITY"
 
-          # .app 경로 찾기
-          APP_PATH=$(find release -name "*.app" -maxdepth 2 | head -1)
-          echo "App path: $APP_PATH"
-
-          # Entitlements 경로
           ENTITLEMENTS="resources/entitlements.mac.plist"
 
-          # 1) 모든 Mach-O 바이너리 찾아서 개별 서명 (안에서 바깥으로)
-          echo "=== Signing all Mach-O binaries ==="
-          find "$APP_PATH" -type f | while read f; do
-            if file "$f" | grep -q "Mach-O"; then
-              echo "  signing: $f"
+          # electron-builder가 생성한 기존 DMG 삭제 (서명 안 된 DMG)
+          find release -name "*.dmg" -maxdepth 1 -delete 2>/dev/null || true
+
+          # 각 아키텍처별 .app을 순회하며 서명 + 공증 + DMG 생성
+          for APP_PATH in release/mac-*/HiveTalk.app; do
+            ARCH_DIR=$(basename "$(dirname "$APP_PATH")")
+            ARCH=$(echo "$ARCH_DIR" | sed 's/mac-//')
+            echo ""
+            echo "========================================="
+            echo "Processing: $ARCH ($APP_PATH)"
+            echo "========================================="
+
+            # 1) 모든 Mach-O 바이너리 개별 서명
+            echo "=== Signing all Mach-O binaries ($ARCH) ==="
+            find "$APP_PATH" -type f | while read f; do
+              if file "$f" | grep -q "Mach-O"; then
+                echo "  signing: $f"
+                codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
+              fi
+            done
+
+            # 2) Framework 번들 서명
+            find "$APP_PATH/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read f; do
               codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
+            done
+
+            # 3) Helper 앱 서명
+            find "$APP_PATH" -name "*.app" -not -path "$APP_PATH" | while read f; do
+              codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
+            done
+
+            # 4) 메인 앱 서명
+            codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP_PATH"
+            echo "=== Codesign complete ($ARCH) ==="
+
+            # 서명 확인
+            codesign --verify --deep --strict "$APP_PATH"
+            echo "=== Verification passed ($ARCH) ==="
+
+            # ZIP으로 공증
+            echo "=== Notarizing ($ARCH) ==="
+            cd "release/$ARCH_DIR"
+            zip -r -y -q "../HiveTalk-notarize-$ARCH.zip" "HiveTalk.app"
+            cd ../..
+
+            xcrun notarytool submit "release/HiveTalk-notarize-$ARCH.zip" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait --timeout 20m 2>&1 | tee notary_output.txt || true
+
+            # 공증 로그 확인
+            SUB_ID=$(grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' notary_output.txt | head -1)
+            xcrun notarytool log "$SUB_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" developer_log.json 2>&1 || true
+            cat developer_log.json 2>/dev/null || true
+
+            if grep -q "Invalid\|Timeout" notary_output.txt; then
+              echo "=== Notarization FAILED ($ARCH) ==="
+              exit 1
             fi
+            echo "=== Notarization complete ($ARCH) ==="
+
+            # Staple
+            xcrun stapler staple "$APP_PATH"
+            echo "=== Staple complete ($ARCH) ==="
+
+            # DMG 생성
+            echo "=== Creating DMG ($ARCH) ==="
+            npx create-dmg "$APP_PATH" release/ || true
+            DMG_CREATED=$(find release -maxdepth 1 -name "HiveTalk*.dmg" -newer "$APP_PATH" | head -1)
+            if [ -n "$DMG_CREATED" ]; then
+              mv "$DMG_CREATED" "release/HiveTalk-$ARCH.dmg"
+            fi
+            codesign --force --timestamp --sign "$IDENTITY" "release/HiveTalk-$ARCH.dmg"
+            echo "=== DMG created: HiveTalk-$ARCH.dmg ==="
+
+            # 임시 파일 정리
+            rm -f "release/HiveTalk-notarize-$ARCH.zip" notary_output.txt developer_log.json
           done
 
-          # 2) Framework 번들 서명
-          echo "=== Signing frameworks ==="
-          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read f; do
-            echo "  signing framework: $f"
-            codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
-          done
-
-          # 3) Helper 앱 서명
-          echo "=== Signing helpers ==="
-          find "$APP_PATH" -name "*.app" -not -path "$APP_PATH" | while read f; do
-            echo "  signing helper: $f"
-            codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$f"
-          done
-
-          # 4) 메인 앱 서명
-          echo "=== Signing main app ==="
-          codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP_PATH"
-          echo "=== Codesign complete ==="
-
-          # 서명 확인
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          echo "=== Verification complete ==="
-
-          # .app을 ZIP으로 압축하여 공증 (DMG보다 빠름)
-          echo "=== Creating ZIP for notarization ==="
-          cd release/mac-arm64
-          zip -r -y ../HiveTalk-notarize.zip "HiveTalk.app"
-          cd ../..
-          echo "=== ZIP created ==="
-
-          # 공증 (ZIP 제출)
-          echo "=== Starting notarization ==="
-          xcrun notarytool submit release/HiveTalk-notarize.zip \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait --timeout 20m 2>&1 | tee notary_output.txt || true
-
-          # submission ID 추출
-          SUB_ID=$(grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' notary_output.txt | head -1)
-          echo "Submission ID: $SUB_ID"
-
-          # 공증 상세 로그 출력
-          echo "=== Fetching notarization log ==="
-          xcrun notarytool log "$SUB_ID" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" developer_log.json 2>&1 || true
-          cat developer_log.json 2>/dev/null || echo "No log file"
-
-          # Invalid 또는 Timeout이면 실패 처리
-          if grep -q "Invalid\|Timeout" notary_output.txt; then
-            echo "=== Notarization FAILED ==="
-            exit 1
-          fi
-
-          echo "=== Notarization complete ==="
-
-          # Staple (.app에 직접 붙임)
-          xcrun stapler staple "$APP_PATH"
-          echo "=== Staple complete ==="
-
-          # Staple된 .app으로 설치용 DMG 생성 (create-dmg 사용)
-          echo "=== Creating final DMG ==="
-          npx create-dmg "$APP_PATH" release/ || true
-          # create-dmg는 자동으로 앱 이름으로 DMG를 생성함
-          # 파일명을 통일
-          DMG_CREATED=$(find release -name "*.dmg" -maxdepth 1 | head -1)
-          if [ -n "$DMG_CREATED" ]; then
-            mv "$DMG_CREATED" "release/HiveTalk-arm64.dmg"
-          fi
-          codesign --force --timestamp --sign "$IDENTITY" "release/HiveTalk-arm64.dmg"
-          echo "=== DMG created ==="
-
-          # 임시 ZIP 삭제
-          rm -f release/HiveTalk-notarize.zip
+          echo ""
+          echo "=== All architectures processed ==="
+          ls -la release/*.dmg
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -244,4 +239,19 @@ jobs:
           # Release 생성 + 설치 파일 업로드
           gh release create "$TAG" $FILES \
             --title "$TAG" \
-            --notes ""
+            --notes "$(cat <<'NOTES'
+## Download Guide
+
+| File | OS | Description |
+|------|-----|------------|
+| `HiveTalk-arm64.dmg` | macOS (Apple Silicon) | M1, M2, M3, M4 칩 Mac 사용자 |
+| `HiveTalk-x64.dmg` | macOS (Intel) | 2020년 이전 Mac 사용자 |
+| `HiveTalk-x64.exe` | Windows | Windows 10/11 사용자 |
+| `HiveTalk-x64.AppImage` | Linux | Ubuntu, Fedora 등 Linux 사용자 |
+
+> **내 Mac이 Apple Silicon인지 Intel인지 모르겠다면?**
+> 좌측 상단  → **이 Mac에 관하여** → **칩** 항목 확인
+> - `Apple M~`으로 시작하면 → **arm64** 다운로드
+> - `Intel`로 시작하면 → **x64** 다운로드
+NOTES
+)"

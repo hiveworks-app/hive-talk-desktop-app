@@ -35,7 +35,7 @@ extraResources:
 mac:
   target:
     - target: dmg
-      arch: [arm64]  # 공증 테스트 완료 후 [arm64, x64]로 복원
+      arch: [arm64, x64]
   category: public.app-category.social-networking
   icon: resources/icon.icns
   hardenedRuntime: true
