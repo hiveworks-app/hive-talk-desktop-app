@@ -80,7 +80,7 @@ jobs:
       # 2) Mac만: 수동 서명 + 공증
       - name: Sign and Notarize (macOS)
         if: matrix.platform == 'mac'
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -144,51 +144,54 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           echo "=== Verification complete ==="
 
-          # DMG 재생성 (서명된 .app으로)
-          DMG_PATH=$(find release -name "*.dmg" -maxdepth 1 | head -1)
-          if [ -n "$DMG_PATH" ]; then
-            echo "=== Re-creating DMG with signed app ==="
-            DMG_NAME=$(basename "$DMG_PATH")
-            rm "$DMG_PATH"
-            hdiutil create -volname "HiveTalk" -srcfolder "$APP_PATH" -ov -format UDZO "release/$DMG_NAME"
-            codesign --force --timestamp --sign "$IDENTITY" "release/$DMG_NAME"
-            echo "=== DMG created and signed ==="
-          fi
+          # .app을 ZIP으로 압축하여 공증 (DMG보다 빠름)
+          echo "=== Creating ZIP for notarization ==="
+          cd release/mac-arm64
+          zip -r -y ../HiveTalk-notarize.zip "HiveTalk.app"
+          cd ../..
+          echo "=== ZIP created ==="
 
-          # 공증
+          # 공증 (ZIP 제출)
           echo "=== Starting notarization ==="
-          if [ -n "$DMG_PATH" ]; then
-            # submit하고 결과를 JSON으로 저장
-            xcrun notarytool submit "$DMG_PATH" \
-              --apple-id "$APPLE_ID" \
-              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" \
-              --wait --timeout 30m 2>&1 | tee notary_output.txt || true
+          xcrun notarytool submit release/HiveTalk-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait --timeout 20m 2>&1 | tee notary_output.txt || true
 
-            # submission ID 추출
-            SUB_ID=$(grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' notary_output.txt | head -1)
-            echo "Submission ID: $SUB_ID"
+          # submission ID 추출
+          SUB_ID=$(grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' notary_output.txt | head -1)
+          echo "Submission ID: $SUB_ID"
 
-            # 항상 공증 상세 로그 출력
-            echo "=== Fetching notarization log ==="
-            xcrun notarytool log "$SUB_ID" \
-              --apple-id "$APPLE_ID" \
-              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" developer_log.json 2>&1 || true
-            cat developer_log.json 2>/dev/null || echo "No log file"
+          # 공증 상세 로그 출력
+          echo "=== Fetching notarization log ==="
+          xcrun notarytool log "$SUB_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" developer_log.json 2>&1 || true
+          cat developer_log.json 2>/dev/null || echo "No log file"
 
-            # Invalid이면 실패 처리
-            if grep -q "Invalid" notary_output.txt; then
-              echo "=== Notarization FAILED ==="
-              exit 1
-            fi
-
-            echo "=== Notarization complete ==="
-
-            # Staple
-            xcrun stapler staple "$DMG_PATH"
-            echo "=== Staple complete ==="
+          # Invalid 또는 Timeout이면 실패 처리
+          if grep -q "Invalid\|Timeout" notary_output.txt; then
+            echo "=== Notarization FAILED ==="
+            exit 1
           fi
+
+          echo "=== Notarization complete ==="
+
+          # Staple (.app에 직접 붙임)
+          xcrun stapler staple "$APP_PATH"
+          echo "=== Staple complete ==="
+
+          # Staple된 .app으로 DMG 생성
+          echo "=== Creating final DMG ==="
+          DMG_NAME="HiveTalk-arm64.dmg"
+          hdiutil create -volname "HiveTalk" -srcfolder "$APP_PATH" -ov -format UDZO "release/$DMG_NAME"
+          codesign --force --timestamp --sign "$IDENTITY" "release/$DMG_NAME"
+          echo "=== DMG created ==="
+
+          # 임시 ZIP 삭제
+          rm release/HiveTalk-notarize.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
