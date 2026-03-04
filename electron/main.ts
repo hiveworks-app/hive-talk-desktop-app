@@ -327,6 +327,8 @@ app.whenReady().then(async () => {
       },
     ]);
     Menu.setApplicationMenu(appMenu);
+  } else {
+    Menu.setApplicationMenu(null);
   }
 
   try {
