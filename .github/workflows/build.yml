@@ -183,10 +183,15 @@ jobs:
           xcrun stapler staple "$APP_PATH"
           echo "=== Staple complete ==="
 
-          # Staple된 .app으로 DMG 생성
+          # Staple된 .app으로 설치용 DMG 생성
           echo "=== Creating final DMG ==="
           DMG_NAME="HiveTalk-arm64.dmg"
-          hdiutil create -volname "HiveTalk" -srcfolder "$APP_PATH" -ov -format UDZO "release/$DMG_NAME"
+          DMG_STAGE="release/dmg-stage"
+          mkdir -p "$DMG_STAGE"
+          cp -R "$APP_PATH" "$DMG_STAGE/"
+          ln -s /Applications "$DMG_STAGE/Applications"
+          hdiutil create -volname "HiveTalk" -srcfolder "$DMG_STAGE" -ov -format UDZO "release/$DMG_NAME"
+          rm -rf "$DMG_STAGE"
           codesign --force --timestamp --sign "$IDENTITY" "release/$DMG_NAME"
           echo "=== DMG created ==="
 
