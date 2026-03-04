@@ -304,6 +304,11 @@ button, a, input, textarea, select, label,
   -webkit-app-region: no-drag;
 }
 
+/* Windows Electron: titleBarOverlay 영역 확보 (nav 제외) */
+html[data-electron-win] .electron-drag:not(nav) {
+  padding-right: 138px;
+}
+
 /* Toast 진입 애니메이션 */
 @keyframes toast-in {
   from {

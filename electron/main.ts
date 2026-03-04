@@ -126,8 +126,16 @@ function createWindow(serverUrl: string) {
       nodeIntegration: false,
     },
     show: false,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 16, y: 16 },
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 16, y: 16 } }
+      : {
+          titleBarOverlay: {
+            color: '#ffffff',
+            symbolColor: '#333333',
+            height: 32,
+          },
+        }),
   });
 
   // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
