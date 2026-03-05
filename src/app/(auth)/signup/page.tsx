@@ -240,7 +240,7 @@ export default function SignupPage() {
       : step === 'SELECT_TYPE' ? 1 : step === 'TERMS' ? 2 : 3;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-state-primary-highlighted">
+    <div className="flex flex-1 items-center justify-center bg-state-primary-highlighted">
       <div className="w-full max-w-[480px] rounded-2xl bg-surface p-8 shadow-lg">
         {/* 로고 + 뒤로가기 */}
         <div className="mb-6 flex items-center justify-between">

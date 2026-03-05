@@ -9,14 +9,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [authChecked, setAuthChecked] = useState(false);
   const accessToken = useAuthStore(s => s.accessToken);
 
-  // Windows Electron: titleBarOverlay 패딩용 data attribute 설정
-  useEffect(() => {
-    const api = (window as unknown as { electronAPI?: { platform?: string } }).electronAPI;
-    if (api?.platform === 'win32') {
-      document.documentElement.setAttribute('data-electron-win', '');
-    }
-  }, []);
-
   // Zustand persist 복원 완료 후 인증 확인
   useEffect(() => {
     const check = () => {

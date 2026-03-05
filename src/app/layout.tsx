@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ReactQueryProvider } from '@/shared/providers/ReactQueryProvider';
+import { ElectronPlatformDetector } from '@/shared/ui/ElectronPlatformDetector';
 import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
 import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
@@ -47,6 +48,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ReactQueryProvider>
+          <ElectronPlatformDetector />
           {children}
           <ToastContainer />
           <LoadingOverlay />

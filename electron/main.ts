@@ -115,7 +115,7 @@ function createWindow(serverUrl: string) {
     width: 400,
     height: 640,
     minWidth: 400,
-    minHeight: 500,
+    minHeight: 640,
     maxWidth: screenWidth,
     maxHeight: screenHeight,
     title: 'HiveTalk',

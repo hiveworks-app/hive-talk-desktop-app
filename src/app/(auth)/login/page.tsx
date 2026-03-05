@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { del } from "idb-keyval";
 import { useLogin } from "@/features/auth/queries";
@@ -66,6 +68,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const isFormFilled = email.trim().length > 0 && password.trim().length > 0;
+
   const validateLoginInfo = (email: string, password: string) => {
     const _email = email.trim();
     const _password = password.trim();
@@ -100,14 +104,11 @@ export default function LoginPage() {
         password: password.trim(),
       };
 
-      // 1. 로그인 API 호출
       const res = await login(params);
 
-      // 2. 이전 유저 캐시 완전 제거
       queryClient.clear();
       await del("hiveworks-query-cache");
 
-      // 3. 새 유저 인증 설정
       const { deviceId, deviceType } = params;
       const { accessToken, refreshToken, ...rest } = res.payload;
       setAuth({
@@ -117,7 +118,6 @@ export default function LoginPage() {
         user: { ...rest, userType: USER_TYPE.ORG_MEMBER as UserType },
       });
 
-      // 4. 핵심 데이터 prefetch (스피너가 도는 동안 완료 대기)
       await Promise.allSettled([
         queryClient.prefetchQuery({
           queryKey: MEMBERS_KEY,
@@ -137,9 +137,6 @@ export default function LoginPage() {
         }),
       ]);
 
-      // 5. 모든 데이터 준비 완료 → 풀 페이지 네비게이션
-      // Electron standalone에서 router.replace()는 RSC 페이로드 fetch 실패로 동작하지 않을 수 있음
-      // window.location.href는 전체 페이지를 새로 로드하므로 확실히 동작
       window.location.href = "/members";
     } catch (err) {
       setIsProcessing(false);
@@ -164,7 +161,6 @@ export default function LoginPage() {
     }
   };
 
-  // 쿠키 없이 accessToken만 남아있으면 stale 상태 → 정리
   if (
     accessToken &&
     typeof document !== "undefined" &&
@@ -173,61 +169,76 @@ export default function LoginPage() {
     logout();
   }
 
-  // 이미 로그인된 상태면 빈 화면 (middleware가 리디렉션 처리)
-  // isProcessing 중에는 로그인 폼+스피너를 계속 보여줌 (흰 화면 방지)
   if (accessToken && !isProcessing) return null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-white">
-      <div className="w-full max-w-[400px] rounded-2xl bg-surface p-8 shadow-lg">
-        {/* 로고 */}
-        <div className="mb-8 text-center">
-          <h1 className="text-heading-xl font-bold text-primary">HIVE TALK</h1>
-          <p className="mt-1 text-sub text-text-secondary">
-            일상과 업무의 분리, 대화를 통한 데이터 분석
-          </p>
+    <div className="flex flex-1 items-center justify-center bg-white">
+      <div className="flex w-full max-w-[400px] flex-col items-center px-4">
+        {/* 로고 + 서브텍스트 */}
+        <Image
+          src="/hivetalk-login-logo.png"
+          alt="HiveTalk"
+          width={200}
+          height={115}
+          priority
+        />
+        <p className="mt-3 text-sub tracking-tight text-text-secondary">
+          대화가 데이터가 되는곳, 똑똑한 협업 플랫폼
+        </p>
+
+        {/* 폼 영역 */}
+        <div className="mt-12 w-full space-y-5" onKeyDown={handleKeyDown}>
+          {/* 입력 필드 */}
+          <div className="space-y-2.5">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일"
+              autoComplete="email"
+              disabled={isProcessing}
+              className="h-11"
+            />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호"
+              autoComplete="current-password"
+              disabled={isProcessing}
+              className="h-11"
+            />
+          </div>
+
+          {/* 버튼 영역 */}
+          <div className="space-y-2.5">
+            <Button
+              variant={isFormFilled ? "primary" : "dark"}
+              size="lg"
+              onClick={onLogin}
+              disabled={!isFormFilled || isProcessing}
+              fullWidth
+            >
+              {isProcessing ? <Spinner /> : "로그인"}
+            </Button>
+            <Button
+              variant="primary-light"
+              size="lg"
+              onClick={() => { window.location.href = "/signup"; }}
+              fullWidth
+            >
+              회원가입
+            </Button>
+          </div>
         </div>
 
-        {/* 로그인 폼 */}
-        <div className="flex flex-col gap-3" onKeyDown={handleKeyDown}>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="아이디 입력"
-            autoComplete="email"
-            disabled={isProcessing}
-          />
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 입력"
-            autoComplete="current-password"
-            disabled={isProcessing}
-          />
-        </div>
-
-        <Button
-          onClick={onLogin}
-          disabled={!email || !password || isProcessing}
-          fullWidth
-          className="mt-6"
+        {/* 계정정보 찾기 링크 */}
+        <Link
+          href="/find-account"
+          className="mt-5 text-sub text-text-secondary underline"
         >
-          {isProcessing ? <Spinner /> : "로그인"}
-        </Button>
-
-        <div className="mt-4 text-center">
-          <span className="text-sub-sm text-text-tertiary">
-            계정이 없으신가요?{" "}
-          </span>
-          <a
-            href="/signup"
-            className="text-sub-sm font-semibold text-primary hover:underline"
-          >
-            회원가입
-          </a>
-        </div>
+          계정정보를 잊어버렸어요
+        </Link>
       </div>
     </div>
   );
