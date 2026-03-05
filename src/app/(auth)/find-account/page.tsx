@@ -146,13 +146,14 @@ function FindIdContent({
 
         <div className="space-y-2 pb-4">
           <Button
-            variant="ghost"
+            variant="outlined"
+            size="lg"
             fullWidth
             onClick={handleGoToFindPassword}
           >
             비밀번호 찾기
           </Button>
-          <Button variant="primary" fullWidth onClick={handleGoToLogin}>
+          <Button variant="primary" size="lg" fullWidth onClick={handleGoToLogin}>
             로그인하기
           </Button>
         </div>
@@ -161,8 +162,8 @@ function FindIdContent({
   }
 
   return (
-    <div className="flex flex-1 flex-col px-4">
-      <div className="flex-1 space-y-5 pt-[30px]">
+    <div className="flex flex-1 flex-col overflow-y-auto px-4">
+      <div className="space-y-5 pt-[30px]">
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -170,24 +171,28 @@ function FindIdContent({
           className="h-11"
         />
 
-        <div className="flex gap-2">
+        <div className="relative">
           <Input
             value={phone}
             onChange={(e) => handlePhoneChange(e.target.value)}
             placeholder="휴대전화(-없이)"
             inputMode="numeric"
             maxLength={11}
-            className="h-11 flex-1"
+            className="h-11 pr-24"
           />
-          <Button
-            variant="secondary"
-            size="lg"
+          <button
+            type="button"
             onClick={handleSendCode}
             disabled={!canSendCode}
-            className="shrink-0"
+            className={cn(
+              "absolute right-1.5 top-1/2 -translate-y-1/2 h-8 rounded-md px-3 text-sub-sm font-medium transition-colors",
+              canSendCode
+                ? "bg-[#E6F3FF] text-primary"
+                : "bg-[#ADB5BD] text-white",
+            )}
           >
             {isSending ? "발송 중..." : isCodeSent ? "재발송" : "인증요청"}
-          </Button>
+          </button>
         </div>
 
         {isCodeSent && (
@@ -204,9 +209,10 @@ function FindIdContent({
         )}
       </div>
 
-      <div className="pb-4 pt-6">
+      <div className="mt-5 pb-4">
         <Button
-          variant={isVerified ? "primary" : "secondary"}
+          variant={isVerified ? "primary" : "dark"}
+          size="lg"
           fullWidth
           onClick={handleSubmit}
           disabled={!isVerified}
@@ -287,6 +293,7 @@ function FindPasswordContent({
         <div className="pb-4">
           <Button
             variant="primary"
+            size="lg"
             fullWidth
             onClick={handleResetPassword}
             disabled={!newPassword || !confirmPassword || isResetting}
@@ -299,8 +306,8 @@ function FindPasswordContent({
   }
 
   return (
-    <div className="flex flex-1 flex-col px-4">
-      <div className="flex-1 space-y-5 pt-[30px]">
+    <div className="flex flex-1 flex-col overflow-y-auto px-4">
+      <div className="space-y-5 pt-[30px]">
         <Input
           type="email"
           value={email}
@@ -316,24 +323,28 @@ function FindPasswordContent({
           className="h-11"
         />
 
-        <div className="flex gap-2">
+        <div className="relative">
           <Input
             value={phone}
             onChange={(e) => handlePhoneChange(e.target.value)}
             placeholder="휴대전화(-없이)"
             inputMode="numeric"
             maxLength={11}
-            className="h-11 flex-1"
+            className="h-11 pr-24"
           />
-          <Button
-            variant="secondary"
-            size="lg"
+          <button
+            type="button"
             onClick={handleSendCode}
             disabled={!canSendCode}
-            className="shrink-0"
+            className={cn(
+              "absolute right-1.5 top-1/2 -translate-y-1/2 h-8 rounded-md px-3 text-sub-sm font-medium transition-colors",
+              canSendCode
+                ? "bg-[#E6F3FF] text-primary"
+                : "bg-[#ADB5BD] text-white",
+            )}
           >
             {isSending ? "발송 중..." : isCodeSent ? "재발송" : "인증요청"}
-          </Button>
+          </button>
         </div>
 
         {isCodeSent && (
@@ -350,9 +361,10 @@ function FindPasswordContent({
         )}
       </div>
 
-      <div className="pb-4 pt-6">
+      <div className="mt-5 pb-4">
         <Button
-          variant={isVerified ? "primary" : "secondary"}
+          variant={isVerified ? "primary" : "dark"}
+          size="lg"
           fullWidth
           onClick={handleSubmitVerification}
           disabled={!isVerified}
@@ -395,14 +407,14 @@ export default function FindAccountPage() {
   return (
     <div className="flex flex-1 flex-col bg-white">
       {/* 헤더 */}
-      <div className="flex h-14 items-center px-4">
+      <div className="flex h-14 items-center gap-1 px-4">
         <button
           onClick={() => { window.location.href = "/login"; }}
-          className="flex items-center gap-1 text-sub text-text-secondary hover:text-text-primary"
+          className="flex items-center text-text-primary hover:text-text-secondary"
         >
           <svg
-            width="20"
-            height="20"
+            width="26"
+            height="26"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -410,16 +422,13 @@ export default function FindAccountPage() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
+            <path d="M15 18l-6-6 6-6" />
           </svg>
-          돌아가기
         </button>
+        <span className="text-heading-lg font-semibold text-text-primary">
+          계정정보 찾기
+        </span>
       </div>
-
-      <h1 className="px-4 text-heading-xl font-bold text-text-primary">
-        계정정보 찾기
-      </h1>
 
       {/* 탭 */}
       <Tabs.Root
@@ -427,14 +436,15 @@ export default function FindAccountPage() {
         onValueChange={handleTabChange}
         className="flex flex-1 flex-col"
       >
-        <Tabs.List className="mx-4 mt-[30px] flex rounded-lg bg-gray-100 p-1">
+        <Tabs.List className="mx-4 mt-[30px] flex">
           <Tabs.Trigger
             value="findId"
             className={cn(
-              "flex-1 rounded-md py-2 text-sub font-medium transition-colors",
+              "flex-1 items-center justify-center py-3 text-body font-medium transition-colors",
               selectedTab === "findId"
-                ? "bg-white text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary",
+                ? "border-t border-l border-r border-primary bg-white text-primary"
+                : "border-t bg-gray-100 text-gray-500",
+              selectedTab !== "findId" && "border-l border-gray-200",
             )}
           >
             아이디 찾기
@@ -442,10 +452,11 @@ export default function FindAccountPage() {
           <Tabs.Trigger
             value="findPassword"
             className={cn(
-              "flex-1 rounded-md py-2 text-sub font-medium transition-colors",
+              "flex-1 items-center justify-center py-3 text-body font-medium transition-colors",
               selectedTab === "findPassword"
-                ? "bg-white text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary",
+                ? "border-t border-l border-r border-primary bg-white text-primary"
+                : "border-t bg-gray-100 text-gray-500",
+              selectedTab !== "findPassword" && "border-r border-gray-200",
             )}
           >
             비밀번호 찾기

@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark' | 'primary-light';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark' | 'primary-light' | 'outlined';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -23,6 +23,8 @@ const variantStyles: Record<ButtonVariant, string> = {
     'bg-state-error text-on-primary hover:opacity-90 disabled:opacity-50',
   'primary-light':
     'bg-[#E6F3FF] text-primary hover:bg-[#A7CBFA] disabled:opacity-50',
+  outlined:
+    'border border-primary text-primary bg-transparent hover:bg-primary/5 disabled:opacity-50',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
