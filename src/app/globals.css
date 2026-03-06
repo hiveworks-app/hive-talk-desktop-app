@@ -212,9 +212,9 @@
   --text-heading-xl--line-height: 34px;
   --text-heading-xl--letter-spacing: -0.72px;
 
-  --text-heading-lg: 20px;
+  --text-heading-lg: 22px;
   --text-heading-lg--line-height: 28px;
-  --text-heading-lg--letter-spacing: -0.6px;
+  --text-heading-lg--letter-spacing: -0.44px;
 
   --text-heading-md: 18px;
   --text-heading-md--line-height: 26px;
@@ -234,9 +234,9 @@
   --text-body-lg--line-height: 26px;
   --text-body-lg--letter-spacing: -0.34px;
 
-  --text-body: 15px;
-  --text-body--line-height: 24px;
-  --text-body--letter-spacing: -0.15px;
+  --text-body: 16px;
+  --text-body--line-height: 26px;
+  --text-body--letter-spacing: -0.32px;
 
   /* Sub */
   --text-sub: 14px;
@@ -302,6 +302,21 @@ button, a, input, textarea, select, label,
 }
 .electron-no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* macOS Electron: 트래픽 라이트 safe area (auth 페이지 등 AppNav 없는 화면) */
+html[data-electron-mac] .electron-safe-top {
+  padding-top: 48px;
+}
+
+/* Windows Electron: titleBarOverlay 영역 확보 (nav 제외) */
+html[data-electron-win] .electron-drag:not(nav) {
+  padding-right: 138px;
+}
+
+/* Windows Electron: safe area (auth 페이지 등 AppNav 없는 화면) */
+html[data-electron-win] .electron-safe-top {
+  padding-top: 36px;
 }
 
 /* Toast 진입 애니메이션 */

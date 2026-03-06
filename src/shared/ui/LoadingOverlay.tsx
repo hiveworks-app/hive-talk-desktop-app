@@ -54,16 +54,18 @@ export function LoadingOverlay() {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
       <div className="flex flex-col items-center gap-3">
-        <div style={{ width: 50, height: 50 }}>
+        <div className="h-20 w-20">
           {animationData ? (
             <Lottie
               animationData={animationData}
               loop
               autoplay
-              style={{ width: 60, height: 60 }}
+              style={{ width: "100%", height: "100%" }}
             />
           ) : (
-            <div className="h-[60px] w-[60px] animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
+            </div>
           )}
         </div>
         {isDeterminate ? (

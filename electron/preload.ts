@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   setBadgeCount: (count: number) => ipcRenderer.invoke('set-badge-count', count),
   isElectron: true,
+  platform: process.platform,
 });

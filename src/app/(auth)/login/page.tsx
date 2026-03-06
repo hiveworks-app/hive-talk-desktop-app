@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { del } from "idb-keyval";
 import { useLogin } from "@/features/auth/queries";
@@ -16,14 +18,11 @@ import {
   EM_ROOM_LIST_KEY,
   MEMBERS_KEY,
 } from "@/shared/config/queryKeys";
-import { isApiError } from "@/shared/api";
 import type { UserType } from "@/shared/types/user";
 import { USER_TYPE } from "@/shared/types/user";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
-import { useUIStore } from "@/store";
 import { useAuthStore } from "@/store/auth/authStore";
-import type { LoginErrorResponse } from "@/features/auth/type";
 
 function getBrowserDeviceId(): string {
   const KEY = "hive-device-id";
@@ -58,13 +57,19 @@ export default function LoginPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const logout = useAuthStore((state) => state.logout);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const { showSnackbar } = useUIStore();
   const { mutateAsync: login } = useLogin();
   const queryClient = useQueryClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  const preventBlur = (e: React.MouseEvent) => e.preventDefault();
+
+  const isFormFilled = email.trim().length > 0 && password.trim().length > 0;
 
   const validateLoginInfo = (email: string, password: string) => {
     const _email = email.trim();
@@ -86,7 +91,7 @@ export default function LoginPage() {
   const onLogin = async () => {
     const errorMessage = validateLoginInfo(email, password);
     if (errorMessage) {
-      showSnackbar({ message: errorMessage, state: "error" });
+      setLoginError(errorMessage);
       return;
     }
 
@@ -100,14 +105,11 @@ export default function LoginPage() {
         password: password.trim(),
       };
 
-      // 1. 로그인 API 호출
       const res = await login(params);
 
-      // 2. 이전 유저 캐시 완전 제거
       queryClient.clear();
       await del("hiveworks-query-cache");
 
-      // 3. 새 유저 인증 설정
       const { deviceId, deviceType } = params;
       const { accessToken, refreshToken, ...rest } = res.payload;
       setAuth({
@@ -117,7 +119,6 @@ export default function LoginPage() {
         user: { ...rest, userType: USER_TYPE.ORG_MEMBER as UserType },
       });
 
-      // 4. 핵심 데이터 prefetch (스피너가 도는 동안 완료 대기)
       await Promise.allSettled([
         queryClient.prefetchQuery({
           queryKey: MEMBERS_KEY,
@@ -137,24 +138,10 @@ export default function LoginPage() {
         }),
       ]);
 
-      // 5. 모든 데이터 준비 완료 → 풀 페이지 네비게이션
-      // Electron standalone에서 router.replace()는 RSC 페이로드 fetch 실패로 동작하지 않을 수 있음
-      // window.location.href는 전체 페이지를 새로 로드하므로 확실히 동작
       window.location.href = "/members";
-    } catch (err) {
+    } catch {
       setIsProcessing(false);
-      if (isApiError<LoginErrorResponse>(err)) {
-        const message =
-          err.message ||
-          "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-        showSnackbar({ message, state: "error" });
-        return;
-      }
-      if (err instanceof Error) {
-        showSnackbar({ message: err.message, state: "error" });
-        return;
-      }
-      showSnackbar({ message: "로그인 실패", state: "error" });
+      setLoginError("하이브톡계정 또는 비밀번호를 다시 입력해주세요.");
     }
   };
 
@@ -164,7 +151,6 @@ export default function LoginPage() {
     }
   };
 
-  // 쿠키 없이 accessToken만 남아있으면 stale 상태 → 정리
   if (
     accessToken &&
     typeof document !== "undefined" &&
@@ -173,61 +159,123 @@ export default function LoginPage() {
     logout();
   }
 
-  // 이미 로그인된 상태면 빈 화면 (middleware가 리디렉션 처리)
-  // isProcessing 중에는 로그인 폼+스피너를 계속 보여줌 (흰 화면 방지)
   if (accessToken && !isProcessing) return null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-white">
-      <div className="w-full max-w-[400px] rounded-2xl bg-surface p-8 shadow-lg">
-        {/* 로고 */}
-        <div className="mb-8 text-center">
-          <h1 className="text-heading-xl font-bold text-primary">HIVE TALK</h1>
-          <p className="mt-1 text-sub text-text-secondary">
-            일상과 업무의 분리, 대화를 통한 데이터 분석
-          </p>
+    <div className="flex flex-1 items-center justify-center bg-white">
+      <div className="flex w-full max-w-[400px] flex-col items-center px-4">
+        {/* 로고 + 서브텍스트 */}
+        <Image
+          src="/hivetalk-login-logo.png"
+          alt="HiveTalk"
+          width={200}
+          height={115}
+          priority
+        />
+        <p className="mt-3 text-sub tracking-tight text-text-secondary">
+          대화가 데이터가 되는곳, 똑똑한 협업 플랫폼
+        </p>
+
+        {/* 폼 영역 */}
+        <div className="mt-12 w-full space-y-5" onKeyDown={handleKeyDown}>
+          {/* 입력 필드 */}
+          <div className="space-y-2.5">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setLoginError("");
+              }}
+              placeholder="이메일"
+              autoComplete="email"
+              disabled={isProcessing}
+              className="h-11"
+            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setLoginError("");
+                }}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                placeholder="비밀번호"
+                autoComplete="current-password"
+                disabled={isProcessing}
+                className={`h-11${passwordFocused && password.length > 0 ? " pr-16" : ""}`}
+              />
+              {passwordFocused && password.length > 0 && !isProcessing && (
+                <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onMouseDown={preventBlur}
+                    onClick={() => { setPassword(""); setLoginError(""); }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onMouseDown={preventBlur}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.8 11.8 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+            {loginError && (
+              <p className="text-sub-sm text-state-error">{loginError}</p>
+            )}
+          </div>
+
+          {/* 버튼 영역 */}
+          <div className="space-y-2.5">
+            <Button
+              variant={isFormFilled ? "primary" : "dark"}
+              size="lg"
+              onClick={onLogin}
+              disabled={!isFormFilled || isProcessing}
+              fullWidth
+            >
+              {isProcessing ? <Spinner /> : "로그인"}
+            </Button>
+            <Button
+              variant="primary-light"
+              size="lg"
+              onClick={() => {
+                window.location.href = "/signup";
+              }}
+              fullWidth
+            >
+              회원가입
+            </Button>
+          </div>
         </div>
 
-        {/* 로그인 폼 */}
-        <div className="flex flex-col gap-3" onKeyDown={handleKeyDown}>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="아이디 입력"
-            autoComplete="email"
-            disabled={isProcessing}
-          />
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 입력"
-            autoComplete="current-password"
-            disabled={isProcessing}
-          />
-        </div>
-
-        <Button
-          onClick={onLogin}
-          disabled={!email || !password || isProcessing}
-          fullWidth
-          className="mt-6"
+        {/* 계정정보 찾기 링크 */}
+        <Link
+          href="/find-account"
+          className="mt-5 text-sub text-text-secondary underline"
         >
-          {isProcessing ? <Spinner /> : "로그인"}
-        </Button>
-
-        <div className="mt-4 text-center">
-          <span className="text-sub-sm text-text-tertiary">
-            계정이 없으신가요?{" "}
-          </span>
-          <a
-            href="/signup"
-            className="text-sub-sm font-semibold text-primary hover:underline"
-          >
-            회원가입
-          </a>
-        </div>
+          계정정보를 잊어버렸어요
+        </Link>
       </div>
     </div>
   );

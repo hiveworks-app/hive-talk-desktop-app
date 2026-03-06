@@ -16,8 +16,7 @@ export interface SignupTermsPayload {
 }
 
 export interface SignupTermItem {
-  termId: number;
-  version: number;
+  id: number;
   isAgreed: boolean;
 }
 
