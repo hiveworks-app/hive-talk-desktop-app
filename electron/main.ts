@@ -25,6 +25,13 @@ function getIconPath() {
     : path.join(process.resourcesPath, iconName);
 }
 
+function getTrayIconPath() {
+  const base = isDev
+    ? path.join(app.getAppPath(), 'resources')
+    : process.resourcesPath;
+  return path.join(base, 'trayIconTemplate.png');
+}
+
 /** Check if a specific port is available */
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -192,7 +199,15 @@ function createWindow(serverUrl: string) {
 // ------------------------------------------------------------------
 
 function createTray() {
-  const icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
+  let icon: Electron.NativeImage;
+
+  if (process.platform === 'darwin') {
+    icon = nativeImage.createFromPath(getTrayIconPath());
+    icon.setTemplateImage(true);
+  } else {
+    icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
+  }
+
   tray = new Tray(icon);
   tray.setToolTip('HiveTalk');
 
