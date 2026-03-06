@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const TIMER_DURATION = 180;
+const TIMER_DURATION = 300;
 
 /**
  * SMS 인증 카운트다운 타이머 훅
@@ -38,18 +38,34 @@ export const useCountdownTimer = (duration = TIMER_DURATION) => {
     };
   }, [isRunning]);
 
+  const [hasStarted, setHasStarted] = useState(false);
+
   const start = useCallback(() => {
+    setHasStarted(true);
     setSeconds(duration);
   }, [duration]);
 
+  const stop = useCallback(() => {
+    setSeconds(0);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
   const formattedTime =
-    seconds > 0 ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '';
+    seconds > 0
+      ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+      : hasStarted
+        ? '0:00'
+        : '';
 
   return {
     seconds,
     formattedTime,
-    isExpired: seconds === 0,
+    isExpired: hasStarted && seconds === 0,
     isRunning,
     start,
+    stop,
   } as const;
 };

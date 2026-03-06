@@ -10,7 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     <input
       ref={ref}
       className={cn(
-        'h-[var(--size-touch-target)] w-full rounded-lg border bg-surface px-3 text-sub text-text-primary outline-none placeholder:text-text-placeholder transition-colors',
+        'h-[var(--size-touch-target)] w-full rounded-lg border bg-surface px-3 text-sub text-text-primary outline-none placeholder:text-text-placeholder transition-colors disabled:bg-disabled disabled:text-text-disabled disabled:border-outline disabled:cursor-not-allowed',
         error
           ? 'border-state-error focus:border-state-error'
           : 'border-outline focus:border-primary',

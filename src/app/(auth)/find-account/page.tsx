@@ -436,15 +436,14 @@ export default function FindAccountPage() {
         onValueChange={handleTabChange}
         className="flex flex-1 flex-col"
       >
-        <Tabs.List className="mx-4 mt-[30px] flex">
+        <Tabs.List className="mx-4 mt-[30px] flex overflow-hidden">
           <Tabs.Trigger
             value="findId"
             className={cn(
-              "flex-1 items-center justify-center py-3 text-body font-medium transition-colors",
+              "flex-1 items-center justify-center rounded-l-xl border py-3 text-heading-sm font-medium transition-colors",
               selectedTab === "findId"
-                ? "border-t border-l border-r border-primary bg-white text-primary"
-                : "border-t bg-gray-100 text-gray-500",
-              selectedTab !== "findId" && "border-l border-gray-200",
+                ? "border-primary bg-[#E6F3FF] text-primary"
+                : "border-gray-200 bg-white text-gray-500",
             )}
           >
             아이디 찾기
@@ -452,11 +451,10 @@ export default function FindAccountPage() {
           <Tabs.Trigger
             value="findPassword"
             className={cn(
-              "flex-1 items-center justify-center py-3 text-body font-medium transition-colors",
+              "flex-1 items-center justify-center rounded-r-xl border py-3 text-heading-sm font-medium transition-colors",
               selectedTab === "findPassword"
-                ? "border-t border-l border-r border-primary bg-white text-primary"
-                : "border-t bg-gray-100 text-gray-500",
-              selectedTab !== "findPassword" && "border-r border-gray-200",
+                ? "border-primary bg-[#E6F3FF] text-primary"
+                : "border-gray-200 bg-white text-gray-500",
             )}
           >
             비밀번호 찾기
