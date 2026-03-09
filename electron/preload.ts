@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('tray-logout', handler);
     return () => { ipcRenderer.removeListener('tray-logout', handler); };
   },
+  setTrayAuthState: (isLoggedIn: boolean) =>
+    ipcRenderer.invoke('set-tray-auth-state', isLoggedIn),
 });

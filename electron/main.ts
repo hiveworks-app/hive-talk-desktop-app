@@ -198,18 +198,8 @@ function createWindow(serverUrl: string) {
 // Tray
 // ------------------------------------------------------------------
 
-function createTray() {
-  let icon: Electron.NativeImage;
-
-  if (process.platform === 'darwin') {
-    icon = nativeImage.createFromPath(getTrayIconPath());
-    icon.setTemplateImage(true);
-  } else {
-    icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
-  }
-
-  tray = new Tray(icon);
-  tray.setToolTip('HiveTalk');
+function updateTrayMenu(isLoggedIn: boolean) {
+  if (!tray) return;
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -222,6 +212,7 @@ function createTray() {
     { type: 'separator' },
     {
       label: '잠금모드',
+      enabled: isLoggedIn,
       click: () => {
         mainWindow?.webContents.send('tray-lock-mode');
         mainWindow?.show();
@@ -230,6 +221,7 @@ function createTray() {
     { type: 'separator' },
     {
       label: '로그아웃',
+      enabled: isLoggedIn,
       click: () => {
         mainWindow?.webContents.send('tray-logout');
         mainWindow?.show();
@@ -247,6 +239,21 @@ function createTray() {
   ]);
 
   tray.setContextMenu(contextMenu);
+}
+
+function createTray() {
+  let icon: Electron.NativeImage;
+
+  if (process.platform === 'darwin') {
+    icon = nativeImage.createFromPath(getTrayIconPath());
+    icon.setTemplateImage(true);
+  } else {
+    icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
+  }
+
+  tray = new Tray(icon);
+  tray.setToolTip('HiveTalk');
+  updateTrayMenu(false);
 
   if (process.platform !== 'darwin') {
     tray.on('double-click', () => {
@@ -273,6 +280,10 @@ ipcMain.handle('set-badge-count', (_event, count: number) => {
     app.setBadgeCount(count);
   }
   // Windows: overlay icon could be used here
+});
+
+ipcMain.handle('set-tray-auth-state', (_event, isLoggedIn: boolean) => {
+  updateTrayMenu(isLoggedIn);
 });
 
 // ------------------------------------------------------------------
