@@ -198,8 +198,14 @@ function createWindow(serverUrl: string) {
 // Tray
 // ------------------------------------------------------------------
 
-function updateTrayMenu(isLoggedIn: boolean) {
+let trayIsLoggedIn = false;
+let trayIsLocked = false;
+
+function updateTrayMenu(isLoggedIn: boolean, isLocked: boolean) {
   if (!tray) return;
+
+  trayIsLoggedIn = isLoggedIn;
+  trayIsLocked = isLocked;
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -212,7 +218,7 @@ function updateTrayMenu(isLoggedIn: boolean) {
     { type: 'separator' },
     {
       label: '잠금모드',
-      enabled: isLoggedIn,
+      enabled: isLoggedIn && !isLocked,
       click: () => {
         mainWindow?.webContents.send('tray-lock-mode');
         mainWindow?.show();
@@ -253,7 +259,7 @@ function createTray() {
 
   tray = new Tray(icon);
   tray.setToolTip('HiveTalk');
-  updateTrayMenu(false);
+  updateTrayMenu(false, false);
 
   if (process.platform !== 'darwin') {
     tray.on('double-click', () => {
@@ -283,7 +289,11 @@ ipcMain.handle('set-badge-count', (_event, count: number) => {
 });
 
 ipcMain.handle('set-tray-auth-state', (_event, isLoggedIn: boolean) => {
-  updateTrayMenu(isLoggedIn);
+  updateTrayMenu(isLoggedIn, trayIsLocked);
+});
+
+ipcMain.handle('set-tray-lock-state', (_event, isLocked: boolean) => {
+  updateTrayMenu(trayIsLoggedIn, isLocked);
 });
 
 // ------------------------------------------------------------------

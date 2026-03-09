@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
 
@@ -9,6 +10,7 @@ interface ElectronAPI {
   onTrayLockMode?: (callback: () => void) => () => void;
   onTrayLogout?: (callback: () => void) => () => void;
   setTrayAuthState?: (isLoggedIn: boolean) => void;
+  setTrayLockState?: (isLocked: boolean) => void;
 }
 
 function getElectronAPI(): ElectronAPI | undefined {
@@ -16,12 +18,19 @@ function getElectronAPI(): ElectronAPI | undefined {
 }
 
 export function ElectronTrayHandler() {
+  const router = useRouter();
   const accessToken = useAuthStore(s => s.accessToken);
+  const isLocked = useUIStore(s => s.isLocked);
 
   // 로그인 상태 변경 시 트레이 메뉴 활성화/비활성화 동기화
   useEffect(() => {
     getElectronAPI()?.setTrayAuthState?.(!!accessToken);
   }, [accessToken]);
+
+  // 잠금 상태 변경 시 트레이 메뉴 동기화
+  useEffect(() => {
+    getElectronAPI()?.setTrayLockState?.(isLocked);
+  }, [isLocked]);
 
   useEffect(() => {
     const api = getElectronAPI();
@@ -34,7 +43,7 @@ export function ElectronTrayHandler() {
 
     const cleanupLogout = api.onTrayLogout?.(() => {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      router.replace('/login');
     });
 
     return () => {

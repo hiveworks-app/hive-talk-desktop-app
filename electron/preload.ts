@@ -19,4 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   setTrayAuthState: (isLoggedIn: boolean) =>
     ipcRenderer.invoke('set-tray-auth-state', isLoggedIn),
+  setTrayLockState: (isLocked: boolean) =>
+    ipcRenderer.invoke('set-tray-lock-state', isLocked),
 });
