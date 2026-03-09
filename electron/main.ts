@@ -248,14 +248,12 @@ function createTray() {
 
   tray.setContextMenu(contextMenu);
 
-  tray.on('click', () => {
-    if (mainWindow?.isVisible()) {
-      mainWindow.focus();
-    } else {
+  if (process.platform !== 'darwin') {
+    tray.on('double-click', () => {
       mainWindow?.show();
       mainWindow?.focus();
-    }
-  });
+    });
+  }
 }
 
 // ------------------------------------------------------------------
