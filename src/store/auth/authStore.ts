@@ -73,22 +73,8 @@ export const useAuthStore = create<AuthState>()(
       name: 'user-auth',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => state => {
-        if (typeof window === 'undefined') return;
-
-        const autoLogin = localStorage.getItem('auto-login') === 'true';
-        const sessionActive = sessionStorage.getItem('session-active');
-
-        if (state?.accessToken && !autoLogin && !sessionActive) {
-          // 자동로그인 OFF + 새 세션(앱 재시작) → 인증 상태 초기화 + 로그인 페이지 이동
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-          return;
-        }
-
-        if (state?.accessToken) {
-          sessionStorage.setItem('session-active', 'true');
-        }
         // localStorage → Zustand 복원 완료 후 쿠키 동기화
+        // 새로고침 시 쿠키가 누락되었더라도 여기서 복구됨
         syncAuthCookie(!!state?.accessToken);
       },
     },

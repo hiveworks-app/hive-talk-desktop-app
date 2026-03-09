@@ -114,7 +114,6 @@ export default function LoginPage() {
       const res = await login(params);
 
       localStorage.setItem("auto-login", String(autoLogin));
-      sessionStorage.setItem("session-active", "true");
       queryClient.clear();
       await del("hiveworks-query-cache");
 
