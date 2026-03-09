@@ -2,6 +2,9 @@
 
 /* ── Design System Colors (from hiveworks-mobile/src/theme/colors.ts) ── */
 :root {
+  /* Electron 타이틀바 높이 (Windows에서만 사용, 기본 0) */
+  --electron-titlebar-h: 0px;
+
   /* Light Theme Semantic Tokens (RN light.* 동일) */
   --color-primary: #007AFF;
   --color-on-primary: #FFFFFF;
@@ -260,6 +263,8 @@
 body {
   background: var(--color-background);
   color: var(--color-text-primary);
+  height: 100dvh;
+  box-sizing: border-box;
 }
 
 /* Scrollbar styling for chat areas */
@@ -310,8 +315,11 @@ html[data-electron-mac] .electron-safe-top {
 }
 
 /* Windows Electron: 콘텐츠를 titleBarOverlay 아래로 배치 (카카오톡 방식) */
+html[data-electron-win] {
+  --electron-titlebar-h: 32px; /* titleBarOverlay height와 동일 */
+}
 html[data-electron-win] body {
-  padding-top: 32px; /* titleBarOverlay height와 동일 */
+  padding-top: var(--electron-titlebar-h);
 }
 
 /* Windows Electron: AppNav 상단 여백 축소 (타이틀바는 body padding이 처리) */
