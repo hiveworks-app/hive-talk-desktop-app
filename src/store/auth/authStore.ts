@@ -79,8 +79,9 @@ export const useAuthStore = create<AuthState>()(
         const sessionActive = sessionStorage.getItem('session-active');
 
         if (state?.accessToken && !autoLogin && !sessionActive) {
-          // 자동로그인 OFF + 새 세션(앱 재시작) → 인증 상태 초기화
+          // 자동로그인 OFF + 새 세션(앱 재시작) → 인증 상태 초기화 + 로그인 페이지 이동
           useAuthStore.getState().logout();
+          window.location.href = '/login';
           return;
         }
 
