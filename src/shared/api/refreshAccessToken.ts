@@ -42,7 +42,7 @@ export async function refreshAccessToken(): Promise<string | null> {
         deviceId: effectiveDeviceInfo.deviceId,
         userId: user.id,
         refreshToken,
-        deviceToken: "web-no-fcm",
+        deviceToken: effectiveDeviceInfo.deviceId,
       };
 
       const res = await fetch(`${BASE_URL}/app/refresh-tokens`, {

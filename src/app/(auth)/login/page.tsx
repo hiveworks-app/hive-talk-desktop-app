@@ -103,10 +103,11 @@ export default function LoginPage() {
 
     setIsProcessing(true);
     try {
+      const deviceId = getBrowserDeviceId();
       const params = {
-        deviceToken: "web-no-fcm",
+        deviceToken: deviceId,
         deviceType: "DESKTOP" as const,
-        deviceId: getBrowserDeviceId(),
+        deviceId,
         email: email.trim(),
         password: password.trim(),
       };
@@ -117,12 +118,11 @@ export default function LoginPage() {
       queryClient.clear();
       await del("hiveworks-query-cache");
 
-      const { deviceId, deviceType } = params;
       const { accessToken, refreshToken, ...rest } = res.payload;
       setAuth({
         accessToken,
         refreshToken,
-        deviceInfo: { deviceId, deviceType },
+        deviceInfo: { deviceId, deviceType: params.deviceType },
         user: { ...rest, userType: USER_TYPE.ORG_MEMBER as UserType },
       });
 
