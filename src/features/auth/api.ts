@@ -1,8 +1,8 @@
 import { LoginRequestProps, LoginResponseProps } from '@/features/auth/type';
-import { request } from '@/shared/api';
+import { publicRequest, request } from '@/shared/api';
 
 export const apiLogin = (data: LoginRequestProps) =>
-  request<LoginResponseProps>('/app/login', {
+  publicRequest<LoginResponseProps>('/app/login', {
     method: 'POST',
     body: data,
   });
