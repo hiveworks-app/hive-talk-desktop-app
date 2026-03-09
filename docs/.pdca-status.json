@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-09T01:37:31.552Z",
+  "lastUpdated": "2026-03-09T01:54:36.455Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -12,7 +12,9 @@
     "find-account",
     "signup",
     "(auth)",
-    "_components"
+    "_components",
+    "store",
+    "settings"
   ],
   "primaryFeature": "hive-talk-desktop-app",
   "features": {
@@ -158,6 +160,32 @@
         "lastUpdated": "2026-03-06T06:55:59.419Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/signup/_components/CompleteStep.tsx"
+    },
+    "store": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T01:54:09.157Z",
+        "lastUpdated": "2026-03-09T01:54:09.157Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/themeStore.ts"
+    },
+    "settings": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T01:54:14.360Z",
+        "lastUpdated": "2026-03-09T01:54:36.455Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/settings/page.tsx"
     }
   },
   "pipeline": {
@@ -168,7 +196,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-09T01:37:31.552Z"
+    "lastActivity": "2026-03-09T01:54:36.455Z"
   },
   "history": [
     {
@@ -1326,6 +1354,30 @@
     {
       "timestamp": "2026-03-09T01:37:31.552Z",
       "feature": "hive-talk-desktop-app",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T01:54:09.157Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T01:54:14.360Z",
+      "feature": "settings",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T01:54:23.805Z",
+      "feature": "settings",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T01:54:36.455Z",
+      "feature": "settings",
       "phase": "do",
       "action": "updated"
     }

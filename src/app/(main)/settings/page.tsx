@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
-import { cn } from '@/shared/lib/cn';
 import { useAuthStore } from '@/store/auth/authStore';
-import { useThemeStore } from '@/store/themeStore';
 import { useUIStore } from '@/store';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 
@@ -87,12 +85,6 @@ export default function SettingsPage() {
           />
         </section>
 
-        {/* 화면 설정 섹션 */}
-        <section className="border-b border-divider py-2">
-          <h3 className="px-4 py-2 text-sub-sm font-semibold uppercase text-text-tertiary">화면</h3>
-          <ThemeSelector />
-        </section>
-
         {/* 앱 정보 섹션 */}
         <section className="py-2">
           <h3 className="px-4 py-2 text-sub-sm font-semibold uppercase text-text-tertiary">앱 정보</h3>
@@ -115,55 +107,6 @@ export default function SettingsPage() {
 
       <MyProfileDialog isOpen={showProfile} onClose={() => setShowProfile(false)} />
     </main>
-  );
-}
-
-const THEME_OPTIONS = [
-  { value: 'system' as const, label: '시스템' },
-  { value: 'light' as const, label: '라이트' },
-  { value: 'dark' as const, label: '다크' },
-];
-
-function ThemeSelector() {
-  const { mode, setMode } = useThemeStore();
-
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center gap-3">
-        <span className="text-text-secondary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-        </span>
-        <div className="flex-1">
-          <span className="text-sub text-text-primary">테마</span>
-        </div>
-        <div className="flex rounded-lg border border-divider">
-          {THEME_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setMode(opt.value)}
-              className={cn(
-                'px-3 py-1.5 text-sub-sm font-medium transition-colors',
-                mode === opt.value
-                  ? 'bg-primary text-on-primary'
-                  : 'text-text-secondary hover:bg-surface-pressed',
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 

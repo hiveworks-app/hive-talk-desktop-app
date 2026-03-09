@@ -1,48 +1,20 @@
 import { create } from 'zustand';
 
-type ThemeMode = 'system' | 'light' | 'dark';
-
 interface ThemeState {
-  mode: ThemeMode;
-  setMode: (mode: ThemeMode) => void;
+  mode: 'light';
 }
 
-function getInitialMode(): ThemeMode {
-  if (typeof window === 'undefined') return 'system';
-  return (localStorage.getItem('theme') as ThemeMode) || 'system';
-}
-
-function applyTheme(mode: ThemeMode) {
+function applyTheme() {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-
-  root.classList.remove('dark', 'light');
-  root.removeAttribute('data-theme');
-
-  if (mode === 'dark') {
-    root.classList.add('dark');
-    root.setAttribute('data-theme', 'dark');
-  } else if (mode === 'light') {
-    root.classList.add('light');
-    root.setAttribute('data-theme', 'light');
-  }
-  // 'system' → no class, CSS media query handles it
+  root.classList.remove('dark');
+  root.classList.add('light');
+  root.setAttribute('data-theme', 'light');
 }
 
-export const useThemeStore = create<ThemeState>((set) => {
-  // Apply initial theme on store creation
-  const initial = getInitialMode();
+export const useThemeStore = create<ThemeState>(() => {
   if (typeof window !== 'undefined') {
-    // Defer to avoid SSR hydration mismatch
-    requestAnimationFrame(() => applyTheme(initial));
+    requestAnimationFrame(() => applyTheme());
   }
-
-  return {
-    mode: initial,
-    setMode: (mode) => {
-      localStorage.setItem('theme', mode);
-      applyTheme(mode);
-      set({ mode });
-    },
-  };
+  return { mode: 'light' };
 });
