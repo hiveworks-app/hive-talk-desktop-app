@@ -292,8 +292,23 @@ app.on('second-instance', () => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   isQuitting = true;
+
+  // 자동로그인 OFF → localStorage에서 인증 정보 삭제
+  // 재시작 시 Zustand가 복원할 데이터가 없으므로 로그인 페이지로 이동
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      await mainWindow.webContents.executeJavaScript(`
+        if (localStorage.getItem('auto-login') !== 'true') {
+          localStorage.removeItem('user-auth');
+          document.cookie = 'has-auth=; max-age=0; path=/';
+        }
+      `);
+    } catch {
+      // 윈도우가 이미 닫힌 경우 무시
+    }
+  }
 });
 
 app.on('window-all-closed', () => {
