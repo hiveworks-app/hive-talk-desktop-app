@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { ReactQueryProvider } from '@/shared/providers/ReactQueryProvider';
 import { ElectronPlatformDetector } from '@/shared/ui/ElectronPlatformDetector';
+import { ElectronTrayHandler } from '@/shared/ui/ElectronTrayHandler';
 import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
+import { LockScreen } from '@/shared/ui/LockScreen';
 import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
 
@@ -49,9 +51,11 @@ export default function RootLayout({
       <body className="antialiased">
         <ReactQueryProvider>
           <ElectronPlatformDetector />
+          <ElectronTrayHandler />
           {children}
           <ToastContainer />
           <LoadingOverlay />
+          <LockScreen />
         </ReactQueryProvider>
       </body>
     </html>

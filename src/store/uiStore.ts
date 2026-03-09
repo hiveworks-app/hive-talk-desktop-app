@@ -18,17 +18,21 @@ interface LoadingOverlayState {
 interface UIState {
   toasts: ToastItem[];
   loadingOverlay: LoadingOverlayState;
+  isLocked: boolean;
   showToast: (toast: Omit<ToastItem, 'id'>) => void;
   removeToast: (id: string) => void;
   showSnackbar: (params: { message: string; state?: ToastItem['state'] }) => void;
   showLoadingOverlay: (options?: { message?: string; progress?: number }) => void;
   setLoadingProgress: (progress: number) => void;
   hideLoadingOverlay: () => void;
+  lock: () => void;
+  unlock: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   toasts: [],
   loadingOverlay: { visible: false },
+  isLocked: false,
   showToast: toast => {
     const id = crypto.randomUUID();
     set(state => ({ toasts: [...state.toasts, { ...toast, id }] }));
@@ -50,4 +54,6 @@ export const useUIStore = create<UIState>((set) => ({
     set(s => ({ loadingOverlay: { ...s.loadingOverlay, progress } })),
   hideLoadingOverlay: () =>
     set({ loadingOverlay: { visible: false } }),
+  lock: () => set({ isLocked: true }),
+  unlock: () => set({ isLocked: false }),
 }));

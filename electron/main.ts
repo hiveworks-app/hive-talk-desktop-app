@@ -213,8 +213,25 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '열기',
+      label: 'HiveTalk 열기',
       click: () => {
+        mainWindow?.show();
+        mainWindow?.focus();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '잠금모드',
+      click: () => {
+        mainWindow?.webContents.send('tray-lock-mode');
+        mainWindow?.show();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '로그아웃',
+      click: () => {
+        mainWindow?.webContents.send('tray-logout');
         mainWindow?.show();
         mainWindow?.focus();
       },
@@ -231,14 +248,12 @@ function createTray() {
 
   tray.setContextMenu(contextMenu);
 
-  tray.on('click', () => {
-    if (mainWindow?.isVisible()) {
-      mainWindow.focus();
-    } else {
+  if (process.platform !== 'darwin') {
+    tray.on('double-click', () => {
       mainWindow?.show();
       mainWindow?.focus();
-    }
-  });
+    });
+  }
 }
 
 // ------------------------------------------------------------------

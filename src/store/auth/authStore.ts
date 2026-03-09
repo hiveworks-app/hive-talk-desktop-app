@@ -73,8 +73,15 @@ export const useAuthStore = create<AuthState>()(
       name: 'user-auth',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => state => {
+        if (typeof window === 'undefined') return;
+
+        const autoLogin = localStorage.getItem('auto-login') === 'true';
+        if (state?.accessToken && !autoLogin) {
+          // 자동로그인 OFF → 인증 상태 초기화
+          useAuthStore.getState().logout();
+          return;
+        }
         // localStorage → Zustand 복원 완료 후 쿠키 동기화
-        // 새로고침 시 쿠키가 누락되었더라도 여기서 복구됨
         syncAuthCookie(!!state?.accessToken);
       },
     },
