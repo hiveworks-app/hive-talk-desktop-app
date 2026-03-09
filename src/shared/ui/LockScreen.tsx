@@ -130,7 +130,7 @@ export function LockScreen() {
             logout();
             router.replace('/login');
           }}
-          className="mt-6 text-sub text-text-tertiary underline hover:text-text-secondary"
+          className="mt-6 cursor-pointer text-sub text-text-tertiary underline hover:text-text-secondary"
         >
           다른 계정으로 로그인
         </button>
