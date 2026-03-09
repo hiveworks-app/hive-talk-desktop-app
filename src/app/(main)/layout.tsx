@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
   const accessToken = useAuthStore(s => s.accessToken);
 
@@ -13,7 +15,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const check = () => {
       if (!useAuthStore.getState().accessToken) {
-        window.location.href = '/login';
+        router.replace('/login');
         return;
       }
       setAuthChecked(true);
@@ -29,7 +31,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // 로그아웃 시 로그인 페이지로 이동
   useEffect(() => {
     if (authChecked && !accessToken) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
   }, [authChecked, accessToken]);
 
