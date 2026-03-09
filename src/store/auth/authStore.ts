@@ -76,10 +76,16 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window === 'undefined') return;
 
         const autoLogin = localStorage.getItem('auto-login') === 'true';
-        if (state?.accessToken && !autoLogin) {
-          // 자동로그인 OFF → 인증 상태 초기화
+        const sessionActive = sessionStorage.getItem('session-active');
+
+        if (state?.accessToken && !autoLogin && !sessionActive) {
+          // 자동로그인 OFF + 새 세션(앱 재시작) → 인증 상태 초기화
           useAuthStore.getState().logout();
           return;
+        }
+
+        if (state?.accessToken) {
+          sessionStorage.setItem('session-active', 'true');
         }
         // localStorage → Zustand 복원 완료 후 쿠키 동기화
         syncAuthCookie(!!state?.accessToken);
