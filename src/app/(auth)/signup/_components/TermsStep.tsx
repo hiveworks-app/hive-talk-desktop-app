@@ -1,26 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
+import { Checkbox } from '@/shared/ui/Checkbox';
 import type { SignupTerm } from '@/features/signup/type';
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <div
-      className={cn(
-        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
-        checked ? 'border-primary bg-primary' : 'border-gray-300',
-      )}
-    >
-      {checked && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      )}
-    </div>
-  );
-}
 
 export function TermsStep({
   terms,
@@ -64,7 +47,7 @@ export function TermsStep({
               onClick={() => onToggle(term.id)}
               className="flex flex-1 items-center gap-2.5 px-4 text-left"
             >
-              <Checkbox checked={agreedTermIds.has(term.id)} />
+              <Checkbox checked={agreedTermIds.has(term.id)} size="md" />
               <span className="flex-1 text-sub text-text-primary">
                 {term.title} {term.isRequired ? '(필수)' : '(선택)'}
               </span>

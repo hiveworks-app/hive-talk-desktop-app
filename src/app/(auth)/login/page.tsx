@@ -21,6 +21,7 @@ import {
 import type { UserType } from "@/shared/types/user";
 import { USER_TYPE } from "@/shared/types/user";
 import { Button } from "@/shared/ui/Button";
+import { Checkbox } from "@/shared/ui/Checkbox";
 import { Input } from "@/shared/ui/Input";
 import { useAuthStore } from "@/store/auth/authStore";
 
@@ -66,6 +67,11 @@ export default function LoginPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [autoLogin, setAutoLogin] = useState(() =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("auto-login") === "true"
+      : false,
+  );
 
   const preventBlur = (e: React.MouseEvent) => e.preventDefault();
 
@@ -107,6 +113,7 @@ export default function LoginPage() {
 
       const res = await login(params);
 
+      localStorage.setItem("auto-login", String(autoLogin));
       queryClient.clear();
       await del("hiveworks-query-cache");
 
@@ -244,6 +251,17 @@ export default function LoginPage() {
               <p className="text-sub-sm text-state-error">{loginError}</p>
             )}
           </div>
+
+          {/* 자동로그인 */}
+          <button
+            type="button"
+            onClick={() => setAutoLogin((prev) => !prev)}
+            disabled={isProcessing}
+            className="flex items-center gap-2"
+          >
+            <Checkbox checked={autoLogin} size="md" />
+            <span className="text-sub text-text-secondary">자동로그인</span>
+          </button>
 
           {/* 버튼 영역 */}
           <div className="space-y-2.5">

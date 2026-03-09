@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-09T02:42:06.316Z",
+  "lastUpdated": "2026-03-09T03:04:59.426Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -14,7 +14,8 @@
     "(auth)",
     "_components",
     "store",
-    "settings"
+    "settings",
+    "auth"
   ],
   "primaryFeature": "hive-talk-desktop-app",
   "features": {
@@ -53,7 +54,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-03T01:13:10.140Z",
-        "lastUpdated": "2026-03-06T06:00:46.639Z"
+        "lastUpdated": "2026-03-09T03:04:59.426Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/login/page.tsx"
     },
@@ -79,9 +80,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-05T00:18:23.170Z",
-        "lastUpdated": "2026-03-09T02:28:35.290Z"
+        "lastUpdated": "2026-03-09T03:01:49.827Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/ui/ElectronTrayHandler.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/ui/Checkbox.tsx"
     },
     "find-login-id": {
       "phase": "do",
@@ -157,9 +158,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-06T06:53:42.896Z",
-        "lastUpdated": "2026-03-06T06:55:59.419Z"
+        "lastUpdated": "2026-03-09T03:04:17.463Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/signup/_components/CompleteStep.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/signup/_components/TermsStep.tsx"
     },
     "store": {
       "phase": "do",
@@ -186,6 +187,19 @@
         "lastUpdated": "2026-03-09T01:54:36.455Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/settings/page.tsx"
+    },
+    "auth": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T02:49:13.789Z",
+        "lastUpdated": "2026-03-09T02:49:13.789Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/auth/authStore.ts"
     }
   },
   "pipeline": {
@@ -196,7 +210,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-09T02:42:06.316Z"
+    "lastActivity": "2026-03-09T03:04:59.426Z"
   },
   "history": [
     {
@@ -1444,6 +1458,78 @@
     {
       "timestamp": "2026-03-09T02:42:06.316Z",
       "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:49:13.789Z",
+      "feature": "auth",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:49:24.864Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:49:34.933Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:49:41.375Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:53:58.881Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:54:29.460Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:54:35.502Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:54:49.674Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T02:54:56.266Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:01:49.827Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:04:17.463Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:04:59.426Z",
+      "feature": "login",
       "phase": "do",
       "action": "updated"
     }
