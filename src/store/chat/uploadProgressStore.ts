@@ -22,8 +22,9 @@ export const useUploadProgressStore = create<UploadProgressState>(set => ({
     set(state => ({ byFileId: { ...state.byFileId, [fileId]: next } })),
   clearProgress: fileId =>
     set(state => {
-      const { [fileId]: _, ...rest } = state.byFileId;
-      return { byFileId: rest };
+      const next = { ...state.byFileId };
+      delete next[fileId];
+      return { byFileId: next };
     }),
   clearAll: () => set({ byFileId: {} }),
 }));

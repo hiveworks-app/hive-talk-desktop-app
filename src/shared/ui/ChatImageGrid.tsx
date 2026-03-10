@@ -69,7 +69,12 @@ export function ChatImageGrid({
   if (count === 0) return null;
 
   const rows = buildRows(count);
-  let cursor = 0;
+
+  // 렌더 중 변수 변이 방지: 각 row의 시작 인덱스를 미리 계산
+  const rowStartIndices = rows.reduce<number[]>((acc, row, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1] + rows[i - 1].length);
+    return acc;
+  }, []);
 
   const cellSize = (columns: number) =>
     (maxWidth - GAP_PX * (columns - 1)) / columns;
@@ -103,8 +108,8 @@ export function ChatImageGrid({
   return (
     <div style={{ maxWidth }}>
       {rows.map((row, rowIndex) => {
-        const rowItems = sources.slice(cursor, cursor + row.length);
-        cursor += row.length;
+        const start = rowStartIndices[rowIndex];
+        const rowItems = sources.slice(start, start + row.length);
         const size = cellSize(row.columns);
 
         return (
@@ -114,7 +119,7 @@ export function ChatImageGrid({
             style={{ marginTop: rowIndex === 0 ? 0 : GAP_PX }}
           >
             {rowItems.map((item, colIndex) => {
-              const globalIndex = cursor - row.length + colIndex;
+              const globalIndex = start + colIndex;
               return (
                 <button
                   key={item.key}

@@ -25,7 +25,6 @@ import {
   Message,
   WS_CHANNEL_TYPE,
   WS_MESSAGE_CONTENT_TYPE,
-  WebSocketChannelTypes,
   WebSocketEnvelope,
   WebSocketPublishItem,
   isAddTagBroadcast,
@@ -550,7 +549,7 @@ export const useChatRoomController = () => {
       removeListener(currentRoomId);
       clearPendingReadEvents();
     };
-  }, [currentRoomId, removeListener, clearPendingReadEvents]);
+  }, [currentRoomId]);
 
   // 2. 방 변경 감지 및 초기화
   // isFirstMountRef: 같은 방 재진입 시에도 stale 메시지를 비우고 fresh fetch 보장
@@ -563,7 +562,7 @@ export const useChatRoomController = () => {
       didInitialSyncRef.current = false;
       setRunTimeRoomId(saveRoomId);
     }
-  }, [saveRoomId, currentRoomId, replaceMessages, setRunTimeRoomId]);
+  }, [saveRoomId, currentRoomId]);
 
   // 3. 초기 메시지 fetch
   // 재진입 시 기존 메시지를 비우고 fresh presigned URL을 가진 데이터로 다시 받아옴
@@ -593,7 +592,7 @@ export const useChatRoomController = () => {
     return () => {
       didInitialSyncRef.current = false;
     };
-  }, [currentRoomId, lastMessage?.message?.id, buildFetchBeforeMessage, send, replaceMessages, setLoading]);
+  }, [currentRoomId, lastMessage?.message?.id]);
 
   // 4. visibilitychange (AppState 대체)
   useEffect(() => {
@@ -618,7 +617,7 @@ export const useChatRoomController = () => {
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [currentRoomId, buildViewInMessageRoom, buildViewOutMessageRoom, send]);
+  }, [currentRoomId]);
 
   // 5. WebSocket 재연결 시 리스너 재등록 및 메시지 fetch
   useEffect(() => {
@@ -655,14 +654,5 @@ export const useChatRoomController = () => {
         );
       }
     }
-  }, [
-    isConnected,
-    currentRoomId,
-    lastMessage?.message?.id,
-    buildFetchAfterMessage,
-    buildFetchBeforeMessage,
-    send,
-    addListener,
-    buildViewInMessageRoom,
-  ]);
+  }, [isConnected, currentRoomId]);
 };

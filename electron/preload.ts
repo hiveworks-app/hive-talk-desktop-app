@@ -23,4 +23,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('set-tray-lock-state', isLocked),
   setTitleBarDimmed: (isDimmed: boolean) =>
     ipcRenderer.invoke('set-titlebar-dimmed', isDimmed),
+  focusWindow: () => ipcRenderer.invoke('focus-window'),
 });

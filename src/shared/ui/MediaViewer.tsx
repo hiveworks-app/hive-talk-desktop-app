@@ -13,7 +13,6 @@ export interface MediaViewerItem {
 interface MediaViewerProps {
   visible: boolean;
   items: MediaViewerItem[];
-  initialIndex: number;
   currentIndex: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
@@ -22,7 +21,6 @@ interface MediaViewerProps {
 export function MediaViewer({
   visible,
   items,
-  initialIndex,
   currentIndex,
   onIndexChange,
   onClose,

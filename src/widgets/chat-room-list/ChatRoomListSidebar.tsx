@@ -25,7 +25,7 @@ import {
 } from "@/shared/types/websocket";
 import { getLastMessagePreview } from "@/shared/utils/chatUtils";
 import { formatChatTimestamp } from "@/shared/utils/formatTimeUtils";
-import { useAuthStore } from "@/store/auth/authStore";
+
 import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 
@@ -34,7 +34,6 @@ type Tab = "dm" | "gm";
 export function ChatRoomListSidebar() {
   const [activeTab, setActiveTab] = useState<Tab>("dm");
   const [showCreateRoom, setShowCreateRoom] = useState(false);
-  const user = useAuthStore((s) => s.user);
   const { data: dmRooms = [], isLoading: dmLoading } = useGetDMRoomList();
   const { data: gmRooms = [], isLoading: gmLoading } = useGetGMRoomList();
 

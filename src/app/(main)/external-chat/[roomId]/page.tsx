@@ -287,7 +287,6 @@ export default function ExternalChatRoomPage() {
       <MediaViewer
         visible={viewerVisible}
         items={viewerItems}
-        initialIndex={viewerIndex}
         currentIndex={viewerIndex}
         onIndexChange={setViewerIndex}
         onClose={closeMediaViewer}

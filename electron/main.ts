@@ -287,6 +287,13 @@ ipcMain.handle('show-notification', (_event, title: string, body: string) => {
   }
 });
 
+ipcMain.handle('focus-window', () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 ipcMain.handle('get-app-version', () => app.getVersion());
 
 ipcMain.handle('set-badge-count', (_event, count: number) => {

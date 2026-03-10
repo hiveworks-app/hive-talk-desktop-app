@@ -85,7 +85,7 @@ function ViewMode({ user, onEdit }: { user: AuthSaveUserInfoTypes; onEdit: () =>
 
 function EditMode({ user, onDone }: { user: AuthSaveUserInfoTypes; onDone: () => void }) {
   const { mutateAsync: updateProfile, isPending } = useMyProfileUpdate();
-  const { mutateAsync: uploadImage, isPending: imgPending } = useMyProfileImageUpload();
+  const { mutateAsync: uploadImage } = useMyProfileImageUpload();
   const { showSnackbar, showLoadingOverlay, hideLoadingOverlay } = useUIStore();
   const fileRef = useRef<HTMLInputElement>(null);
 

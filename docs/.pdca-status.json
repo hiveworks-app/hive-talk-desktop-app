@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-10T01:10:10.716Z",
+  "lastUpdated": "2026-03-10T01:44:53.182Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -20,7 +20,10 @@
     "create-room",
     "profile",
     "chat-room",
-    "[roomId]"
+    "[roomId]",
+    "websocket",
+    "chat-room-list",
+    "chat"
   ],
   "primaryFeature": "hive-talk-desktop-app",
   "features": {
@@ -46,9 +49,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-03T01:12:53.470Z",
-        "lastUpdated": "2026-03-10T00:34:58.092Z"
+        "lastUpdated": "2026-03-10T01:19:28.608Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/electron/main.ts"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/electron/preload.ts"
     },
     "login": {
       "phase": "do",
@@ -72,7 +75,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-03T02:11:12.103Z",
-        "lastUpdated": "2026-03-09T08:08:40.446Z"
+        "lastUpdated": "2026-03-10T01:44:43.798Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/layout.tsx"
     },
@@ -85,9 +88,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-05T00:18:23.170Z",
-        "lastUpdated": "2026-03-10T00:37:20.160Z"
+        "lastUpdated": "2026-03-10T01:44:44.742Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/ui/LoadingOverlay.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/ui/ElectronTrayHandler.tsx"
     },
     "find-login-id": {
       "phase": "do",
@@ -241,7 +244,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T00:36:17.415Z",
-        "lastUpdated": "2026-03-10T00:36:33.968Z"
+        "lastUpdated": "2026-03-10T01:33:59.081Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/profile/MyProfileDialog.tsx"
     },
@@ -254,9 +257,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:02:48.500Z",
-        "lastUpdated": "2026-03-10T01:10:10.716Z"
+        "lastUpdated": "2026-03-10T01:44:53.182Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/chat-room/MessageBubble.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/chat-room/useChatRoomController.ts"
     },
     "[roomId]": {
       "phase": "do",
@@ -267,9 +270,48 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:08:44.377Z",
-        "lastUpdated": "2026-03-10T01:08:44.377Z"
+        "lastUpdated": "2026-03-10T01:38:52.187Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/chat/[roomId]/page.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/external-chat/[roomId]/page.tsx"
+    },
+    "websocket": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-10T01:19:42.699Z",
+        "lastUpdated": "2026-03-10T01:36:17.592Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/websocket/WebSocketContext.tsx"
+    },
+    "chat-room-list": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-10T01:33:58.165Z",
+        "lastUpdated": "2026-03-10T01:34:14.102Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/chat-room-list/ChatRoomListSidebar.tsx"
+    },
+    "chat": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-10T01:34:02.721Z",
+        "lastUpdated": "2026-03-10T01:38:54.660Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/chat/uploadProgressStore.ts"
     }
   },
   "pipeline": {
@@ -280,7 +322,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-10T01:10:10.716Z"
+    "lastActivity": "2026-03-10T01:44:53.182Z"
   },
   "history": [
     {
@@ -2037,6 +2079,282 @@
     },
     {
       "timestamp": "2026-03-10T01:10:10.716Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:19:24.891Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:19:28.608Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:19:42.699Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:19:50.204Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:20:04.978Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:22:43.800Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:25:39.939Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:25:44.650Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:25:48.728Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:25:51.981Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:25:56.854Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:26:07.850Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:26:42.869Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:26:47.380Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:29:14.811Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:29:21.228Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:33:55.938Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:33:58.165Z",
+      "feature": "chat-room-list",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:33:59.082Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:00.963Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:02.721Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:14.102Z",
+      "feature": "chat-room-list",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:18.560Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:20.882Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:24.290Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:34:32.221Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:35:29.814Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:35:50.006Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:35:51.683Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:35:54.373Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:36:17.592Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:34.779Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:36.745Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:39.863Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:45.866Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:48.832Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:50.542Z",
+      "feature": "[roomId]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:52.187Z",
+      "feature": "[roomId]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:38:54.660Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:43.798Z",
+      "feature": "(main)",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:44.742Z",
+      "feature": "ui",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:47.373Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:48.683Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:50.520Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:51.816Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T01:44:53.182Z",
       "feature": "chat-room",
       "phase": "do",
       "action": "updated"

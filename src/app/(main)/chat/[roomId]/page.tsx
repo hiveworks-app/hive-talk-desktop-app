@@ -301,7 +301,6 @@ export default function ChatRoomPage() {
       <MediaViewer
         visible={viewerVisible}
         items={viewerItems}
-        initialIndex={viewerIndex}
         currentIndex={viewerIndex}
         onIndexChange={setViewerIndex}
         onClose={closeMediaViewer}

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import {
@@ -66,6 +67,8 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
 export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const routerRef = useRef(router);
   const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
   const loginUserId = useAuthStore(state => state.user)?.id;
   const wsRef = useRef<WebSocket | null>(null);
@@ -76,6 +79,8 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const processedReadEventsRef = useRef<Set<string>>(new Set());
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendRef = useRef<(data: unknown) => void>(() => {});
+  const connectWebSocketRef = useRef<(newToken?: string) => void>(() => {});
   const [isConnected, setIsConnected] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const { buildSubscribeMessage } = useWebSocketMessageBuilder({
@@ -162,7 +167,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             ...channelIdOverride,
             ...channelTypeOverride,
           });
-          send(subMsg);
+          sendRef.current(subMsg);
           return;
         }
 
@@ -318,12 +323,45 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           if (!isMySentMessage && !isRoomActive && 'Notification' in window) {
             if (Notification.permission === 'granted') {
               const senderName = normalizedPayload.sender?.name ?? '사용자';
-              new Notification(senderName, {
+              const notification = new Notification(senderName, {
                 body: normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
                   ? normalizedPayload.message.payload.content
                   : '새 메시지',
                 tag: roomId,
               });
+
+              notification.onclick = () => {
+                // Electron: 창 포커스 (트레이/최소화 상태에서 복원)
+                const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+                  | { focusWindow?: () => void }
+                  | undefined;
+                electronAPI?.focusWindow?.();
+
+                // 캐시에서 방 정보 조회
+                const qKey = getTargetQueryKey(currentChannelType);
+                const rooms = qKey
+                  ? (queryClient.getQueryData<GetChatRoomListItemType[]>(qKey) ?? [])
+                  : [];
+                const cachedRoom = rooms.find(r => r.roomModel.roomId === roomId);
+
+                const roomName =
+                  cachedRoom?.roomModel.title ||
+                  cachedRoom?.roomModel.participantDetail?.name ||
+                  senderName;
+                const totalUserCount = cachedRoom?.roomModel.participants?.length ?? 2;
+
+                useChatRoomInfo.getState().setChatRoomInfo({
+                  roomId,
+                  roomName,
+                  channelType: currentChannelType ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+                  totalUserCount,
+                  otherUserIsExit: false,
+                  lastMessage: normalizedPayload,
+                  invitedUserIds: [],
+                });
+
+                routerRef.current.push(`/chat/${roomId}`);
+              };
             }
           }
 
@@ -415,7 +453,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           try {
             const newToken = await refreshAccessToken();
             if (newToken) {
-              connectWebSocket(newToken);
+              connectWebSocketRef.current(newToken);
               return;
             }
           } catch {
@@ -446,7 +484,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           if (!forceCloseRef.current && isPageVisible) {
             // 재연결 전 토큰 갱신 시도
             const freshToken = await refreshAccessToken().catch(() => null);
-            connectWebSocket(freshToken ?? undefined);
+            connectWebSocketRef.current(freshToken ?? undefined);
           }
         }, delay);
       };
@@ -465,7 +503,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
         pendingQueue.current.push(data);
-        if (!isConnectingRef.current) connectWebSocket();
+        if (!isConnectingRef.current) connectWebSocketRef.current();
         return;
       }
 
@@ -475,8 +513,15 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         console.error('[WS] send 에러:', error);
       }
     },
-    [connectWebSocket],
+    [],
   );
+
+  // ref 동기화 (순환 참조 해소: connectWebSocket ↔ send, 렌더 외부에서 업데이트)
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+    sendRef.current = send;
+    routerRef.current = router;
+  });
 
   const addListener = useCallback((id: string, listener: Listener) => {
     listenersRef.current[id] = listener;
@@ -496,11 +541,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // 연결/재연결
+  // deps 변경 시 cleanup에서 disconnect → 조건 충족 시 connect
   useEffect(() => {
     const loginUserId = useAuthStore.getState().user?.id;
 
     if (!WS_URL || !loginUserId || !isPageVisible) {
-      disconnectWebSocket();
       return;
     }
 
