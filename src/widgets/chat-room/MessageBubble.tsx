@@ -12,6 +12,7 @@ import { DateSeparator } from './DateSeparator';
 interface MessageBubbleProps {
   message: ChatMessageUI;
   prevMessage?: ChatMessageUI;
+  nextMessage?: ChatMessageUI;
   index: number;
   isFocused: boolean;
   onOpenMedia: (items: MediaViewerItem[], startIndex: number) => void;
@@ -20,6 +21,7 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   prevMessage,
+  nextMessage,
   index,
   isFocused,
   onOpenMedia,
@@ -42,6 +44,18 @@ export function MessageBubble({
     prevMessage.sender === message.sender &&
     prevMessage.name === message.name &&
     prevMessage.createdAt.slice(0, 16) === message.createdAt.slice(0, 16);
+
+  // 다음 메시지가 같은 발신자 + 같은 분(minute)이면 이 메시지는 그룹의 마지막이 아님
+  const isNextSameGroup =
+    nextMessage &&
+    nextMessage.sender === message.sender &&
+    nextMessage.name === message.name &&
+    nextMessage.createdAt.slice(0, 16) === message.createdAt.slice(0, 16) &&
+    // 시스템 메시지는 그룹에 포함하지 않음
+    nextMessage.messageContentType !== WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE &&
+    nextMessage.messageContentType !== WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT;
+
+  const showTime = !isNextSameGroup;
 
   if (isSystem) {
     return (
@@ -100,7 +114,9 @@ export function MessageBubble({
               {message.notReadCount > 0 && (
                 <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>
               )}
-              <span className="text-[10px] text-text-tertiary">{message.time}</span>
+              {showTime && (
+                <span className="text-[10px] text-text-tertiary">{message.time}</span>
+              )}
             </div>
           </div>
         </div>

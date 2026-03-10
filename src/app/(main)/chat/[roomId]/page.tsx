@@ -271,6 +271,7 @@ export default function ChatRoomPage() {
               key={msg.id}
               message={msg}
               prevMessage={messages[idx - 1]}
+              nextMessage={messages[idx + 1]}
               index={idx}
               isFocused={search.focusedMessageId === msg.id}
               onOpenMedia={openMediaViewer}
