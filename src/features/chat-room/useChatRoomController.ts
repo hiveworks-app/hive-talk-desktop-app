@@ -70,6 +70,7 @@ export const useChatRoomController = () => {
 
   const viewStateRef = useRef<'in' | 'out' | null>(null);
   const isMountedRef = useRef(true);
+  const isFirstMountRef = useRef(true);
   const didInitialSyncRef = useRef(false);
   const needsFetchAfterReconnectRef = useRef(false);
   const isReconnectFetchRef = useRef(false);
@@ -552,13 +553,13 @@ export const useChatRoomController = () => {
   }, [currentRoomId, removeListener, clearPendingReadEvents]);
 
   // 2. 방 변경 감지 및 초기화
+  // isFirstMountRef: 같은 방 재진입 시에도 stale 메시지를 비우고 fresh fetch 보장
   useEffect(() => {
     if (!saveRoomId) return;
 
-    if (currentRoomId !== saveRoomId) {
-      if (currentRoomId !== null) {
-        replaceMessages([]);
-      }
+    if (isFirstMountRef.current || currentRoomId !== saveRoomId) {
+      isFirstMountRef.current = false;
+      replaceMessages([]);
       didInitialSyncRef.current = false;
       setRunTimeRoomId(saveRoomId);
     }
