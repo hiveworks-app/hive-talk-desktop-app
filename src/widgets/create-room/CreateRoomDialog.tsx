@@ -11,6 +11,7 @@ import { cn } from '@/shared/lib/cn';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUIStore } from '@/store';
@@ -23,6 +24,7 @@ interface CreateRoomDialogProps {
 }
 
 export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
+  useDimmed(isOpen);
   const router = useRouter();
   const queryClient = useQueryClient();
   const showSnackbar = useUIStore(state => state.showSnackbar);

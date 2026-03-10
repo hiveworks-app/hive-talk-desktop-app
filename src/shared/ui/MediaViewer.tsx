@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 export interface MediaViewerItem {
   id: string;
@@ -26,6 +27,7 @@ export function MediaViewer({
   onIndexChange,
   onClose,
 }: MediaViewerProps) {
+  useDimmed(visible);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const item = items[currentIndex];

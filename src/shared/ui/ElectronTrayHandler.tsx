@@ -11,6 +11,7 @@ interface ElectronAPI {
   onTrayLogout?: (callback: () => void) => () => void;
   setTrayAuthState?: (isLoggedIn: boolean) => void;
   setTrayLockState?: (isLocked: boolean) => void;
+  setTitleBarDimmed?: (isDimmed: boolean) => void;
 }
 
 function getElectronAPI(): ElectronAPI | undefined {
@@ -21,6 +22,7 @@ export function ElectronTrayHandler() {
   const router = useRouter();
   const accessToken = useAuthStore(s => s.accessToken);
   const isLocked = useUIStore(s => s.isLocked);
+  const isDimmed = useUIStore(s => s.isDimmed);
 
   // 로그인 상태 변경 시 트레이 메뉴 활성화/비활성화 동기화
   useEffect(() => {
@@ -31,6 +33,11 @@ export function ElectronTrayHandler() {
   useEffect(() => {
     getElectronAPI()?.setTrayLockState?.(isLocked);
   }, [isLocked]);
+
+  // dimmed 상태 변경 시 Windows 타이틀바 색상 동기화
+  useEffect(() => {
+    getElectronAPI()?.setTitleBarDimmed?.(isDimmed);
+  }, [isDimmed]);
 
   useEffect(() => {
     const api = getElectronAPI();

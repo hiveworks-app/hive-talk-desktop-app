@@ -304,6 +304,15 @@ ipcMain.handle('set-tray-lock-state', (_event, isLocked: boolean) => {
   updateTrayMenu(trayIsLoggedIn, isLocked);
 });
 
+ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {
+  if (process.platform !== 'win32' || !mainWindow) return;
+  mainWindow.setTitleBarOverlay(
+    isDimmed
+      ? { color: '#666666', symbolColor: '#ffffff' }
+      : { color: '#ffffff', symbolColor: '#333333' },
+  );
+});
+
 // ------------------------------------------------------------------
 // App lifecycle
 // ------------------------------------------------------------------

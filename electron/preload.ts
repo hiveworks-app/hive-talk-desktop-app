@@ -21,4 +21,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('set-tray-auth-state', isLoggedIn),
   setTrayLockState: (isLocked: boolean) =>
     ipcRenderer.invoke('set-tray-lock-state', isLocked),
+  setTitleBarDimmed: (isDimmed: boolean) =>
+    ipcRenderer.invoke('set-titlebar-dimmed', isDimmed),
 });
