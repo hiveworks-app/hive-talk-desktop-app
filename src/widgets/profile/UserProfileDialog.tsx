@@ -9,6 +9,7 @@ import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUIStore } from '@/store';
@@ -20,6 +21,7 @@ interface UserProfileDialogProps {
 }
 
 export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialogProps) {
+  useDimmed(isOpen);
   const router = useRouter();
   const queryClient = useQueryClient();
   const showSnackbar = useUIStore(state => state.showSnackbar);

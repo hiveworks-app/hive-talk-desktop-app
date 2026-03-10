@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useMyProfileUpdate, useMyProfileImageUpload } from '@/features/profile/queries';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore, AuthSaveUserInfoTypes } from '@/store/auth/authStore';
 import { useUIStore } from '@/store';
 
@@ -13,6 +14,7 @@ interface MyProfileDialogProps {
 }
 
 export function MyProfileDialog({ isOpen, onClose }: MyProfileDialogProps) {
+  useDimmed(isOpen);
   const user = useAuthStore(s => s.user);
   const [isEditing, setIsEditing] = useState(false);
 

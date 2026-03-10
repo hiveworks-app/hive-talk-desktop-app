@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useDimmed } from "@/shared/hooks/useDimmed";
 import { useUIStore } from "@/store/uiStore";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -38,6 +39,7 @@ function DeterminateBar({ progress }: { progress: number }) {
 
 export function LoadingOverlay() {
   const { visible, message, progress } = useUIStore((s) => s.loadingOverlay);
+  useDimmed(visible);
   const [animationData, setAnimationData] = useState<unknown>(null);
 
   useEffect(() => {
