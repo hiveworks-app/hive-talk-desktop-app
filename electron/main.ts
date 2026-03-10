@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen, globalShortcut } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
 import path from 'path';
 import net from 'net';
 
@@ -242,6 +242,14 @@ function updateTrayMenu(isLoggedIn: boolean, isLocked: boolean) {
         app.quit();
       },
     },
+    { type: 'separator' },
+    {
+      label: '개발자 도구',
+      click: () => {
+        mainWindow?.show();
+        mainWindow?.webContents.toggleDevTools();
+      },
+    },
   ]);
 
   tray.setContextMenu(contextMenu);
@@ -403,11 +411,6 @@ app.whenReady().then(async () => {
     Menu.setApplicationMenu(appMenu);
   } else {
     Menu.setApplicationMenu(null);
-
-    // Windows: 메뉴 제거 시 개발자도구 단축키도 사라지므로 수동 등록
-    globalShortcut.register('F12', () => {
-      mainWindow?.webContents.toggleDevTools();
-    });
   }
 
   try {
