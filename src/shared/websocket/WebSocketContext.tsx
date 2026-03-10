@@ -17,6 +17,7 @@ import {
   upsertChatRoomListWithMessage,
 } from '@/features/chat-room-list/updater';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { apiGetStorage } from '@/features/storage/api';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import {
   WS_CHANNEL_TYPE,
@@ -74,6 +75,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sendRef = useRef<(data: unknown) => void>(() => {});
+  const pendingReadCallbacksRef = useRef<Map<string, () => void>>(new Map());
   const connectWebSocketRef = useRef<(newToken?: string) => void>(() => {});
   const [isConnected, setIsConnected] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
@@ -251,6 +253,15 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
+          // 알림 "읽음" 버튼으로 등록된 일회성 콜백 실행
+          readItems.forEach(item => {
+            const cb = pendingReadCallbacksRef.current.get(item.roomId);
+            if (cb) {
+              pendingReadCallbacksRef.current.delete(item.roomId);
+              cb();
+            }
+          });
+
           Object.values(listenersRef.current).forEach(listener => listener(envelope));
           return;
         }
@@ -313,49 +324,50 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
           }
 
-          // 웹 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
-          if (!isMySentMessage && !isRoomActive && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              const senderName = normalizedPayload.sender?.name ?? '사용자';
-              const notification = new Notification(senderName, {
-                body: normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
-                  ? normalizedPayload.message.payload.content
-                  : '새 메시지',
-                tag: roomId,
-              });
+          // 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
+          if (!isMySentMessage && !isRoomActive) {
+            const senderName = normalizedPayload.sender?.name ?? '사용자';
+            const body = normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
+              ? normalizedPayload.message.payload.content
+              : '새 메시지';
 
-              notification.onclick = () => {
-                // Electron: 창 포커스 (트레이/최소화 상태에서 복원)
-                const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
-                  | { focusWindow?: () => void }
-                  | undefined;
-                electronAPI?.focusWindow?.();
+            const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+              | { isElectron?: boolean; showNotification?: (data: unknown) => void }
+              | undefined;
 
-                // 캐시에서 방 정보 조회
-                const qKey = getTargetQueryKey(currentChannelType);
-                const rooms = qKey
-                  ? (queryClient.getQueryData<GetChatRoomListItemType[]>(qKey) ?? [])
-                  : [];
-                const cachedRoom = rooms.find(r => r.roomModel.roomId === roomId);
-
-                const roomName =
-                  cachedRoom?.roomModel.title ||
-                  cachedRoom?.roomModel.participantDetail?.name ||
-                  senderName;
-                const totalUserCount = cachedRoom?.roomModel.participants?.length ?? 2;
-
-                useChatRoomInfo.getState().setChatRoomInfo({
-                  roomId,
-                  roomName,
-                  channelType: currentChannelType ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-                  totalUserCount,
-                  otherUserIsExit: false,
-                  lastMessage: normalizedPayload,
-                  invitedUserIds: [],
-                });
-
-                routerRef.current.push(`/chat/${roomId}`);
+            if (electronAPI?.isElectron && electronAPI.showNotification) {
+              // Electron: 네이티브 알림 (프로필 이미지 + 클릭 시 IPC로 처리)
+              const notificationMeta = {
+                roomId,
+                channelType: currentChannelType ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+                senderName,
               };
+              const storageKey =
+                normalizedPayload.sender?.thumbnailProfileUrl ||
+                normalizedPayload.sender?.profileImageUrl ||
+                normalizedPayload.sender?.profileUrl;
+
+              // 스토리지 키 → presigned URL 변환 후 알림 전송
+              if (storageKey) {
+                apiGetStorage(storageKey)
+                  .then(res => {
+                    electronAPI.showNotification!({
+                      title: senderName, body, profileImageUrl: res.payload.key, meta: notificationMeta,
+                    });
+                  })
+                  .catch(() => {
+                    electronAPI.showNotification!({
+                      title: senderName, body, meta: notificationMeta,
+                    });
+                  });
+              } else {
+                electronAPI.showNotification({
+                  title: senderName, body, meta: notificationMeta,
+                });
+              }
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+              // 브라우저 폴백 (개발 환경)
+              new Notification(senderName, { body, tag: roomId });
             }
           }
 
@@ -523,6 +535,120 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
   const removeListener = useCallback((id: string) => {
     delete listenersRef.current[id];
+  }, []);
+
+  // Electron 알림 클릭 → 해당 채팅방으로 이동
+  useEffect(() => {
+    const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+      | {
+          isElectron?: boolean;
+          onNotificationClicked?: (
+            callback: (meta: { roomId: string; channelType: string; senderName: string }) => void,
+          ) => () => void;
+        }
+      | undefined;
+
+    if (!electronAPI?.isElectron || !electronAPI.onNotificationClicked) return;
+
+    const cleanup = electronAPI.onNotificationClicked((meta) => {
+      const { roomId, channelType, senderName } = meta;
+      const targetQueryKey = getTargetQueryKey(channelType as WebSocketChannelTypes);
+      const rooms = targetQueryKey
+        ? queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey)
+        : undefined;
+      const room = rooms?.find(r => r.roomModel.roomId === roomId);
+
+      if (room) {
+        const { roomModel } = room;
+        const totalUserCount = roomModel.participants?.length ?? 2;
+        const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
+        const invitedUserIds =
+          channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE &&
+          isOtherUserExit &&
+          roomModel.participantDetail?.userId
+            ? [String(roomModel.participantDetail.userId)]
+            : [];
+
+        const displayName =
+          roomModel.title ||
+          roomModel.participantDetail?.name ||
+          roomModel.participants?.map(p => p.name).join(', ') ||
+          senderName;
+
+        useChatRoomInfo.getState().setChatRoomInfo({
+          roomId: roomModel.roomId,
+          roomName: displayName,
+          channelType: channelType as WebSocketChannelTypes,
+          totalUserCount,
+          otherUserIsExit: isOtherUserExit,
+          lastMessage: room.messageList?.[room.messageList.length - 1] ?? null,
+          invitedUserIds,
+        });
+      } else {
+        useChatRoomInfo.getState().setChatRoomInfo({
+          roomId,
+          roomName: senderName,
+          channelType: (channelType as WebSocketChannelTypes) ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+        });
+      }
+
+      routerRef.current.push(`/chat/${roomId}`);
+    });
+
+    return cleanup;
+  }, [queryClient]);
+
+  // Electron 알림 "읽음" 버튼 → 해당 채팅방 읽음 처리
+  useEffect(() => {
+    const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+      | {
+          isElectron?: boolean;
+          onNotificationRead?: (
+            callback: (meta: { roomId: string; channelType: string }) => void,
+          ) => () => void;
+        }
+      | undefined;
+
+    if (!electronAPI?.isElectron || !electronAPI.onNotificationRead) return;
+
+    const cleanup = electronAPI.onNotificationRead((meta) => {
+      const { roomId, channelType } = meta;
+
+      // 서버 응답 감지 방식:
+      // 1) VIEW_IN 전송 → 서버가 읽음 처리 후 READ_MESSAGE broadcast
+      // 2) READ_MESSAGE 수신 시 콜백으로 VIEW_OUT 전송
+      // 3) 3초 타임아웃 안전장치 (서버 응답 없으면 강제 VIEW_OUT)
+      const timeoutId = setTimeout(() => {
+        if (pendingReadCallbacksRef.current.has(roomId)) {
+          pendingReadCallbacksRef.current.delete(roomId);
+          sendRef.current({
+            operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
+            channelType,
+            channelId: roomId,
+            payload: null,
+          });
+        }
+      }, 3000);
+
+      pendingReadCallbacksRef.current.set(roomId, () => {
+        clearTimeout(timeoutId);
+        sendRef.current({
+          operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
+          channelType,
+          channelId: roomId,
+          payload: null,
+        });
+      });
+
+      sendRef.current({
+        operationType: WS_OPERATION.VIEW_IN_MESSAGE_ROOM,
+        channelType,
+        channelId: roomId,
+        payload: null,
+      });
+    });
+
+    return cleanup;
   }, []);
 
   // visibilitychange (AppState 대체)

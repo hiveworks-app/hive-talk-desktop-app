@@ -1,9 +1,12 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
 import path from 'path';
 import net from 'net';
 
 const isDev = !app.isPackaged;
 const DEV_PORT = 23000;
+
+// 시스템 테마와 관계없이 항상 Light 모드 강제
+nativeTheme.themeSource = 'light';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -30,6 +33,13 @@ function getTrayIconPath() {
     ? path.join(app.getAppPath(), 'resources')
     : process.resourcesPath;
   return path.join(base, 'trayIconTemplate.png');
+}
+
+function getDefaultProfilePath() {
+  const base = isDev
+    ? path.join(app.getAppPath(), 'resources')
+    : process.resourcesPath;
+  return path.join(base, 'notification-profile-default.png');
 }
 
 /** Check if a specific port is available */
@@ -281,10 +291,58 @@ function createTray() {
 // IPC Handlers
 // ------------------------------------------------------------------
 
-ipcMain.handle('show-notification', (_event, title: string, body: string) => {
-  if (Notification.isSupported()) {
-    new Notification({ title, body, icon: getIconPath() }).show();
+ipcMain.handle('show-notification', async (_event, data: {
+  title: string;
+  body: string;
+  profileImageUrl?: string;
+  meta?: { roomId: string; channelType: string; senderName: string };
+}) => {
+  if (!Notification.isSupported()) return;
+
+  const { title, body, profileImageUrl, meta } = data;
+
+  // 프로필 이미지 다운로드 → nativeImage 변환 (실패 시 기본 프로필 이미지 사용)
+  const ICON_SIZE = 128;
+  let icon: Electron.NativeImage | undefined;
+  if (profileImageUrl) {
+    try {
+      const res = await fetch(profileImageUrl);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      icon = nativeImage.createFromBuffer(buffer).resize({ width: ICON_SIZE, height: ICON_SIZE });
+    } catch {
+      // 다운로드 실패 → 기본 이미지로 폴백
+    }
   }
+  if (!icon || icon.isEmpty()) {
+    icon = nativeImage.createFromPath(getDefaultProfilePath());
+  }
+
+  const notification = new Notification({
+    title,
+    body,
+    icon,
+    actions: [{ type: 'button', text: '읽음' }],
+  });
+
+  notification.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+
+      if (meta) {
+        mainWindow.webContents.send('notification-clicked', meta);
+      }
+    }
+  });
+
+  notification.on('action', () => {
+    if (meta) {
+      mainWindow?.webContents.send('notification-read', meta);
+    }
+  });
+
+  notification.show();
 });
 
 ipcMain.handle('focus-window', () => {
