@@ -7,6 +7,7 @@ import { MEMBERS_KEY } from '@/shared/config/queryKeys';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
+import { SettingItem } from './_components/SettingItem';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -110,32 +111,3 @@ export default function SettingsPage() {
   );
 }
 
-function SettingItem({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description?: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-    >
-      <span className="text-text-secondary">{icon}</span>
-      <div className="flex-1">
-        <span className="text-sub text-text-primary">{title}</span>
-        {description && (
-          <p className="mt-0.5 text-sub-sm text-text-tertiary">{description}</p>
-        )}
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    </button>
-  );
-}

@@ -23,36 +23,9 @@ import { USER_TYPE } from "@/shared/types/user";
 import { Button } from "@/shared/ui/Button";
 import { Checkbox } from "@/shared/ui/Checkbox";
 import { Input } from "@/shared/ui/Input";
+import { Spinner } from "@/shared/ui/Spinner";
+import { getBrowserDeviceId } from "@/shared/utils/deviceId";
 import { useAuthStore } from "@/store/auth/authStore";
-
-function getBrowserDeviceId(): string {
-  const KEY = "hive-device-id";
-  const stored = localStorage.getItem(KEY);
-  if (stored) return stored;
-  const id = crypto.randomUUID();
-  localStorage.setItem(KEY, id);
-  return id;
-}
-
-function Spinner() {
-  return (
-    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  );
-}
 
 export default function LoginPage() {
   const accessToken = useAuthStore((state) => state.accessToken);

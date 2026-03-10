@@ -4,28 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetExternalMembers } from '@/features/external-member/queries';
 import type { ExternalMemberItem } from '@/features/external-member/type';
-import { useMyProfileHook } from '@/features/profile/useMyProfileHook';
 import { cn } from '@/shared/lib/cn';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
-import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconAddMemberDefault from '@assets/icons/add-member-default.svg';
-import IconSettingsFilled from '@assets/icons/settings-filled.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
-import IconArrowRightDefault from '@assets/icons/arrow-right-default.svg';
 import { useAuthStore } from '@/store/auth/authStore';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
+import { MyProfileHeader } from './_components/MyProfileHeader';
+import { MemberListItem } from './_components/MemberListItem';
+import type { NormalizedMember } from './_components/MemberListItem';
+import { Chip } from './_components/Chip';
 
 type MemberChipType = 'all' | 'company' | 'external';
-
-interface NormalizedMember {
-  id: string;
-  name: string;
-  description: string;
-  storageKey?: string | null;
-}
 
 function normalizeCompanyMember(item: MemberItem): NormalizedMember {
   return {
@@ -70,11 +63,9 @@ export default function MembersPage() {
     }
   }, [isSearchVisible]);
 
-  // 데이터 조회
   const { data: members = [], isLoading: membersLoading } = useGetMembers();
   const { data: externalMembers = [], isLoading: externalLoading } = useGetExternalMembers();
 
-  // 한글 검색 필터링 (초성, 자모 검색 지원)
   const filteredCompany = useMemo(
     () => filterByhangeulSearch(members, search, item => item.name),
     [members, search],
@@ -84,7 +75,6 @@ export default function MembersPage() {
     [externalMembers, search],
   );
 
-  // 정규화 + 칩 필터링
   const displayMembers = useMemo(() => {
     const companyNormalized = filteredCompany.map(normalizeCompanyMember);
     const externalNormalized = filteredExternal.map(normalizeExternalMember);
@@ -103,13 +93,11 @@ export default function MembersPage() {
     [members],
   );
 
-  // 현재 활성 탭에 해당하는 데이터만 로딩 상태로 판단
-  // → external members API 실패가 전체 페이지를 블로킹하지 않도록 분리
   const isLoading = activeChip === 'external' ? externalLoading : membersLoading;
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-100">
-      {/* TopBar: 타이틀 + 우측 버튼들 (RN: border 없이 bg-gray-100 위에 배치) */}
+      {/* TopBar */}
       <header className="electron-drag">
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-heading-lg font-semibold text-text-primary">멤버목록</h2>
@@ -129,7 +117,7 @@ export default function MembersPage() {
         </div>
       </header>
 
-      {/* 검색 바 (헤더 아래 슬라이드 애니메이션) */}
+      {/* 검색 바 */}
       <div
         className={cn(
           'grid transition-[grid-template-rows] duration-200 ease-out',
@@ -169,29 +157,16 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* 내 프로필 헤더 (MembersProfileHeader) */}
+      {/* 내 프로필 헤더 */}
       <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
 
-      {/* 칩 + 리스트 영역 (RN: rounded-t-[16px] 카드) */}
+      {/* 칩 + 리스트 영역 */}
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
-        {/* 소속 유저만 칩 표시 */}
         {isOrgMember && (
           <div className="flex items-center gap-2.5 px-4 py-3.5">
-            <Chip
-              label="전체"
-              active={activeChip === 'all'}
-              onClick={() => setActiveChip('all')}
-            />
-            <Chip
-              label="사내멤버"
-              active={activeChip === 'company'}
-              onClick={() => setActiveChip('company')}
-            />
-            <Chip
-              label="협력멤버"
-              active={activeChip === 'external'}
-              onClick={() => setActiveChip('external')}
-            />
+            <Chip label="전체" active={activeChip === 'all'} onClick={() => setActiveChip('all')} />
+            <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => setActiveChip('company')} />
+            <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => setActiveChip('external')} />
           </div>
         )}
 
@@ -207,7 +182,7 @@ export default function MembersPage() {
             </div>
           ) : (
             <>
-              {/* 관심 멤버 섹션 (하드코딩 더미 데이터 - RN과 동일) */}
+              {/* 관심 멤버 섹션 */}
               <div className="border-b border-divider pb-3.5">
                 <div className="flex items-end gap-1 px-4">
                   <IconStarFilled width={20} height={20} />
@@ -261,86 +236,5 @@ export default function MembersPage() {
         onClose={() => setIsMyProfileOpen(false)}
       />
     </main>
-  );
-}
-
-/** 내 프로필 헤더 (RN MembersProfileHeader와 동일 구조) */
-function MyProfileHeader({ onOpenProfile }: { onOpenProfile: () => void }) {
-  const { name, department, job, profileUrl } = useMyProfileHook();
-
-  return (
-    <div className="flex items-center px-4 pb-2 pt-3">
-      {/* 좌측: 프로필 이미지 + 텍스트 */}
-      <button
-        onClick={onOpenProfile}
-        className="flex flex-1 items-center gap-3.5 text-left"
-      >
-        <ProfileCircle name={name ?? '?'} size="lg" storageKey={profileUrl} />
-        <div className="min-w-0 flex-1">
-          <div className="text-body font-semibold text-text-primary">
-            {name}
-          </div>
-          {(department || job) && (
-            <div className="flex items-center gap-1 text-sub-sm text-text-primary">
-              <span>{[department, job].filter(Boolean).join(' · ')}</span>
-              <IconArrowRightDefault width={14} height={14} className="text-gray-900" />
-            </div>
-          )}
-        </div>
-      </button>
-
-      {/* 우측: 설정 아이콘 */}
-      <button
-        onClick={onOpenProfile}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-gray-300 p-1.5 text-gray-500 transition-colors hover:bg-gray-400"
-      >
-        <IconSettingsFilled width={24} height={24} />
-      </button>
-    </div>
-  );
-}
-
-function Chip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'rounded-full px-3 py-1 text-sub-sm font-medium transition-colors',
-        active
-          ? 'bg-primary text-on-primary'
-          : 'bg-gray-100 text-text-secondary hover:bg-gray-200',
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function MemberListItem({
-  member,
-  onClick,
-}: {
-  member: NormalizedMember;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-2.5 px-4 py-1.5 text-left transition-colors hover:bg-gray-50"
-    >
-      <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} />
-      <span className="flex-1 truncate text-sub text-text-primary">{member.name}</span>
-      {member.description && (
-        <span className="shrink-0 text-sub-sm text-text-secondary">{member.description}</span>
-      )}
-    </button>
   );
 }

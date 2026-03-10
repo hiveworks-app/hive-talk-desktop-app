@@ -4,17 +4,17 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateDM, useCreateGM } from '@/features/create-chat-room/queries';
-import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { useGetMembers } from '@/features/members/queries';
 import { isApiError } from '@/shared/api';
 import { cn } from '@/shared/lib/cn';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
-import { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUIStore } from '@/store';
+import { MemberRow } from './MemberRow';
+import { findExistingDMRoom, extractRoomIdFromError } from './createRoomUtils';
 
 type Mode = 'dm' | 'gm';
 
@@ -60,7 +60,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (mode === 'dm') {
-        // DM: 단일 선택
         if (next.has(userId)) {
           next.delete(userId);
         } else {
@@ -68,7 +67,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
           next.add(userId);
         }
       } else {
-        // GM: 복수 선택
         if (next.has(userId)) next.delete(userId);
         else next.add(userId);
       }
@@ -115,7 +113,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       const userId = [...selectedIds][0];
       const member = otherMembers.find(m => m.userId === userId);
 
-      // 이미 존재하는 DM 방이면 API 호출 없이 바로 이동
       const existingRoom = findExistingDMRoom(queryClient, userId);
       if (existingRoom) {
         navigateToRoom(
@@ -135,7 +132,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
         const res = await createDM(userId);
         const { roomId } = res.payload;
 
-        // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
         navigateToRoom(roomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, null, [userId]);
       } catch (err) {
         if (!isApiError(err)) {
@@ -143,7 +139,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
           return;
         }
 
-        // 에러 응답에서 roomId 추출 시도
         const existingRoomId = extractRoomIdFromError(err);
         if (existingRoomId) {
           navigateToRoom(existingRoomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2);
@@ -151,7 +146,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
           return;
         }
 
-        // DM 목록을 새로 조회 후 재검색
         await queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
         const refetchedRoom = findExistingDMRoom(queryClient, userId);
         if (refetchedRoom) {
@@ -175,7 +169,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       });
       const { roomId } = res.payload;
 
-      // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
       navigateToRoom(roomId, gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1, null, [...selectedIds]);
     }
   };
@@ -306,84 +299,4 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
       </div>
     </div>
   );
-}
-
-function MemberRow({
-  member,
-  selected,
-  onToggle,
-}: {
-  member: MemberItem;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
-        selected ? 'bg-state-primary-highlighted' : 'hover:bg-surface-pressed',
-      )}
-    >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sub font-medium text-text-secondary">
-        {member.name.charAt(0)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sub font-medium text-text-primary">{member.name}</div>
-        <div className="flex items-center gap-1.5 text-sub-sm text-text-tertiary">
-          {member.department && <span>{member.department}</span>}
-          {member.job && <span>{member.job}</span>}
-        </div>
-      </div>
-      <div
-        className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-          selected ? 'border-primary bg-primary' : 'border-gray-300',
-        )}
-      >
-        {selected && (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function findExistingDMRoom(
-  queryClient: ReturnType<typeof useQueryClient>,
-  targetUserId: string,
-): GetChatRoomListItemType | undefined {
-  const dmRooms = queryClient.getQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY) ?? [];
-  return dmRooms.find(room => {
-    const uid = String(targetUserId);
-    // participantDetail (1:1 상대방 정보)
-    if (String(room.roomModel.participantDetail?.userId) === uid) return true;
-    // participants 배열에서 검색
-    return room.roomModel.participants?.some(p => String(p.userId) === uid) ?? false;
-  });
-}
-
-function extractRoomIdFromError(err: { payload?: unknown; rawBody?: string }): string | null {
-  // 1. err.payload.payload.roomId (ApiResponse 구조)
-  const body = err.payload as Record<string, unknown> | null;
-  if (body?.payload && typeof body.payload === 'object') {
-    const inner = body.payload as Record<string, unknown>;
-    if (typeof inner.roomId === 'string') return inner.roomId;
-  }
-
-  // 2. err.payload.roomId (flat 구조)
-  if (body && typeof body.roomId === 'string') return body.roomId;
-
-  // 3. rawBody에서 roomId JSON 파싱 시도
-  if (err.rawBody) {
-    try {
-      const parsed = JSON.parse(err.rawBody);
-      const roomId = parsed?.payload?.roomId ?? parsed?.roomId;
-      if (typeof roomId === 'string') return roomId;
-    } catch { /* ignore */ }
-  }
-
-  return null;
 }

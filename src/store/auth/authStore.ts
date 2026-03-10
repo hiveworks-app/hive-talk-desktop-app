@@ -2,37 +2,9 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { LoginResponseProps } from '@/features/auth/type';
-import type { OrganizationInfo, UserType } from '@/shared/types/user';
+import type { AuthState } from './type';
 
-export interface AuthSaveUserInfoTypes
-  extends Omit<LoginResponseProps, 'accessToken' | 'refreshToken'> {
-  profileImageUrl?: string | null;
-  thumbnailProfileUrl?: string | null;
-  userType: UserType;
-  organization?: OrganizationInfo;
-}
-
-export type DeviceInfoTypes = {
-  deviceId: string;
-  deviceType: 'DESKTOP';
-};
-
-interface SetAuthProps {
-  accessToken?: string;
-  refreshToken?: string;
-  deviceInfo?: DeviceInfoTypes;
-  user?: AuthSaveUserInfoTypes;
-}
-
-interface AuthState {
-  accessToken: string | null;
-  refreshToken: string | null;
-  deviceInfo: DeviceInfoTypes | null;
-  user: AuthSaveUserInfoTypes | null;
-  setAuth: (props: SetAuthProps) => void;
-  logout: () => void;
-}
+export type { AuthSaveUserInfoTypes, DeviceInfoTypes, SetAuthProps, AuthState } from './type';
 
 const initAuthState = {
   accessToken: null,
@@ -73,8 +45,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'user-auth',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => state => {
-        // localStorage → Zustand 복원 완료 후 쿠키 동기화
-        // 새로고침 시 쿠키가 누락되었더라도 여기서 복구됨
         syncAuthCookie(!!state?.accessToken);
       },
     },

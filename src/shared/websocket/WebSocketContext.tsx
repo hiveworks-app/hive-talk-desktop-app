@@ -40,15 +40,9 @@ import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessa
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import type { Listener, WebSocketContextValue } from './type';
 
-type Listener = (data: WebSocketEnvelope) => void;
-
-interface WebSocketContextValue {
-  send: (data: unknown) => void;
-  addListener: (id: string, listener: Listener) => void;
-  removeListener: (id: string) => void;
-  isConnected: boolean;
-}
+export type { Listener, WebSocketContextValue } from './type';
 
 const getTargetQueryKey = (channelType: WebSocketChannelTypes | undefined) => {
   switch (channelType) {
