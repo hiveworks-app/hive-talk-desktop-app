@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-10T02:51:28.218Z",
+  "lastUpdated": "2026-03-10T05:20:13.475Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -104,7 +104,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-05T00:40:29.585Z",
-        "lastUpdated": "2026-03-05T00:40:48.105Z"
+        "lastUpdated": "2026-03-10T05:19:40.892Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/find-login-id/useFindLoginId.ts"
     },
@@ -169,9 +169,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-06T06:53:42.896Z",
-        "lastUpdated": "2026-03-10T02:28:49.547Z"
+        "lastUpdated": "2026-03-10T05:20:13.475Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/settings/_components/SettingItem.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/find-account/_components/FindIdContent.tsx"
     },
     "store": {
       "phase": "do",
@@ -364,7 +364,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-10T02:51:28.218Z"
+    "lastActivity": "2026-03-10T05:20:13.475Z"
   },
   "history": [
     {
@@ -2776,6 +2776,30 @@
     {
       "timestamp": "2026-03-10T02:51:28.218Z",
       "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T05:19:24.282Z",
+      "feature": "find-login-id",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T05:19:40.892Z",
+      "feature": "find-login-id",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T05:19:52.803Z",
+      "feature": "_components",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-10T05:20:13.475Z",
+      "feature": "_components",
       "phase": "do",
       "action": "updated"
     }

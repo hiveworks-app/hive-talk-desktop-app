@@ -18,19 +18,19 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
     phone,
     verificationCode,
     isCodeSent,
-    isVerified,
     isSending,
     isVerifying,
     foundEmail,
     timer,
     canSendCode,
     canVerify,
+    verifyErrorMessage,
+    isMaxFailuresReached,
     setName,
     handlePhoneChange,
     setVerificationCode,
     handleSendCode,
     handleVerifyCode,
-    handleSubmit,
   } = useFindLoginId();
 
   const handleGoToFindPassword = useCallback(() => {
@@ -140,23 +140,26 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
             onChangeVerificationCode={setVerificationCode}
             timerText={timer.formattedTime}
             isExpired={timer.isExpired}
-            isVerified={isVerified}
+            isVerified={false}
             isVerifying={isVerifying}
             canVerify={canVerify}
             onVerify={handleVerifyCode}
+            showVerifyButton={false}
+            errorMessage={verifyErrorMessage}
+            isMaxFailuresReached={isMaxFailuresReached}
           />
         )}
       </div>
 
       <div className="mt-5 pb-4">
         <Button
-          variant={isVerified ? 'primary' : 'dark'}
+          variant={canVerify ? 'primary' : 'dark'}
           size="lg"
           fullWidth
-          onClick={handleSubmit}
-          disabled={!isVerified}
+          onClick={handleVerifyCode}
+          disabled={!isCodeSent || !canVerify}
         >
-          아이디 찾기
+          {isVerifying ? '확인 중...' : '아이디 찾기'}
         </Button>
       </div>
     </div>

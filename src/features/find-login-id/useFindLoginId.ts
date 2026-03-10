@@ -1,10 +1,13 @@
 import { useCallback, useState } from 'react';
+import { isApiError } from '@/shared/api';
 import { useCountdownTimer } from '@/shared/hooks/useCountdownTimer';
 import { isPhonePartsValid, isPhoneValid, parsePhoneParts } from '@/shared/utils/phone';
 import { useUIStore } from '@/store';
 import { useFindLoginIdSendSms, useFindLoginIdVerify } from './queries';
 
 type FindIdStep = 'input' | 'result';
+
+const MAX_VERIFY_ATTEMPTS = 5;
 
 export const useFindLoginId = () => {
   const showSnackbar = useUIStore(state => state.showSnackbar);
@@ -19,7 +22,9 @@ export const useFindLoginId = () => {
   const [phone, setPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+
+  const [failCount, setFailCount] = useState(0);
+  const [verifyErrorMessage, setVerifyErrorMessage] = useState('');
 
   const handleSendCode = useCallback(async () => {
     if (!name.trim()) {
@@ -35,6 +40,8 @@ export const useFindLoginId = () => {
       await sendSms({ name: name.trim(), ...parts });
       setIsCodeSent(true);
       setVerificationCode('');
+      setVerifyErrorMessage('');
+      setFailCount(0);
       timer.start();
     } catch {
       // onError 콜백에서 스낵바 처리됨
@@ -42,11 +49,10 @@ export const useFindLoginId = () => {
   }, [name, phone, sendSms, showSnackbar, timer]);
 
   const handleVerifyCode = useCallback(async () => {
-    if (!verificationCode.trim()) {
-      showSnackbar({ message: '인증번호를 입력해주세요.', state: 'error' });
-      return;
-    }
+    if (!verificationCode.trim()) return;
+
     const parts = parsePhoneParts(phone);
+    setVerifyErrorMessage('');
     try {
       const result = await verifySms({
         name: name.trim(),
@@ -54,22 +60,30 @@ export const useFindLoginId = () => {
         code: verificationCode.trim(),
       });
       setFoundEmail(result.payload);
-      setIsVerified(true);
-    } catch {
-      // onError 콜백에서 스낵바 처리됨
+      setStep('result');
+    } catch (err) {
+      const nextFailCount = failCount + 1;
+      setFailCount(nextFailCount);
+      if (isApiError(err)) {
+        const baseMessage = err.message || '인증번호가 올바르지 않습니다.';
+        setVerifyErrorMessage(`${baseMessage} (${nextFailCount}/${MAX_VERIFY_ATTEMPTS})`);
+      } else {
+        setVerifyErrorMessage(`요청에 실패했습니다. 잠시 후 다시 시도해주세요. (${nextFailCount}/${MAX_VERIFY_ATTEMPTS})`);
+      }
     }
-  }, [name, phone, verificationCode, verifySms, showSnackbar]);
-
-  const handleSubmit = useCallback(() => {
-    setStep('result');
-  }, []);
+  }, [name, phone, verificationCode, verifySms, failCount]);
 
   const handlePhoneChange = useCallback((text: string) => {
     setPhone(text.replace(/\D/g, ''));
   }, []);
 
+  const isMaxFailuresReached = failCount >= MAX_VERIFY_ATTEMPTS;
   const canSendCode = name.trim().length > 0 && isPhoneValid(phone) && !isSending;
-  const canVerify = verificationCode.length > 0 && timer.isRunning && !isVerifying;
+  const canVerify =
+    verificationCode.length > 0 &&
+    timer.isRunning &&
+    !isVerifying &&
+    !isMaxFailuresReached;
 
   return {
     step,
@@ -77,18 +91,18 @@ export const useFindLoginId = () => {
     phone,
     verificationCode,
     isCodeSent,
-    isVerified,
     isSending,
     isVerifying,
     foundEmail,
     timer,
     canSendCode,
     canVerify,
+    verifyErrorMessage,
+    isMaxFailuresReached,
     setName,
     handlePhoneChange,
     setVerificationCode,
     handleSendCode,
     handleVerifyCode,
-    handleSubmit,
   } as const;
 };
