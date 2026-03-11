@@ -44,6 +44,9 @@ export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
     roomModel.participants?.map((p) => p.name).join(", ") ||
     "채팅방";
 
+  const profileStorageKey =
+    roomModel.participantDetail?.thumbnailProfileUrl ?? null;
+
   const isActive = params?.roomId === roomModel.roomId;
 
   const handleClick = async () => {
@@ -102,7 +105,7 @@ export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
       )}
     >
       {/* 아바타 */}
-      <ProfileCircle name={displayName} size="md" />
+      <ProfileCircle name={displayName} size="md" storageKey={profileStorageKey} />
 
       {/* 컨텐츠 */}
       <div className="min-w-0 flex-1">

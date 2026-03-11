@@ -18,9 +18,10 @@ type MessageParser = {
 export function createWsMessageParser(params: {
   getLoginUserId: () => string | number | null | undefined;
   getParticipants: () => ParticipantItemsType[];
+  getTotalUserCount: () => number;
   consumeNextMyTags?: () => WebSocketReceiveTagProps[] | null;
 }) {
-  const { getLoginUserId, getParticipants, consumeNextMyTags } = params;
+  const { getLoginUserId, getParticipants, getTotalUserCount, consumeNextMyTags } = params;
 
   return function parseWsMessage(input: MessageParser): Message | null {
     const { item } = input;
@@ -53,7 +54,9 @@ export function createWsMessageParser(params: {
 
     if (participants.length === 0) {
       readUserIds = rawReadUserIds;
-      notReadCount = 0;
+      // participants 캐시 미로드 시 totalUserCount로 fallback 계산
+      const totalCount = getTotalUserCount();
+      notReadCount = totalCount > 0 ? Math.max(0, totalCount - rawReadUserIds.length) : 0;
     } else {
       const participantIds = readCountCalculator.createParticipantIdSet(participants);
       readUserIds = readCountCalculator.filterValidReaders(rawReadUserIds, participantIds);

@@ -127,6 +127,7 @@ export const useChatRoomController = () => {
         );
         return participants ?? [];
       },
+      getTotalUserCount: () => useChatRoomInfo.getState().totalUserCount,
       consumeNextMyTags: useChatRoomRuntimeStore.getState().consumeNextMyTags,
     }),
   );
@@ -284,6 +285,19 @@ export const useChatRoomController = () => {
     addListener(currentRoomId, (data: WebSocketEnvelope) => handleWsMessageRef.current(data));
     send(buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';
+
+    // 재연결 시 participants 캐시 갱신 (만료됐을 수 있음)
+    participantsManager
+      .ensureParticipants(currentRoomId, channelType)
+      .then(participants => {
+        if (!isMountedRef.current) return;
+        if (participants.length > 0) {
+          recalculateAllMessagesNotReadCount(participants);
+        }
+      })
+      .catch(error => {
+        console.warn('[WS] 재연결 참여자 목록 조회 실패:', error);
+      });
 
     if (needsFetchAfterReconnectRef.current) {
       needsFetchAfterReconnectRef.current = false;

@@ -80,7 +80,7 @@ export function MessageBubble({
         )}
       >
         {!isMe && !isSameSender && (
-          <ProfileCircle name={message.name} size="sm" />
+          <ProfileCircle name={message.name} size="sm" storageKey={message.thumbnailProfileUrl || message.profileImageUrl} />
         )}
         {!isMe && isSameSender && <div className="w-8 shrink-0" />}
 

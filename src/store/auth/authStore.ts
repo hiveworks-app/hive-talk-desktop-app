@@ -44,8 +44,20 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'user-auth',
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: () => state => {
-        syncAuthCookie(!!state?.accessToken);
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
+
+        // 앱 cold start 시에만 auto-login 체크
+        // sessionStorage는 앱(윈도우) 종료 시 자동 초기화됨
+        if (!sessionStorage.getItem('auth-checked')) {
+          sessionStorage.setItem('auth-checked', '1');
+          if (localStorage.getItem('auto-login') !== 'true' && state.accessToken) {
+            state.logout();
+            return;
+          }
+        }
+
+        syncAuthCookie(!!state.accessToken);
       },
     },
   ),

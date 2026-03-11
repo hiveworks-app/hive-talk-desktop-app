@@ -171,7 +171,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         if (isReadMessage(envelope)) {
           const currentChannelType = globalChannelType || envelope.response.channelType;
           const { items: readItems } = envelope.response.payload;
-
           const newMyReadItems = readItems.filter(item => {
             const eventKey = `${item.messageId}:${item.userId}`;
             if (processedReadEventsRef.current.has(eventKey)) return false;
@@ -620,6 +619,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       // 3) 3초 타임아웃 안전장치 (서버 응답 없으면 강제 VIEW_OUT)
       const timeoutId = setTimeout(() => {
         if (pendingReadCallbacksRef.current.has(roomId)) {
+          console.log('[VIEW] 🔴 VIEW_OUT 전송 (notification-read timeout)', roomId);
           pendingReadCallbacksRef.current.delete(roomId);
           sendRef.current({
             operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
@@ -631,6 +631,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       }, 3000);
 
       pendingReadCallbacksRef.current.set(roomId, () => {
+        console.log('[VIEW] 🔴 VIEW_OUT 전송 (notification-read callback)', roomId);
         clearTimeout(timeoutId);
         sendRef.current({
           operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
@@ -640,6 +641,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         });
       });
 
+      console.log('[VIEW] 🟢 VIEW_IN 전송 (notification-read)', roomId);
       sendRef.current({
         operationType: WS_OPERATION.VIEW_IN_MESSAGE_ROOM,
         channelType,
