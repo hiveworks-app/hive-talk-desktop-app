@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-11T00:40:49.237Z",
+  "lastUpdated": "2026-03-11T01:08:16.643Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -27,7 +27,8 @@
     "members",
     "side-panel",
     "external-members",
-    "storage"
+    "storage",
+    "nav"
   ],
   "primaryFeature": "hive-talk-desktop-app",
   "features": {
@@ -287,7 +288,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:19:42.699Z",
-        "lastUpdated": "2026-03-10T08:48:55.072Z"
+        "lastUpdated": "2026-03-11T01:08:16.643Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/websocket/WebSocketContext.tsx"
     },
@@ -368,6 +369,19 @@
         "lastUpdated": "2026-03-10T07:45:41.773Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/storage/usePresignedUrl.ts"
+    },
+    "nav": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-11T00:52:05.564Z",
+        "lastUpdated": "2026-03-11T00:52:14.488Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/nav/AppNav.tsx"
     }
   },
   "pipeline": {
@@ -378,7 +392,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-11T00:40:49.237Z"
+    "lastActivity": "2026-03-11T01:08:16.643Z"
   },
   "history": [
     {
@@ -3324,6 +3338,30 @@
     {
       "timestamp": "2026-03-11T00:40:49.237Z",
       "feature": "chat-room-list",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:52:05.564Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:52:09.572Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:52:14.488Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T01:08:16.643Z",
+      "feature": "websocket",
       "phase": "do",
       "action": "updated"
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,8 +28,9 @@ function useTotalUnreadCount() {
   const gmUnread = sumUnread(gmList);
   const emUnread = sumUnread(emList);
   const companyChatBadge = dmUnread + gmUnread;
+  const totalUnread = companyChatBadge + emUnread;
 
-  return { companyChatBadge, externalChatBadge: emUnread };
+  return { companyChatBadge, externalChatBadge: emUnread, totalUnread };
 }
 
 const NAV_ITEMS = [
@@ -60,7 +62,14 @@ const NAV_ITEMS = [
 
 export function AppNav() {
   const pathname = usePathname();
-  const { companyChatBadge, externalChatBadge } = useTotalUnreadCount();
+  const { companyChatBadge, externalChatBadge, totalUnread } =
+    useTotalUnreadCount();
+
+  useEffect(() => {
+    const api = (window as unknown as { electronAPI?: { setBadgeCount?: (n: number) => void } })
+      .electronAPI;
+    api?.setBadgeCount?.(totalUnread);
+  }, [totalUnread]);
 
   const getBadgeCount = (key: "company" | "external" | null) => {
     if (key === "company") return companyChatBadge;

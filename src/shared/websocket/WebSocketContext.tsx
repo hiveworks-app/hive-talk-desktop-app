@@ -439,7 +439,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       };
 
       ws.onerror = (err) => {
-        console.error('[WS] ❌ 에러:', err);
+        console.warn('[WS] ⚠️ 연결 실패 (토큰 만료 시 자동 재연결됨):', err);
         isConnectingRef.current = false;
       };
 
