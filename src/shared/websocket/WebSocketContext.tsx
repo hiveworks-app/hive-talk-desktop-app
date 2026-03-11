@@ -336,10 +336,16 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
             if (electronAPI?.isElectron && electronAPI.showNotification) {
               // Electron: 네이티브 알림 (프로필 이미지 + 클릭 시 IPC로 처리)
+              // 알림 생성 시점의 notReadCount를 캡처 (클릭 시 캐시가 변할 수 있으므로)
+              const updatedRooms = targetQueryKey
+                ? queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey)
+                : undefined;
+              const currentNotReadCount = updatedRooms?.find(r => r.roomModel.roomId === roomId)?.notReadCount ?? 0;
               const notificationMeta = {
                 roomId,
                 channelType: currentChannelType ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
                 senderName,
+                notReadCount: currentNotReadCount,
               };
               const storageKey =
                 normalizedPayload.sender?.thumbnailProfileUrl ||
@@ -542,7 +548,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       | {
           isElectron?: boolean;
           onNotificationClicked?: (
-            callback: (meta: { roomId: string; channelType: string; senderName: string }) => void,
+            callback: (meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => void,
           ) => () => void;
         }
       | undefined;
@@ -550,12 +556,17 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     if (!electronAPI?.isElectron || !electronAPI.onNotificationClicked) return;
 
     const cleanup = electronAPI.onNotificationClicked((meta) => {
-      const { roomId, channelType, senderName } = meta;
+      const { roomId, channelType, senderName, notReadCount: metaNotReadCount } = meta;
       const targetQueryKey = getTargetQueryKey(channelType as WebSocketChannelTypes);
       const rooms = targetQueryKey
         ? queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey)
         : undefined;
       const room = rooms?.find(r => r.roomModel.roomId === roomId);
+
+      // 알림 생성 시점에 캡처한 값(meta)과 현재 캐시 값 중 큰 값 사용
+      // → 캐시가 타이밍 이슈로 0이 되어도 meta 값으로 보장
+      // → 알림 이후 메시지가 더 오면 캐시 값이 더 크므로 그쪽 사용
+      const reliableNotReadCount = Math.max(metaNotReadCount ?? 0, room?.notReadCount ?? 0);
 
       if (room) {
         const { roomModel } = room;
@@ -580,16 +591,16 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           channelType: channelType as WebSocketChannelTypes,
           totalUserCount,
           otherUserIsExit: isOtherUserExit,
-          lastMessage: room.messageList?.[room.messageList.length - 1] ?? null,
+          lastMessage: room.messageList?.[0] ?? null,
           invitedUserIds,
-          initialNotReadCount: room.notReadCount ?? 0,
+          initialNotReadCount: reliableNotReadCount,
         });
       } else {
         useChatRoomInfo.getState().setChatRoomInfo({
           roomId,
           roomName: senderName,
           channelType: (channelType as WebSocketChannelTypes) ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-          initialNotReadCount: 0,
+          initialNotReadCount: metaNotReadCount ?? 0,
         });
       }
 

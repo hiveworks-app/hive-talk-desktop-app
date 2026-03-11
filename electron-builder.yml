@@ -34,6 +34,19 @@ extraResources:
       - "trayIconTemplate*.png"
       - "notification-profile-default.png"
 
+dmg:
+  icon: resources/icon.icns
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 200
+    - x: 400
+      y: 200
+      type: link
+      path: /Applications
+
 mac:
   target:
     - target: dmg

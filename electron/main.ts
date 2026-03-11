@@ -228,6 +228,49 @@ function createWindow(serverUrl: string) {
 }
 
 // ------------------------------------------------------------------
+// SVG → PNG 변환 (nativeImage는 SVG 미지원)
+// ------------------------------------------------------------------
+
+function svgToPngImage(svgBuffer: Buffer, size: number): Promise<Electron.NativeImage> {
+  return new Promise((resolve) => {
+    const base64 = svgBuffer.toString('base64');
+    const html = `<html><body style="margin:0;background:transparent;">
+      <img id="img" src="data:image/svg+xml;base64,${base64}" width="${size}" height="${size}" />
+    </body></html>`;
+
+    const win = new BrowserWindow({
+      width: size,
+      height: size,
+      show: false,
+      frame: false,
+      transparent: true,
+      webPreferences: { offscreen: true },
+    });
+
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    win.webContents.on('paint', () => {
+      // 렌더링 완료 후 캡처
+      win.webContents.capturePage().then((img) => {
+        win.close();
+        resolve(img.isEmpty() ? nativeImage.createEmpty() : img.resize({ width: size, height: size }));
+      }).catch(() => {
+        win.close();
+        resolve(nativeImage.createEmpty());
+      });
+    });
+
+    // 3초 타임아웃
+    setTimeout(() => {
+      if (!win.isDestroyed()) {
+        win.close();
+        resolve(nativeImage.createEmpty());
+      }
+    }, 3000);
+  });
+}
+
+// ------------------------------------------------------------------
 // Custom Notification (카카오톡 스타일)
 // ------------------------------------------------------------------
 
@@ -480,19 +523,40 @@ async function showCustomNotification(data: {
 // Native Notification (macOS)
 // ------------------------------------------------------------------
 
-function showNativeNotification(data: {
+async function showNativeNotification(data: {
   title: string;
   body: string;
   profileImageUrl?: string;
   meta?: { roomId: string; channelType: string; senderName: string };
 }) {
+  // 프로필 이미지 다운로드 → nativeImage 변환 (실패 시 기본 프로필 이미지 사용)
+  const ICON_SIZE = 128;
+  let icon: Electron.NativeImage | undefined;
+  if (data.profileImageUrl) {
+    try {
+      const res = await fetch(data.profileImageUrl);
+      const contentType = res.headers.get('content-type') || '';
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      if (contentType.includes('svg')) {
+        // SVG → PNG 변환 (nativeImage는 SVG 미지원)
+        icon = await svgToPngImage(buffer, ICON_SIZE);
+      } else {
+        icon = nativeImage.createFromBuffer(buffer).resize({ width: ICON_SIZE, height: ICON_SIZE });
+      }
+    } catch {
+      // 다운로드 실패 → 기본 이미지로 폴백
+    }
+  }
+  if (!icon || icon.isEmpty()) {
+    icon = nativeImage.createFromPath(getDefaultProfilePath());
+  }
+
   const notif = new Notification({
     title: data.title,
     body: data.body,
-    icon: getIconPath(),
-    silent: false,
+    icon,
     actions: [{ type: 'button', text: '읽음' }],
-    closeButtonText: '닫기',
   });
 
   notif.on('click', () => {
