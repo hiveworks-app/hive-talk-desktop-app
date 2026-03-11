@@ -28,8 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setTitleBarDimmed: (isDimmed: boolean) =>
     ipcRenderer.invoke('set-titlebar-dimmed', isDimmed),
   focusWindow: () => ipcRenderer.invoke('focus-window'),
-  onNotificationClicked: (callback: (meta: { roomId: string; channelType: string; senderName: string }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, meta: { roomId: string; channelType: string; senderName: string }) => callback(meta);
+  onNotificationClicked: (callback: (meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => callback(meta);
     ipcRenderer.on('notification-clicked', handler);
     return () => { ipcRenderer.removeListener('notification-clicked', handler); };
   },
