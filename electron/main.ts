@@ -22,6 +22,8 @@ const activeNotifByRoom = new Map<string, {
   cleanup: () => void;
 }>();
 let cachedAppIconDataUrl: string | null = null;
+// macOS 네이티브 알림 추적: roomId → Notification[] (클릭 시 같은 방 알림 일괄 닫기)
+const activeNativeNotifByRoom = new Map<string, Notification[]>();
 
 // ------------------------------------------------------------------
 // Helpers
@@ -552,6 +554,8 @@ async function showNativeNotification(data: {
     icon = nativeImage.createFromPath(getDefaultProfilePath());
   }
 
+  const roomId = data.meta?.roomId;
+
   const notif = new Notification({
     title: data.title,
     body: data.body,
@@ -559,7 +563,31 @@ async function showNativeNotification(data: {
     actions: [{ type: 'button', text: '읽음' }],
   });
 
+  // 같은 방의 모든 알림을 알림 센터에서 일괄 제거
+  const closeAllForRoom = () => {
+    if (!roomId) return;
+    const group = activeNativeNotifByRoom.get(roomId);
+    if (!group) return;
+    // 먼저 Map에서 제거 → close 이벤트의 removeSelf()가 no-op이 됨
+    activeNativeNotifByRoom.delete(roomId);
+    // 복사본으로 순회 (close → removeSelf가 원본을 변경해도 영향 없음)
+    for (const n of [...group]) {
+      try { n.close(); } catch { /* 이미 닫힌 알림 무시 */ }
+    }
+  };
+
+  // 추적 Map에서 이 알림만 제거
+  const removeSelf = () => {
+    if (!roomId) return;
+    const group = activeNativeNotifByRoom.get(roomId);
+    if (!group) return;
+    const idx = group.indexOf(notif);
+    if (idx >= 0) group.splice(idx, 1);
+    if (group.length === 0) activeNativeNotifByRoom.delete(roomId);
+  };
+
   notif.on('click', () => {
+    closeAllForRoom(); // 같은 방 알림 전부 닫기
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -572,12 +600,26 @@ async function showNativeNotification(data: {
 
   notif.on('action', (_event, index) => {
     // 읽음 버튼 (index 0)
-    if (index === 0 && mainWindow && data.meta) {
-      mainWindow.webContents.send('notification-read', data.meta);
+    if (index === 0) {
+      closeAllForRoom(); // 같은 방 알림 전부 닫기
+      if (mainWindow && data.meta) {
+        mainWindow.webContents.send('notification-read', data.meta);
+      }
     }
   });
 
+  notif.on('close', () => {
+    removeSelf(); // 개별 닫힘 시 자기만 제거
+  });
+
   notif.show();
+
+  // 추적 Map에 등록
+  if (roomId) {
+    const group = activeNativeNotifByRoom.get(roomId) ?? [];
+    group.push(notif);
+    activeNativeNotifByRoom.set(roomId, group);
+  }
 }
 
 // ------------------------------------------------------------------
@@ -699,8 +741,30 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('set-badge-count', (_event, count: number) => {
   if (process.platform === 'darwin') {
     app.setBadgeCount(count);
+  } else if (process.platform === 'win32' && mainWindow) {
+    if (count > 0) {
+      // 빨간 배지에 숫자를 그려서 오버레이 아이콘으로 사용
+      const size = 16;
+      const canvas = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+          <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#FF3B30"/>
+          ${count <= 99
+            ? `<text x="50%" y="50%" text-anchor="middle" dy=".36em"
+                font-family="Arial" font-size="${count > 9 ? 9 : 11}" font-weight="bold" fill="white">
+                ${count}
+              </text>`
+            : `<text x="50%" y="50%" text-anchor="middle" dy=".36em"
+                font-family="Arial" font-size="8" font-weight="bold" fill="white">
+                99+
+              </text>`
+          }
+        </svg>`;
+      const overlay = nativeImage.createFromBuffer(Buffer.from(canvas));
+      mainWindow.setOverlayIcon(overlay, `${count}개의 읽지 않은 메시지`);
+    } else {
+      mainWindow.setOverlayIcon(null, '');
+    }
   }
-  // Windows: overlay icon could be used here
 });
 
 ipcMain.handle('set-tray-auth-state', (_event, isLoggedIn: boolean) => {
