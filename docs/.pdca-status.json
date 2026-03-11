@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-11T01:08:16.643Z",
+  "lastUpdated": "2026-03-11T06:33:45.158Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -54,7 +54,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-03T01:12:53.470Z",
-        "lastUpdated": "2026-03-10T07:15:52.412Z"
+        "lastUpdated": "2026-03-11T06:25:30.093Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/electron/main.ts"
     },
@@ -67,7 +67,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-03T01:13:10.140Z",
-        "lastUpdated": "2026-03-10T02:28:22.748Z"
+        "lastUpdated": "2026-03-11T06:29:19.266Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(auth)/login/page.tsx"
     },
@@ -262,9 +262,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:02:48.500Z",
-        "lastUpdated": "2026-03-11T00:40:38.237Z"
+        "lastUpdated": "2026-03-11T06:33:45.158Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/chat-room/createWsMessageParser.ts"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/chat-room/MessageBubble.tsx"
     },
     "[roomId]": {
       "phase": "do",
@@ -288,7 +288,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:19:42.699Z",
-        "lastUpdated": "2026-03-11T01:08:16.643Z"
+        "lastUpdated": "2026-03-11T05:30:46.550Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/shared/websocket/WebSocketContext.tsx"
     },
@@ -301,9 +301,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:33:58.165Z",
-        "lastUpdated": "2026-03-11T00:40:49.237Z"
+        "lastUpdated": "2026-03-11T05:30:35.763Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/chat-room-list/updater.ts"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/chat-room-list/ExternalChatSidebar.tsx"
     },
     "chat": {
       "phase": "do",
@@ -314,9 +314,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:34:02.721Z",
-        "lastUpdated": "2026-03-10T02:39:32.761Z"
+        "lastUpdated": "2026-03-11T05:30:19.496Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/chat/uploadProgressStore.ts"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/chat/chatRoomStore.ts"
     },
     "members": {
       "phase": "do",
@@ -379,7 +379,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-11T00:52:05.564Z",
-        "lastUpdated": "2026-03-11T00:52:14.488Z"
+        "lastUpdated": "2026-03-11T05:12:38.112Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/nav/AppNav.tsx"
     }
@@ -392,7 +392,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-11T01:08:16.643Z"
+    "lastActivity": "2026-03-11T06:33:45.158Z"
   },
   "history": [
     {
@@ -3362,6 +3362,426 @@
     {
       "timestamp": "2026-03-11T01:08:16.643Z",
       "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:43:13.104Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:43:24.306Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:56:39.921Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:57:49.366Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:57:55.279Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:58:11.980Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:58:25.689Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T02:59:34.523Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:49:24.259Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:49:47.157Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:49:54.989Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:51:51.909Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:51:57.538Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:56:45.466Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T04:58:05.582Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:02:57.224Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:03:07.843Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:03:13.014Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:05:22.401Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:05:46.035Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:06:06.863Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:06:21.288Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:06:34.883Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:07:17.652Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:07:18.187Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:08:03.787Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:09:26.448Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:10:35.105Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:11:35.693Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:12:10.001Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:12:22.895Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:12:38.112Z",
+      "feature": "nav",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:14:14.481Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:15:32.782Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:20:03.838Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:20:05.086Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:20:12.233Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:30:17.254Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:30:19.496Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:30:31.887Z",
+      "feature": "chat-room-list",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:30:35.763Z",
+      "feature": "chat-room-list",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:30:46.550Z",
+      "feature": "websocket",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:33:20.649Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:33:33.933Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:33:43.495Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:34:44.029Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:34:48.202Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:35:12.037Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:42:03.837Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:44:10.189Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:44:19.721Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:44:24.339Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:51:58.463Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:55:38.635Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T05:57:25.056Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:08:04.944Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:10:16.606Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:13:05.942Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:13:45.666Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:13:51.962Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:19:32.301Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:21:18.985Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:21:32.758Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:24:21.922Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:25:30.093Z",
+      "feature": "electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:29:10.057Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:29:19.266Z",
+      "feature": "login",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:32:52.244Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:33:19.340Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T06:33:45.158Z",
+      "feature": "chat-room",
       "phase": "do",
       "action": "updated"
     }

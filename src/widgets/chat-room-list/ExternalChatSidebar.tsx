@@ -84,6 +84,7 @@ function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
       totalUserCount,
       otherUserIsExit: roomModel.participantDetail?.isExit ?? false,
       lastMessage: lastMsg ?? null,
+      initialNotReadCount: notReadCount,
     });
 
     router.push(`/external-chat/${roomModel.roomId}`);

@@ -82,7 +82,7 @@ export function MessageBubble({
         {!isMe && !isSameSender && (
           <ProfileCircle name={message.name} size="sm" storageKey={message.thumbnailProfileUrl || message.profileImageUrl} />
         )}
-        {!isMe && isSameSender && <div className="w-8 shrink-0" />}
+        {!isMe && isSameSender && <div className="w-9 shrink-0" />}
 
         <div className={cn('flex max-w-[70%] flex-col', isMe ? 'items-end' : 'items-start')}>
           {!isMe && !isSameSender && (

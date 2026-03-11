@@ -78,9 +78,9 @@ export function AppNav() {
   };
 
   return (
-    <nav className="electron-drag flex h-full w-[88px] shrink-0 flex-col items-center border-r border-divider bg-surface pt-16 pb-4">
+    <nav className="electron-drag flex h-full w-[78px] shrink-0 flex-col items-center border-r border-divider bg-surface pt-16 pb-4">
       {/* 네비게이션 아이템 */}
-      <div className="flex flex-1 flex-col items-center gap-2">
+      <div className="flex flex-1 flex-col items-center gap-5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const badgeCount = getBadgeCount(item.badgeKey);
@@ -91,14 +91,14 @@ export function AppNav() {
               href={item.href}
               title={item.label}
               className={cn(
-                "electron-no-drag flex h-11 w-11 items-center justify-center rounded-xl transition-colors",
+                "electron-no-drag flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
                 isActive
-                  ? "bg-state-primary-highlighted text-black"
-                  : "text-text-tertiary hover:bg-surface-pressed hover:text-text-secondary",
+                  ? "text-black"
+                  : "text-text-tertiary hover:text-text-secondary",
               )}
             >
               <div className="relative">
-                <item.Icon width={28} height={28} />
+                <item.Icon width={26} height={26} />
                 {badgeCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-state-error px-1 text-[9px] font-bold text-on-primary">
                     {badgeCount > 99 ? "99+" : badgeCount}

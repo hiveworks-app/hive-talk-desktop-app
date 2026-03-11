@@ -8,6 +8,7 @@ export interface ChatRoomInfo {
   otherUserIsExit: boolean;
   invitedUserIds: string[];
   lastMessage: WebSocketPublishItem | null;
+  initialNotReadCount: number;
 }
 
 export interface ChatRoomInfoState extends ChatRoomInfo {

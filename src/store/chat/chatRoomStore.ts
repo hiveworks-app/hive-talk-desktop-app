@@ -14,6 +14,7 @@ const initChatRoomInfo: ChatRoomInfo = {
   otherUserIsExit: false,
   invitedUserIds: [],
   lastMessage: null,
+  initialNotReadCount: 0,
 };
 
 export const useChatRoomInfo = create<ChatRoomInfoState>(set => ({

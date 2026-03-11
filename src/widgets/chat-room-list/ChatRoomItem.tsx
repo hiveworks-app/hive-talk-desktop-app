@@ -91,6 +91,7 @@ export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
       otherUserIsExit: isOtherUserExit,
       lastMessage: lastMsg ?? null,
       invitedUserIds,
+      initialNotReadCount: notReadCount,
     });
 
     router.push(`/chat/${roomModel.roomId}`);

@@ -582,12 +582,14 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           otherUserIsExit: isOtherUserExit,
           lastMessage: room.messageList?.[room.messageList.length - 1] ?? null,
           invitedUserIds,
+          initialNotReadCount: room.notReadCount ?? 0,
         });
       } else {
         useChatRoomInfo.getState().setChatRoomInfo({
           roomId,
           roomName: senderName,
           channelType: (channelType as WebSocketChannelTypes) ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+          initialNotReadCount: 0,
         });
       }
 

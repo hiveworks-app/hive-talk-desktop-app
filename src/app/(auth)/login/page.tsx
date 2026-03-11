@@ -12,12 +12,15 @@ import {
   fetchEMRoomList,
 } from "@/features/chat-room-list/queries";
 import { apiGetMembersList } from "@/features/members/api";
+import { apiGetStorage } from "@/features/storage/api";
 import {
   DM_ROOM_LIST_KEY,
   GM_ROOM_LIST_KEY,
   EM_ROOM_LIST_KEY,
   MEMBERS_KEY,
+  PRESIGNED_URL,
 } from "@/shared/config/queryKeys";
+import type { MemberItem } from "@/shared/types/user";
 import type { UserType } from "@/shared/types/user";
 import { USER_TYPE } from "@/shared/types/user";
 import { Button } from "@/shared/ui/Button";
@@ -117,6 +120,27 @@ export default function LoginPage() {
           queryFn: fetchEMRoomList,
         }),
       ]);
+
+      // 멤버 프로필 이미지 presigned URL 미리 로드
+      const members = queryClient.getQueryData<MemberItem[]>(MEMBERS_KEY);
+      if (members) {
+        const profileKeys = [
+          ...new Set(
+            members
+              .map((m) => m.profileUrl)
+              .filter((key): key is string => !!key),
+          ),
+        ];
+        await Promise.allSettled(
+          profileKeys.map((key) =>
+            queryClient.prefetchQuery({
+              queryKey: PRESIGNED_URL(key),
+              queryFn: async () => (await apiGetStorage(key)).payload.key,
+              staleTime: 10 * 60 * 1000,
+            }),
+          ),
+        );
+      }
 
       window.location.href = "/members";
     } catch {

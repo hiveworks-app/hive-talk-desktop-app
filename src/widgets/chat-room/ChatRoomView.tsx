@@ -43,7 +43,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const { hasMoreBefore, isBeforeLoading } = useChatRoomRuntimeStore(s => s.loading);
   const scrollToBottomTrigger = useChatRoomRuntimeStore(s => s.scrollToBottomTrigger);
-  const { roomName, totalUserCount, channelType, lastMessage } = useChatRoomInfo();
+  const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,10 +67,48 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const isNearBottomRef = useRef(true);
+  const isNearBottomRef = useRef(initialNotReadCount === 0);
   const prevScrollHeightRef = useRef(0);
+  const isInitialLoadRef = useRef(true);
+  const canDismissSeparatorRef = useRef(false);
 
+  // 구분선 표시: roomId 기반으로 추적 (setState in useEffect 회피)
+  const [dismissedRoomId, setDismissedRoomId] = useState<string | null>(null);
+  const UNREAD_SEPARATOR_THRESHOLD = 20;
+  const showUnreadSeparator = initialNotReadCount >= UNREAD_SEPARATOR_THRESHOLD && dismissedRoomId !== storeRoomId;
+
+  // 방 변경 시 스크롤 상태 리셋
   useEffect(() => {
+    isInitialLoadRef.current = true;
+    isNearBottomRef.current = initialNotReadCount === 0;
+    canDismissSeparatorRef.current = false;
+  }, [storeRoomId]);
+
+  // 메시지 로드 후 스크롤 위치 결정
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+
+      if (initialNotReadCount === 0) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        isNearBottomRef.current = true;
+      } else {
+        const separator = document.getElementById('unread-separator');
+        if (separator) {
+          separator.scrollIntoView({ behavior: 'auto', block: 'center' });
+          // scrollIntoView 직후 scroll 이벤트가 발생하면 구분선이 즉시 사라지는 것 방지
+          setTimeout(() => { canDismissSeparatorRef.current = true; }, 500);
+        } else {
+          // 구분선 미표시 (임계값 미만) → 하단으로 이동
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          isNearBottomRef.current = true;
+        }
+      }
+      return;
+    }
+
     if (isNearBottomRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -87,13 +125,18 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
-    isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    isNearBottomRef.current = nearBottom;
+
+    if (nearBottom && canDismissSeparatorRef.current) {
+      setDismissedRoomId(storeRoomId);
+    }
 
     if (scrollTop < 50 && hasMoreBefore && !isBeforeLoading) {
       prevScrollHeightRef.current = scrollHeight;
       loadMoreBeforeMessage('before');
     }
-  }, [hasMoreBefore, isBeforeLoading, loadMoreBeforeMessage]);
+  }, [hasMoreBefore, isBeforeLoading, loadMoreBeforeMessage, storeRoomId]);
 
   const search = useChatRoomSearch({
     containerRef: messagesContainerRef,
@@ -265,17 +308,36 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
               <span className="text-sub-sm text-text-tertiary">불러오는 중...</span>
             </div>
           )}
-          {messages.map((msg, idx) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              prevMessage={messages[idx - 1]}
-              nextMessage={showNextMessage ? messages[idx + 1] : undefined}
-              index={idx}
-              isFocused={search.focusedMessageId === msg.id}
-              onOpenMedia={openMediaViewer}
-            />
-          ))}
+          {(() => {
+            const unreadBoundaryIndex = showUnreadSeparator && initialNotReadCount > 0
+              ? Math.max(0, messages.length - initialNotReadCount)
+              : -1;
+
+            return messages.map((msg, idx) => (
+              <div key={msg.id}>
+                {idx === unreadBoundaryIndex && (
+                  <div
+                    id="unread-separator"
+                    className="my-3 flex items-center gap-3"
+                  >
+                    <div className="flex-1 border-t border-state-primary/40" />
+                    <span className="shrink-0 text-[11px] font-medium text-state-primary/70">
+                      여기까지 읽었습니다
+                    </span>
+                    <div className="flex-1 border-t border-state-primary/40" />
+                  </div>
+                )}
+                <MessageBubble
+                  message={msg}
+                  prevMessage={messages[idx - 1]}
+                  nextMessage={showNextMessage ? messages[idx + 1] : undefined}
+                  index={idx}
+                  isFocused={search.focusedMessageId === msg.id}
+                  onOpenMedia={openMediaViewer}
+                />
+              </div>
+            ));
+          })()}
           <div ref={messagesEndRef} />
         </div>
 
