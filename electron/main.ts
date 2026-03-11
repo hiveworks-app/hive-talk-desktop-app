@@ -741,28 +741,36 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('set-badge-count', (_event, count: number) => {
   if (process.platform === 'darwin') {
     app.setBadgeCount(count);
-  } else if (process.platform === 'win32' && mainWindow) {
+  } else if (process.platform === 'win32' && tray) {
+    // 트레이 아이콘에 빨간 점 표시/제거
+    const baseIcon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
     if (count > 0) {
-      // 빨간 배지에 숫자를 그려서 오버레이 아이콘으로 사용
+      // 기존 아이콘을 PNG 버퍼로 가져와서 빨간 점 합성
       const size = 16;
-      const canvas = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#FF3B30"/>
-          ${count <= 99
-            ? `<text x="50%" y="50%" text-anchor="middle" dy=".36em"
-                font-family="Arial" font-size="${count > 9 ? 9 : 11}" font-weight="bold" fill="white">
-                ${count}
-              </text>`
-            : `<text x="50%" y="50%" text-anchor="middle" dy=".36em"
-                font-family="Arial" font-size="8" font-weight="bold" fill="white">
-                99+
-              </text>`
+      const raw = baseIcon.toBitmap();
+      const dotRadius = 3;
+      const dotCenterX = size - dotRadius - 1;
+      const dotCenterY = dotRadius + 1;
+
+      // BGRA 포맷 직접 편집: 우상단에 빨간 원 그리기
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const dx = x - dotCenterX;
+          const dy = y - dotCenterY;
+          if (dx * dx + dy * dy <= dotRadius * dotRadius) {
+            const offset = (y * size + x) * 4;
+            raw[offset] = 0x30;     // B
+            raw[offset + 1] = 0x3B; // G
+            raw[offset + 2] = 0xFF; // R (#FF3B30)
+            raw[offset + 3] = 0xFF; // A
           }
-        </svg>`;
-      const overlay = nativeImage.createFromBuffer(Buffer.from(canvas));
-      mainWindow.setOverlayIcon(overlay, `${count}개의 읽지 않은 메시지`);
+        }
+      }
+
+      const badgeIcon = nativeImage.createFromBuffer(raw, { width: size, height: size });
+      tray.setImage(badgeIcon);
     } else {
-      mainWindow.setOverlayIcon(null, '');
+      tray.setImage(baseIcon);
     }
   }
 });
