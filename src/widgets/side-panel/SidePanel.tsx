@@ -1,15 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import {
-  getSidePanelBeforeAttachmentQuery,
-  getSidePanelBeforeFileQuery,
-  getSidePanelParticipantsQuery,
-} from '@/features/chat-room-side-panel/queries';
 import { cn } from '@/shared/lib/cn';
-import { MediaListType } from '@/shared/types/media';
 import { WebSocketChannelTypes } from '@/shared/types/websocket';
+import { ParticipantsTab } from './ParticipantsTab';
+import { MediaTab } from './MediaTab';
+import { FilesTab } from './FilesTab';
 
 type SidePanelTab = 'participants' | 'media' | 'files';
 
@@ -36,7 +32,6 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       <div
         className={cn(
           'shrink-0 border-l border-divider bg-background transition-all duration-200',
-          // 모바일: 오버레이, 데스크톱: 사이드에 붙음
           isOpen
             ? 'fixed inset-y-0 right-0 z-40 w-[300px] md:relative md:z-auto md:w-[320px]'
             : 'w-0 overflow-hidden border-l-0',
@@ -91,156 +86,5 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       )}
     </div>
     </>
-  );
-}
-
-function ParticipantsTab({
-  roomId,
-  channelType,
-}: {
-  roomId: string;
-  channelType: WebSocketChannelTypes;
-}) {
-  const { data: participants = [], isLoading } = useQuery(
-    getSidePanelParticipantsQuery(roomId, channelType),
-  );
-
-  if (isLoading) {
-    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
-  }
-
-  return (
-    <div className="py-1">
-      <div className="px-4 py-2 text-sub-sm text-text-tertiary">
-        참여자 {participants.length}명
-      </div>
-      {participants.map(p => (
-        <div key={p.userId} className="flex items-center gap-3 px-4 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sub-sm font-medium text-text-secondary">
-            {p.name.charAt(0)}
-          </div>
-          <span className="text-sub text-text-primary">{p.name}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MediaTab({
-  roomId,
-  channelType,
-  lastMessageId,
-}: {
-  roomId: string;
-  channelType: WebSocketChannelTypes;
-  lastMessageId: string;
-}) {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery(
-    getSidePanelBeforeAttachmentQuery(roomId, lastMessageId, channelType),
-  );
-
-  const allMedia: MediaListType[] = data?.pages.flat() ?? [];
-
-  if (isLoading) {
-    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
-  }
-
-  if (allMedia.length === 0) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없습니다</div>;
-  }
-
-  return (
-    <div className="p-2">
-      <div className="grid grid-cols-3 gap-1">
-        {allMedia.map(media => (
-          <a
-            key={media.id}
-            href={media.presignedUrl || media.path}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative aspect-square overflow-hidden rounded bg-gray-100"
-          >
-            <img
-              src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </a>
-        ))}
-      </div>
-      {hasNextPage && (
-        <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="mt-2 w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
-        >
-          {isFetchingNextPage ? '로딩 중...' : '더 보기'}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function FilesTab({
-  roomId,
-  channelType,
-  lastMessageId,
-}: {
-  roomId: string;
-  channelType: WebSocketChannelTypes;
-  lastMessageId: string;
-}) {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery(
-    getSidePanelBeforeFileQuery(roomId, lastMessageId, channelType),
-  );
-
-  const allFiles: MediaListType[] = data?.pages.flat() ?? [];
-
-  if (isLoading) {
-    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
-  }
-
-  if (allFiles.length === 0) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">파일이 없습니다</div>;
-  }
-
-  return (
-    <div className="py-1">
-      {allFiles.map(file => {
-        const fileName = file.path.split('/').pop() || '파일';
-        return (
-          <a
-            key={file.id}
-            href={file.presignedUrl || file.path}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 text-sub-sm text-text-tertiary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sub text-text-primary">{fileName}</div>
-              <div className="text-sub-sm text-text-tertiary">
-                {file.author} · {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)}KB` : ''}
-              </div>
-            </div>
-          </a>
-        );
-      })}
-      {hasNextPage && (
-        <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
-        >
-          {isFetchingNextPage ? '로딩 중...' : '더 보기'}
-        </button>
-      )}
-    </div>
   );
 }

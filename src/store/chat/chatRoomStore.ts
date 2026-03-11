@@ -1,26 +1,10 @@
 'use client';
 
 import { create } from 'zustand';
-import {
-  WS_CHANNEL_TYPE,
-  type WebSocketChannelTypes,
-  type WebSocketPublishItem,
-} from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
+import type { ChatRoomInfo, ChatRoomInfoState } from './chatRoomStore.type';
 
-interface ChatRoomInfo {
-  roomId: string;
-  roomName: string;
-  channelType: WebSocketChannelTypes;
-  totalUserCount: number;
-  otherUserIsExit: boolean;
-  invitedUserIds: string[];
-  lastMessage: WebSocketPublishItem | null;
-}
-
-interface ChatRoomInfoState extends ChatRoomInfo {
-  setChatRoomInfo: (info: Partial<ChatRoomInfo>) => void;
-  resetChatRoomInfo: () => void;
-}
+export type { ChatRoomInfo, ChatRoomInfoState } from './chatRoomStore.type';
 
 const initChatRoomInfo: ChatRoomInfo = {
   roomId: '',
@@ -30,6 +14,7 @@ const initChatRoomInfo: ChatRoomInfo = {
   otherUserIsExit: false,
   invitedUserIds: [],
   lastMessage: null,
+  initialNotReadCount: 0,
 };
 
 export const useChatRoomInfo = create<ChatRoomInfoState>(set => ({

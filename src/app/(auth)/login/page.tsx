@@ -12,47 +12,23 @@ import {
   fetchEMRoomList,
 } from "@/features/chat-room-list/queries";
 import { apiGetMembersList } from "@/features/members/api";
+import { apiGetStorage } from "@/features/storage/api";
 import {
   DM_ROOM_LIST_KEY,
   GM_ROOM_LIST_KEY,
   EM_ROOM_LIST_KEY,
   MEMBERS_KEY,
+  PRESIGNED_URL,
 } from "@/shared/config/queryKeys";
+import type { MemberItem } from "@/shared/types/user";
 import type { UserType } from "@/shared/types/user";
 import { USER_TYPE } from "@/shared/types/user";
 import { Button } from "@/shared/ui/Button";
 import { Checkbox } from "@/shared/ui/Checkbox";
 import { Input } from "@/shared/ui/Input";
+import { Spinner } from "@/shared/ui/Spinner";
+import { getBrowserDeviceId } from "@/shared/utils/deviceId";
 import { useAuthStore } from "@/store/auth/authStore";
-
-function getBrowserDeviceId(): string {
-  const KEY = "hive-device-id";
-  const stored = localStorage.getItem(KEY);
-  if (stored) return stored;
-  const id = crypto.randomUUID();
-  localStorage.setItem(KEY, id);
-  return id;
-}
-
-function Spinner() {
-  return (
-    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  );
-}
 
 export default function LoginPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -144,6 +120,27 @@ export default function LoginPage() {
           queryFn: fetchEMRoomList,
         }),
       ]);
+
+      // 멤버 프로필 이미지 presigned URL 미리 로드
+      const members = queryClient.getQueryData<MemberItem[]>(MEMBERS_KEY);
+      if (members) {
+        const profileKeys = [
+          ...new Set(
+            members
+              .map((m) => m.profileUrl)
+              .filter((key): key is string => !!key),
+          ),
+        ];
+        await Promise.allSettled(
+          profileKeys.map((key) =>
+            queryClient.prefetchQuery({
+              queryKey: PRESIGNED_URL(key),
+              queryFn: async () => (await apiGetStorage(key)).payload.key,
+              staleTime: 10 * 60 * 1000,
+            }),
+          ),
+        );
+      }
 
       window.location.href = "/members";
     } catch {

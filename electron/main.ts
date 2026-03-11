@@ -1,14 +1,27 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
 import path from 'path';
 import net from 'net';
 
 const isDev = !app.isPackaged;
 const DEV_PORT = 23000;
 
+// 시스템 테마와 관계없이 항상 Light 모드 강제
+nativeTheme.themeSource = 'light';
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let nextServer: UtilityProcess | null = null;
 let isQuitting = false;
+
+// 커스텀 알림 윈도우 스택 관리
+const activeNotifications: BrowserWindow[] = [];
+// 같은 방 알림 대체용: roomId → { win, autoCloseTimer, cleanup }
+const activeNotifByRoom = new Map<string, {
+  win: BrowserWindow;
+  autoCloseTimer: ReturnType<typeof setTimeout>;
+  cleanup: () => void;
+}>();
+let cachedAppIconDataUrl: string | null = null;
 
 // ------------------------------------------------------------------
 // Helpers
@@ -16,6 +29,15 @@ let isQuitting = false;
 
 function getPreloadPath() {
   return path.join(__dirname, 'preload.js');
+}
+
+function getNotificationPreloadPath() {
+  return path.join(__dirname, 'notification-preload.js');
+}
+
+function getNotificationHtmlPath() {
+  // electron:compile 시 dist-electron/에 복사되므로 __dirname 기준으로 통일
+  return path.join(__dirname, 'notification.html');
 }
 
 function getIconPath() {
@@ -30,6 +52,13 @@ function getTrayIconPath() {
     ? path.join(app.getAppPath(), 'resources')
     : process.resourcesPath;
   return path.join(base, 'trayIconTemplate.png');
+}
+
+function getDefaultProfilePath() {
+  const base = isDev
+    ? path.join(app.getAppPath(), 'resources')
+    : process.resourcesPath;
+  return path.join(base, 'notification-profile-default.png');
 }
 
 /** Check if a specific port is available */
@@ -135,7 +164,7 @@ function createWindow(serverUrl: string) {
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform === 'darwin'
-      ? { trafficLightPosition: { x: 16, y: 16 } }
+      ? { trafficLightPosition: { x: 10, y: 10 } }
       : {
           titleBarOverlay: {
             color: '#ffffff',
@@ -188,10 +217,303 @@ function createWindow(serverUrl: string) {
     }
   });
 
+  mainWindow.on('focus', () => {
+    mainWindow?.flashFrame(false);
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
+}
+
+// ------------------------------------------------------------------
+// Custom Notification (카카오톡 스타일)
+// ------------------------------------------------------------------
+
+const NOTIF_WIDTH = 360;
+const NOTIF_HEIGHT = 120;
+const NOTIF_GAP = 8;
+const NOTIF_AUTO_CLOSE_MS = 5000;
+let notifIdCounter = 0;
+
+
+function repositionNotifications() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  activeNotifications.forEach((win, index) => {
+    if (win.isDestroyed()) return;
+    const x = width - NOTIF_WIDTH - 16;
+    const y = height - (NOTIF_HEIGHT + NOTIF_GAP) * (index + 1);
+    win.setPosition(x, y, false);
+  });
+}
+
+function removeNotification(win: BrowserWindow) {
+  const idx = activeNotifications.indexOf(win);
+  if (idx >= 0) activeNotifications.splice(idx, 1);
+  if (!win.isDestroyed()) win.close();
+  repositionNotifications();
+}
+
+async function showCustomNotification(data: {
+  title: string;
+  body: string;
+  profileImageUrl?: string;
+  meta?: { roomId: string; channelType: string; senderName: string };
+}) {
+  // 프로필 이미지를 main process에서 미리 다운로드 → base64 data URI로 변환
+  let profileDataUrl: string | undefined;
+  if (data.profileImageUrl) {
+    try {
+      const res = await fetch(data.profileImageUrl);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const contentType = res.headers.get('content-type') || 'image/png';
+      profileDataUrl = `data:${contentType};base64,${buffer.toString('base64')}`;
+    } catch {
+      // 다운로드 실패 → 아래에서 기본 이미지 적용
+    }
+  }
+  if (!profileDataUrl) {
+    try {
+      const defaultIcon = nativeImage.createFromPath(getDefaultProfilePath());
+      profileDataUrl = defaultIcon.toDataURL();
+    } catch {
+      // 기본 이미지 파일도 없으면 HTML 측 폴백 사용
+    }
+  }
+
+  // 앱 아이콘 캐싱 (최초 1회만 파일 읽기)
+  if (!cachedAppIconDataUrl) {
+    try {
+      const appIcon = nativeImage.createFromPath(getIconPath()).resize({ width: 32, height: 32 });
+      cachedAppIconDataUrl = appIcon.toDataURL();
+    } catch {
+      // 아이콘 로드 실패 시 HTML 폴백 사용
+    }
+  }
+
+  const roomId = data.meta?.roomId;
+
+  // ── 같은 방의 알림이 이미 떠있으면 → 내용만 교체 + 타이머 리셋 ──
+  if (roomId) {
+    const existing = activeNotifByRoom.get(roomId);
+    if (existing && !existing.win.isDestroyed()) {
+      existing.cleanup();
+      clearTimeout(existing.autoCloseTimer);
+
+      const newNotifId = ++notifIdCounter;
+      const clickCh = `notification-click-${newNotifId}`;
+      const closeCh = `notification-close-${newNotifId}`;
+      const readCh = `notification-read-${newNotifId}`;
+
+      // HTML에 새 내용 전송 (notifId도 갱신 → preload가 새 IPC 채널 사용)
+      existing.win.webContents.send('notification-data', {
+        title: data.title,
+        body: data.body,
+        profileImageUrl: profileDataUrl,
+        appIconUrl: cachedAppIconDataUrl,
+        notifId: newNotifId,
+      });
+
+      const cleanup = () => {
+        ipcMain.removeListener(clickCh, onClickReplace);
+        ipcMain.removeListener(closeCh, onCloseReplace);
+        ipcMain.removeListener(readCh, onReadReplace);
+      };
+
+      const onClickReplace = () => {
+        cleanup();
+        clearTimeout(timer);
+        removeNotification(existing.win);
+        activeNotifByRoom.delete(roomId);
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+          if (data.meta) mainWindow.webContents.send('notification-clicked', data.meta);
+        }
+      };
+
+      const onCloseReplace = () => {
+        cleanup();
+        clearTimeout(timer);
+        removeNotification(existing.win);
+        activeNotifByRoom.delete(roomId);
+      };
+
+      const onReadReplace = () => {
+        cleanup();
+        clearTimeout(timer);
+        removeNotification(existing.win);
+        activeNotifByRoom.delete(roomId);
+        if (mainWindow && data.meta) mainWindow.webContents.send('notification-read', data.meta);
+      };
+
+      ipcMain.once(clickCh, onClickReplace);
+      ipcMain.once(closeCh, onCloseReplace);
+      ipcMain.once(readCh, onReadReplace);
+
+      const timer = setTimeout(() => {
+        cleanup();
+        removeNotification(existing.win);
+        activeNotifByRoom.delete(roomId);
+      }, NOTIF_AUTO_CLOSE_MS);
+
+      activeNotifByRoom.set(roomId, { win: existing.win, autoCloseTimer: timer, cleanup });
+      return;
+    }
+  }
+
+  // ── 새 알림 윈도우 생성 ──
+  const notifId = ++notifIdCounter;
+  const clickChannel = `notification-click-${notifId}`;
+  const closeChannel = `notification-close-${notifId}`;
+  const readChannel = `notification-read-${notifId}`;
+
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const yIndex = activeNotifications.length;
+
+  const notifWin = new BrowserWindow({
+    width: NOTIF_WIDTH,
+    height: NOTIF_HEIGHT,
+    x: width - NOTIF_WIDTH - 16,
+    y: height - (NOTIF_HEIGHT + NOTIF_GAP) * (yIndex + 1),
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    show: false,
+    transparent: true,
+    hasShadow: false,
+    webPreferences: {
+      preload: getNotificationPreloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  activeNotifications.push(notifWin);
+  notifWin.loadFile(getNotificationHtmlPath());
+
+  notifWin.once('ready-to-show', () => {
+    if (notifWin.isDestroyed()) return;
+    notifWin.showInactive();
+    notifWin.webContents.send('notification-data', {
+      title: data.title,
+      body: data.body,
+      profileImageUrl: profileDataUrl,
+      appIconUrl: cachedAppIconDataUrl,
+      notifId,
+    });
+  });
+
+  const cleanup = () => {
+    ipcMain.removeListener(clickChannel, onNotifClick);
+    ipcMain.removeListener(closeChannel, onNotifClose);
+    ipcMain.removeListener(readChannel, onNotifRead);
+  };
+
+  const onNotifClick = () => {
+    cleanup();
+    clearTimeout(autoCloseTimer);
+    removeNotification(notifWin);
+    if (roomId) activeNotifByRoom.delete(roomId);
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      if (data.meta) mainWindow.webContents.send('notification-clicked', data.meta);
+    }
+  };
+
+  const onNotifClose = () => {
+    cleanup();
+    clearTimeout(autoCloseTimer);
+    removeNotification(notifWin);
+    if (roomId) activeNotifByRoom.delete(roomId);
+  };
+
+  const onNotifRead = () => {
+    cleanup();
+    clearTimeout(autoCloseTimer);
+    removeNotification(notifWin);
+    if (roomId) activeNotifByRoom.delete(roomId);
+    if (mainWindow && data.meta) mainWindow.webContents.send('notification-read', data.meta);
+  };
+
+  ipcMain.once(clickChannel, onNotifClick);
+  ipcMain.once(closeChannel, onNotifClose);
+  ipcMain.once(readChannel, onNotifRead);
+
+  const autoCloseTimer = setTimeout(() => {
+    cleanup();
+    removeNotification(notifWin);
+    if (roomId) activeNotifByRoom.delete(roomId);
+  }, NOTIF_AUTO_CLOSE_MS);
+
+  // roomId가 있으면 방별 알림 추적 시작
+  if (roomId) {
+    activeNotifByRoom.set(roomId, { win: notifWin, autoCloseTimer, cleanup });
+  }
+
+  // 윈도우가 닫힐 때 최신 cleanup 실행 (내용 교체 후에도 안전)
+  notifWin.on('closed', () => {
+    if (roomId) {
+      const entry = activeNotifByRoom.get(roomId);
+      if (entry?.win === notifWin) {
+        entry.cleanup();
+        clearTimeout(entry.autoCloseTimer);
+        activeNotifByRoom.delete(roomId);
+      }
+    }
+    const idx = activeNotifications.indexOf(notifWin);
+    if (idx >= 0) activeNotifications.splice(idx, 1);
+    repositionNotifications();
+  });
+}
+
+// ------------------------------------------------------------------
+// Native Notification (macOS)
+// ------------------------------------------------------------------
+
+function showNativeNotification(data: {
+  title: string;
+  body: string;
+  profileImageUrl?: string;
+  meta?: { roomId: string; channelType: string; senderName: string };
+}) {
+  const notif = new Notification({
+    title: data.title,
+    body: data.body,
+    icon: getIconPath(),
+    silent: false,
+    actions: [{ type: 'button', text: '읽음' }],
+    closeButtonText: '닫기',
+  });
+
+  notif.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      if (data.meta) {
+        mainWindow.webContents.send('notification-clicked', data.meta);
+      }
+    }
+  });
+
+  notif.on('action', (_event, index) => {
+    // 읽음 버튼 (index 0)
+    if (index === 0 && mainWindow && data.meta) {
+      mainWindow.webContents.send('notification-read', data.meta);
+    }
+  });
+
+  notif.show();
 }
 
 // ------------------------------------------------------------------
@@ -281,10 +603,31 @@ function createTray() {
 // IPC Handlers
 // ------------------------------------------------------------------
 
-ipcMain.handle('show-notification', (_event, title: string, body: string) => {
-  if (Notification.isSupported()) {
-    new Notification({ title, body, icon: getIconPath() }).show();
+ipcMain.handle('show-notification', async (_event, data: {
+  title: string;
+  body: string;
+  profileImageUrl?: string;
+  meta?: { roomId: string; channelType: string; senderName: string };
+}) => {
+  if (process.platform === 'win32') {
+    // Windows: 커스텀 알림 윈도우 (읽음 버튼 + 같은 방 대체)
+    showCustomNotification(data);
+  } else {
+    // macOS: 시스템 네이티브 알림
+    showNativeNotification(data);
   }
+
+  // Windows만: 앱이 포커스되지 않은 상태면 작업 표시줄 주황 하이라이트
+  if (process.platform === 'win32' && mainWindow && !mainWindow.isFocused()) {
+    mainWindow.flashFrame(true);
+  }
+});
+
+ipcMain.handle('focus-window', () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());

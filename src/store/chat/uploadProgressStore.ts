@@ -1,20 +1,9 @@
 'use client';
 
 import { create } from 'zustand';
-import { LocalSendStatus } from '@/shared/types/websocket';
+import type { UploadProgressState } from './uploadProgressStore.type';
 
-export interface UploadProgressEntry {
-  done: number;
-  total: number;
-  status: LocalSendStatus;
-}
-
-interface UploadProgressState {
-  byFileId: Record<string, UploadProgressEntry | undefined>;
-  setTransmissionProgress: (fileId: string, next: UploadProgressEntry) => void;
-  clearProgress: (fileId: string) => void;
-  clearAll: () => void;
-}
+export type { UploadProgressEntry, UploadProgressState } from './uploadProgressStore.type';
 
 export const useUploadProgressStore = create<UploadProgressState>(set => ({
   byFileId: {},
@@ -22,8 +11,9 @@ export const useUploadProgressStore = create<UploadProgressState>(set => ({
     set(state => ({ byFileId: { ...state.byFileId, [fileId]: next } })),
   clearProgress: fileId =>
     set(state => {
-      const { [fileId]: _, ...rest } = state.byFileId;
-      return { byFileId: rest };
+      const next = { ...state.byFileId };
+      delete next[fileId];
+      return { byFileId: next };
     }),
   clearAll: () => set({ byFileId: {} }),
 }));

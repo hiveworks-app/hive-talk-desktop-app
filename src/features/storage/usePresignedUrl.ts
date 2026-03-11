@@ -13,7 +13,8 @@ export const usePresignedUrl = (key: string | null | undefined) => {
       const res = await apiGetStorage(key);
       return res.payload.key as string;
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 };

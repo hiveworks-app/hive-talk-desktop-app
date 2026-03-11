@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 
@@ -26,8 +26,18 @@ const noImagePadding: Record<ProfileCircleSize, string> = {
 };
 
 export function ProfileCircle({ name, size = 'sm', storageKey, className }: ProfileCircleProps) {
-  const { data: presignedUrl } = usePresignedUrl(storageKey);
+  const { data: presignedUrl, refetch } = usePresignedUrl(storageKey);
   const [isBroken, setIsBroken] = useState(false);
+  const retryCountRef = useRef(0);
+
+  const handleImageError = useCallback(() => {
+    if (retryCountRef.current < 2) {
+      retryCountRef.current += 1;
+      refetch();
+    } else {
+      setIsBroken(true);
+    }
+  }, [refetch]);
 
   const hasImage = !!presignedUrl && !isBroken;
 
@@ -41,7 +51,7 @@ export function ProfileCircle({ name, size = 'sm', storageKey, className }: Prof
           sizeStyles[size],
           className,
         )}
-        onError={() => setIsBroken(true)}
+        onError={handleImageError}
       />
     );
   }

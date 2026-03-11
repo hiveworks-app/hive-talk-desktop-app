@@ -31,24 +31,9 @@ export const useFindLoginIdSendSms = () => {
   });
 };
 
-/** 아이디 찾기 인증 확인 → 이메일 반환 */
+/** 아이디 찾기 인증 확인 → 이메일 반환 (에러는 useFindLoginId 훅에서 인라인 처리) */
 export const useFindLoginIdVerify = () => {
-  const showSnackbar = useUIStore(state => state.showSnackbar);
-
   return useMutation({
     mutationFn: apiFindLoginIdVerify,
-    onError: (err: unknown) => {
-      if (isApiError(err)) {
-        showSnackbar({
-          message: err.message || '요청에 실패했습니다. 잠시 후 다시 시도해주세요.',
-          state: 'error',
-        });
-        return;
-      }
-      showSnackbar({
-        message: '요청에 실패했습니다. 잠시 후 다시 시도해주세요.',
-        state: 'error',
-      });
-    },
   });
 };

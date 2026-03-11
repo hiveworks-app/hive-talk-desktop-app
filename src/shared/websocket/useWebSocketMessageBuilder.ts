@@ -11,38 +11,10 @@ import {
   ViewInRoomMessageProps,
   WS_MESSAGE_CONTENT_TYPE,
   WS_OPERATION,
-  WebSocketChannelTypes,
 } from '@/shared/types/websocket';
+import type { BuildPublishMessageParams, WebSocketMessageBuilderProps } from './type';
 
-interface WebSocketMessageBuilderProps {
-  type: WebSocketChannelTypes;
-  channelId: string | null;
-}
-
-type BuildPublishMessageParams =
-  | {
-      channelIdOverride?: string;
-      tagList?: string[];
-      type: typeof WS_MESSAGE_CONTENT_TYPE.TEXT;
-      content: string;
-    }
-  | {
-      channelIdOverride?: string;
-      tagList?: string[];
-      type:
-        | typeof WS_MESSAGE_CONTENT_TYPE.IMAGE
-        | typeof WS_MESSAGE_CONTENT_TYPE.MEDIA
-        | typeof WS_MESSAGE_CONTENT_TYPE.FILE;
-      fileId?: string;
-      items: {
-        path: string;
-        meta: {
-          thumbnail?: string;
-          type: string;
-          size: number;
-        };
-      }[];
-    };
+export type { BuildPublishMessageParams, WebSocketMessageBuilderProps } from './type';
 
 export const useWebSocketMessageBuilder = ({ type, channelId }: WebSocketMessageBuilderProps) => {
   const resolveChanneType = useCallback((override?: string) => override ?? type, [type]);

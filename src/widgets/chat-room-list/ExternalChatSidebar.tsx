@@ -59,6 +59,9 @@ function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
     roomModel.participants?.map(p => p.name).join(', ') ||
     '채팅방';
 
+  const profileStorageKey =
+    roomModel.participantDetail?.thumbnailProfileUrl ?? null;
+
   const isActive = params?.roomId === roomModel.roomId;
 
   const handleClick = async () => {
@@ -81,6 +84,7 @@ function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
       totalUserCount,
       otherUserIsExit: roomModel.participantDetail?.isExit ?? false,
       lastMessage: lastMsg ?? null,
+      initialNotReadCount: notReadCount,
     });
 
     router.push(`/external-chat/${roomModel.roomId}`);
@@ -94,7 +98,7 @@ function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
         isActive && 'bg-gray-150',
       )}
     >
-      <ProfileCircle name={displayName} size="md" />
+      <ProfileCircle name={displayName} size="md" storageKey={profileStorageKey} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
           <span className="truncate text-sub font-medium text-text-primary">{displayName}</span>

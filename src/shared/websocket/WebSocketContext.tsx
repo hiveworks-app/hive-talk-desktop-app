@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import {
@@ -16,6 +17,7 @@ import {
   upsertChatRoomListWithMessage,
 } from '@/features/chat-room-list/updater';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { apiGetStorage } from '@/features/storage/api';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import {
   WS_CHANNEL_TYPE,
@@ -39,15 +41,9 @@ import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessa
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import type { Listener, WebSocketContextValue } from './type';
 
-type Listener = (data: WebSocketEnvelope) => void;
-
-interface WebSocketContextValue {
-  send: (data: unknown) => void;
-  addListener: (id: string, listener: Listener) => void;
-  removeListener: (id: string) => void;
-  isConnected: boolean;
-}
+export type { Listener, WebSocketContextValue } from './type';
 
 const getTargetQueryKey = (channelType: WebSocketChannelTypes | undefined) => {
   switch (channelType) {
@@ -66,6 +62,8 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
 export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const routerRef = useRef(router);
   const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
   const loginUserId = useAuthStore(state => state.user)?.id;
   const wsRef = useRef<WebSocket | null>(null);
@@ -76,6 +74,9 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const processedReadEventsRef = useRef<Set<string>>(new Set());
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendRef = useRef<(data: unknown) => void>(() => {});
+  const pendingReadCallbacksRef = useRef<Map<string, () => void>>(new Map());
+  const connectWebSocketRef = useRef<(newToken?: string) => void>(() => {});
   const [isConnected, setIsConnected] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const { buildSubscribeMessage } = useWebSocketMessageBuilder({
@@ -162,7 +163,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             ...channelIdOverride,
             ...channelTypeOverride,
           });
-          send(subMsg);
+          sendRef.current(subMsg);
           return;
         }
 
@@ -170,7 +171,6 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         if (isReadMessage(envelope)) {
           const currentChannelType = globalChannelType || envelope.response.channelType;
           const { items: readItems } = envelope.response.payload;
-
           const newMyReadItems = readItems.filter(item => {
             const eventKey = `${item.messageId}:${item.userId}`;
             if (processedReadEventsRef.current.has(eventKey)) return false;
@@ -252,6 +252,15 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
+          // 알림 "읽음" 버튼으로 등록된 일회성 콜백 실행
+          readItems.forEach(item => {
+            const cb = pendingReadCallbacksRef.current.get(item.roomId);
+            if (cb) {
+              pendingReadCallbacksRef.current.delete(item.roomId);
+              cb();
+            }
+          });
+
           Object.values(listenersRef.current).forEach(listener => listener(envelope));
           return;
         }
@@ -314,16 +323,50 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
           }
 
-          // 웹 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
-          if (!isMySentMessage && !isRoomActive && 'Notification' in window) {
-            if (Notification.permission === 'granted') {
-              const senderName = normalizedPayload.sender?.name ?? '사용자';
-              new Notification(senderName, {
-                body: normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
-                  ? normalizedPayload.message.payload.content
-                  : '새 메시지',
-                tag: roomId,
-              });
+          // 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
+          if (!isMySentMessage && !isRoomActive) {
+            const senderName = normalizedPayload.sender?.name ?? '사용자';
+            const body = normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
+              ? normalizedPayload.message.payload.content
+              : '새 메시지';
+
+            const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+              | { isElectron?: boolean; showNotification?: (data: unknown) => void }
+              | undefined;
+
+            if (electronAPI?.isElectron && electronAPI.showNotification) {
+              // Electron: 네이티브 알림 (프로필 이미지 + 클릭 시 IPC로 처리)
+              const notificationMeta = {
+                roomId,
+                channelType: currentChannelType ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+                senderName,
+              };
+              const storageKey =
+                normalizedPayload.sender?.thumbnailProfileUrl ||
+                normalizedPayload.sender?.profileImageUrl ||
+                normalizedPayload.sender?.profileUrl;
+
+              // 스토리지 키 → presigned URL 변환 후 알림 전송
+              if (storageKey) {
+                apiGetStorage(storageKey)
+                  .then(res => {
+                    electronAPI.showNotification!({
+                      title: senderName, body, profileImageUrl: res.payload.key, meta: notificationMeta,
+                    });
+                  })
+                  .catch(() => {
+                    electronAPI.showNotification!({
+                      title: senderName, body, meta: notificationMeta,
+                    });
+                  });
+              } else {
+                electronAPI.showNotification({
+                  title: senderName, body, meta: notificationMeta,
+                });
+              }
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+              // 브라우저 폴백 (개발 환경)
+              new Notification(senderName, { body, tag: roomId });
             }
           }
 
@@ -396,7 +439,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       };
 
       ws.onerror = (err) => {
-        console.error('[WS] ❌ 에러:', err);
+        console.warn('[WS] ⚠️ 연결 실패 (토큰 만료 시 자동 재연결됨):', err);
         isConnectingRef.current = false;
       };
 
@@ -415,7 +458,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           try {
             const newToken = await refreshAccessToken();
             if (newToken) {
-              connectWebSocket(newToken);
+              connectWebSocketRef.current(newToken);
               return;
             }
           } catch {
@@ -446,7 +489,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           if (!forceCloseRef.current && isPageVisible) {
             // 재연결 전 토큰 갱신 시도
             const freshToken = await refreshAccessToken().catch(() => null);
-            connectWebSocket(freshToken ?? undefined);
+            connectWebSocketRef.current(freshToken ?? undefined);
           }
         }, delay);
       };
@@ -465,7 +508,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
         pendingQueue.current.push(data);
-        if (!isConnectingRef.current) connectWebSocket();
+        if (!isConnectingRef.current) connectWebSocketRef.current();
         return;
       }
 
@@ -475,8 +518,15 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
         console.error('[WS] send 에러:', error);
       }
     },
-    [connectWebSocket],
+    [],
   );
+
+  // ref 동기화 (순환 참조 해소: connectWebSocket ↔ send, 렌더 외부에서 업데이트)
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+    sendRef.current = send;
+    routerRef.current = router;
+  });
 
   const addListener = useCallback((id: string, listener: Listener) => {
     listenersRef.current[id] = listener;
@@ -484,6 +534,125 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
   const removeListener = useCallback((id: string) => {
     delete listenersRef.current[id];
+  }, []);
+
+  // Electron 알림 클릭 → 해당 채팅방으로 이동
+  useEffect(() => {
+    const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+      | {
+          isElectron?: boolean;
+          onNotificationClicked?: (
+            callback: (meta: { roomId: string; channelType: string; senderName: string }) => void,
+          ) => () => void;
+        }
+      | undefined;
+
+    if (!electronAPI?.isElectron || !electronAPI.onNotificationClicked) return;
+
+    const cleanup = electronAPI.onNotificationClicked((meta) => {
+      const { roomId, channelType, senderName } = meta;
+      const targetQueryKey = getTargetQueryKey(channelType as WebSocketChannelTypes);
+      const rooms = targetQueryKey
+        ? queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey)
+        : undefined;
+      const room = rooms?.find(r => r.roomModel.roomId === roomId);
+
+      if (room) {
+        const { roomModel } = room;
+        const totalUserCount = roomModel.participants?.length ?? 2;
+        const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
+        const invitedUserIds =
+          channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE &&
+          isOtherUserExit &&
+          roomModel.participantDetail?.userId
+            ? [String(roomModel.participantDetail.userId)]
+            : [];
+
+        const displayName =
+          roomModel.title ||
+          roomModel.participantDetail?.name ||
+          roomModel.participants?.map(p => p.name).join(', ') ||
+          senderName;
+
+        useChatRoomInfo.getState().setChatRoomInfo({
+          roomId: roomModel.roomId,
+          roomName: displayName,
+          channelType: channelType as WebSocketChannelTypes,
+          totalUserCount,
+          otherUserIsExit: isOtherUserExit,
+          lastMessage: room.messageList?.[room.messageList.length - 1] ?? null,
+          invitedUserIds,
+          initialNotReadCount: room.notReadCount ?? 0,
+        });
+      } else {
+        useChatRoomInfo.getState().setChatRoomInfo({
+          roomId,
+          roomName: senderName,
+          channelType: (channelType as WebSocketChannelTypes) ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+          initialNotReadCount: 0,
+        });
+      }
+
+      routerRef.current.push(`/chat/${roomId}`);
+    });
+
+    return cleanup;
+  }, [queryClient]);
+
+  // Electron 알림 "읽음" 버튼 → 해당 채팅방 읽음 처리
+  useEffect(() => {
+    const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+      | {
+          isElectron?: boolean;
+          onNotificationRead?: (
+            callback: (meta: { roomId: string; channelType: string }) => void,
+          ) => () => void;
+        }
+      | undefined;
+
+    if (!electronAPI?.isElectron || !electronAPI.onNotificationRead) return;
+
+    const cleanup = electronAPI.onNotificationRead((meta) => {
+      const { roomId, channelType } = meta;
+
+      // 서버 응답 감지 방식:
+      // 1) VIEW_IN 전송 → 서버가 읽음 처리 후 READ_MESSAGE broadcast
+      // 2) READ_MESSAGE 수신 시 콜백으로 VIEW_OUT 전송
+      // 3) 3초 타임아웃 안전장치 (서버 응답 없으면 강제 VIEW_OUT)
+      const timeoutId = setTimeout(() => {
+        if (pendingReadCallbacksRef.current.has(roomId)) {
+          console.log('[VIEW] 🔴 VIEW_OUT 전송 (notification-read timeout)', roomId);
+          pendingReadCallbacksRef.current.delete(roomId);
+          sendRef.current({
+            operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
+            channelType,
+            channelId: roomId,
+            payload: null,
+          });
+        }
+      }, 3000);
+
+      pendingReadCallbacksRef.current.set(roomId, () => {
+        console.log('[VIEW] 🔴 VIEW_OUT 전송 (notification-read callback)', roomId);
+        clearTimeout(timeoutId);
+        sendRef.current({
+          operationType: WS_OPERATION.VIEW_OUT_MESSAGE_ROOM,
+          channelType,
+          channelId: roomId,
+          payload: null,
+        });
+      });
+
+      console.log('[VIEW] 🟢 VIEW_IN 전송 (notification-read)', roomId);
+      sendRef.current({
+        operationType: WS_OPERATION.VIEW_IN_MESSAGE_ROOM,
+        channelType,
+        channelId: roomId,
+        payload: null,
+      });
+    });
+
+    return cleanup;
   }, []);
 
   // visibilitychange (AppState 대체)
@@ -496,11 +665,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // 연결/재연결
+  // deps 변경 시 cleanup에서 disconnect → 조건 충족 시 connect
   useEffect(() => {
     const loginUserId = useAuthStore.getState().user?.id;
 
     if (!WS_URL || !loginUserId || !isPageVisible) {
-      disconnectWebSocket();
       return;
     }
 

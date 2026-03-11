@@ -32,6 +32,7 @@ extraResources:
     filter:
       - "icon.*"
       - "trayIconTemplate*.png"
+      - "notification-profile-default.png"
 
 mac:
   target:
