@@ -941,7 +941,13 @@ function initializeAutoUpdater() {
 }
 
 ipcMain.handle('install-update', () => {
-  autoUpdater?.quitAndInstall();
+  if (!autoUpdater) {
+    console.error('[AutoUpdater] autoUpdater가 초기화되지 않음');
+    return;
+  }
+  console.log('[AutoUpdater] quitAndInstall 호출');
+  isQuitting = true; // close 핸들러가 창 닫기를 허용하도록 설정
+  autoUpdater.quitAndInstall(false, true); // isSilent=false, isForceRunAfter=true
 });
 
 app.whenReady().then(async () => {
