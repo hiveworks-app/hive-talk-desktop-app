@@ -196,6 +196,37 @@ jobs:
           echo "=== All architectures processed ==="
           ls -la release/*.dmg
 
+      # 서명된 DMG 기준으로 latest-mac.yml 재생성 (해시 불일치 방지)
+      - name: Regenerate latest-mac.yml
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          YML="release/latest-mac.yml"
+
+          echo "version: $VERSION" > "$YML"
+          echo "files:" >> "$YML"
+
+          for DMG in release/HiveTalk-*.dmg; do
+            FILENAME=$(basename "$DMG")
+            SHA512=$(openssl dgst -sha512 -binary "$DMG" | base64)
+            SIZE=$(stat -f%z "$DMG")
+            echo "  - url: $FILENAME" >> "$YML"
+            echo "    sha512: $SHA512" >> "$YML"
+            echo "    size: $SIZE" >> "$YML"
+          done
+
+          # 기본 파일 (첫 번째 DMG)
+          FIRST_DMG=$(ls release/HiveTalk-*.dmg | head -1)
+          FIRST_NAME=$(basename "$FIRST_DMG")
+          FIRST_SHA=$(openssl dgst -sha512 -binary "$FIRST_DMG" | base64)
+          echo "path: $FIRST_NAME" >> "$YML"
+          echo "sha512: $FIRST_SHA" >> "$YML"
+          echo "releaseDate: '$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'" >> "$YML"
+
+          echo "=== Generated latest-mac.yml ==="
+          cat "$YML"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
