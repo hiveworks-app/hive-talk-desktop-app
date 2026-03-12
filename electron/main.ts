@@ -946,8 +946,11 @@ ipcMain.handle('install-update', () => {
     return;
   }
   console.log('[AutoUpdater] quitAndInstall 호출');
-  isQuitting = true; // close 핸들러가 창 닫기를 허용하도록 설정
-  autoUpdater.quitAndInstall(false, true); // isSilent=false, isForceRunAfter=true
+  isQuitting = true;
+  // IPC 응답이 렌더러로 전달된 후 종료 (즉시 종료하면 IPC가 블로킹됨)
+  setTimeout(() => {
+    autoUpdater.quitAndInstall(false, true);
+  }, 100);
 });
 
 app.whenReady().then(async () => {

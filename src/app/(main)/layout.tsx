@@ -44,7 +44,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <WebSocketProvider>
       <div className="relative flex h-full overflow-hidden">
         {updateReady && (
-          <div className="absolute top-0 right-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
+          <div className="absolute right-0 bottom-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
             <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>
             <button
               onClick={installUpdate}

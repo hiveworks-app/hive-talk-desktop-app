@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
@@ -14,6 +14,14 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { showSnackbar } = useUIStore();
   const [showProfile, setShowProfile] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const api = (window as unknown as { electronAPI?: { getAppVersion: () => Promise<string> } }).electronAPI;
+    if (api?.getAppVersion) {
+      api.getAppVersion().then(setAppVersion);
+    }
+  }, []);
 
   const handleLogout = () => {
     useAuthStore.getState().logout();
@@ -91,7 +99,9 @@ export default function SettingsPage() {
           <h3 className="px-4 py-2 text-sub-sm font-semibold uppercase text-text-tertiary">앱 정보</h3>
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sub text-text-primary">앱 버전</span>
-            <span className="text-sub text-text-tertiary">v1.0.0 (Web)</span>
+            <span className="text-sub text-text-tertiary">
+              {appVersion ? `v${appVersion}` : `v${process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'} (Web)`}
+            </span>
           </div>
         </section>
 
