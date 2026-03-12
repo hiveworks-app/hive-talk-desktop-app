@@ -56,6 +56,13 @@ function getTrayIconPath() {
   return path.join(base, 'trayIconTemplate.png');
 }
 
+function getTrayBadgeIconPath() {
+  const base = isDev
+    ? path.join(app.getAppPath(), 'resources')
+    : process.resourcesPath;
+  return path.join(base, 'trayIconBadge.png');
+}
+
 function getDefaultProfilePath() {
   const base = isDev
     ? path.join(app.getAppPath(), 'resources')
@@ -245,7 +252,21 @@ function svgToPngImage(svgBuffer: Buffer, size: number): Promise<Electron.Native
     const base64 = svgBuffer.toString('base64');
     const html = `<html><body style="margin:0;background:transparent;">
       <img id="img" src="data:image/svg+xml;base64,${base64}" width="${size}" height="${size}" />
+      <script>
+        const img = document.getElementById('img');
+        function onReady() { document.title = 'svg-ready'; }
+        if (img.complete && img.naturalWidth > 0) onReady();
+        else img.onload = onReady;
+      </script>
     </body></html>`;
+
+    let resolved = false;
+    const done = (img: Electron.NativeImage) => {
+      if (resolved) return;
+      resolved = true;
+      if (!win.isDestroyed()) win.close();
+      resolve(img);
+    };
 
     const win = new BrowserWindow({
       width: size,
@@ -258,24 +279,21 @@ function svgToPngImage(svgBuffer: Buffer, size: number): Promise<Electron.Native
 
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 
-    win.webContents.on('paint', () => {
-      // 렌더링 완료 후 캡처
-      win.webContents.capturePage().then((img) => {
-        win.close();
-        resolve(img.isEmpty() ? nativeImage.createEmpty() : img.resize({ width: size, height: size }));
-      }).catch(() => {
-        win.close();
-        resolve(nativeImage.createEmpty());
-      });
+    // SVG <img> 로드 완료를 title 변경으로 감지
+    win.webContents.on('page-title-updated', () => {
+      // 렌더링 버퍼를 위해 약간의 딜레이 후 캡처
+      setTimeout(() => {
+        if (resolved || win.isDestroyed()) return;
+        win.webContents.capturePage().then((img) => {
+          done(img.isEmpty() ? nativeImage.createEmpty() : img.resize({ width: size, height: size }));
+        }).catch(() => {
+          done(nativeImage.createEmpty());
+        });
+      }, 150);
     });
 
     // 3초 타임아웃
-    setTimeout(() => {
-      if (!win.isDestroyed()) {
-        win.close();
-        resolve(nativeImage.createEmpty());
-      }
-    }, 3000);
+    setTimeout(() => { done(nativeImage.createEmpty()); }, 3000);
   });
 }
 
@@ -543,22 +561,31 @@ async function showNativeNotification(data: {
   let icon: Electron.NativeImage | undefined;
   if (data.profileImageUrl) {
     try {
+      console.log('[Notification] 프로필 이미지 다운로드:', data.profileImageUrl.substring(0, 80));
       const res = await fetch(data.profileImageUrl);
+      console.log('[Notification] 응답 상태:', res.status, '타입:', res.headers.get('content-type'));
       const contentType = res.headers.get('content-type') || '';
       const buffer = Buffer.from(await res.arrayBuffer());
+      console.log('[Notification] 버퍼 크기:', buffer.length, 'bytes');
 
       if (contentType.includes('svg')) {
         // SVG → PNG 변환 (nativeImage는 SVG 미지원)
         icon = await svgToPngImage(buffer, ICON_SIZE);
+        console.log('[Notification] SVG→PNG 변환 결과:', icon?.isEmpty() ? 'empty' : 'ok');
       } else {
         icon = nativeImage.createFromBuffer(buffer).resize({ width: ICON_SIZE, height: ICON_SIZE });
+        console.log('[Notification] 이미지 생성 결과:', icon?.isEmpty() ? 'empty' : `${icon.getSize().width}x${icon.getSize().height}`);
       }
-    } catch {
-      // 다운로드 실패 → 기본 이미지로 폴백
+    } catch (err) {
+      console.error('[Notification] 프로필 이미지 로드 실패:', err);
     }
+  } else {
+    console.log('[Notification] profileImageUrl 없음');
   }
   if (!icon || icon.isEmpty()) {
+    console.log('[Notification] 기본 프로필 이미지 사용');
     icon = nativeImage.createFromPath(getDefaultProfilePath());
+    console.log('[Notification] 기본 이미지:', icon.isEmpty() ? 'empty' : `${icon.getSize().width}x${icon.getSize().height}`);
   }
 
   const roomId = data.meta?.roomId;
@@ -748,6 +775,20 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('set-badge-count', (_event, count: number) => {
   if (process.platform === 'darwin') {
     app.setBadgeCount(count);
+
+    // 메뉴바 트레이 아이콘에 빨간 점 표시/제거
+    // 미리 만들어진 배지 아이콘 파일 사용 (안티앨리어싱 + @2x 지원)
+    if (tray) {
+      if (count > 0) {
+        const badgeIcon = nativeImage.createFromPath(getTrayBadgeIconPath());
+        badgeIcon.setTemplateImage(false);
+        tray.setImage(badgeIcon);
+      } else {
+        const originalIcon = nativeImage.createFromPath(getTrayIconPath());
+        originalIcon.setTemplateImage(true);
+        tray.setImage(originalIcon);
+      }
+    }
   } else if (process.platform === 'win32' && tray) {
     // 트레이 아이콘에 빨간 점 표시/제거
     const baseIcon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
@@ -759,16 +800,25 @@ ipcMain.handle('set-badge-count', (_event, count: number) => {
       const dotCenterX = size - dotRadius; // 우하단
       const dotCenterY = size - dotRadius; // 우하단
 
-      // BGRA 포맷 직접 편집: 우하단에 빨간 원 그리기
+      // BGRA 포맷 직접 편집: 우하단에 검은 테두리 + 빨간 원 그리기
+      const borderRadius = dotRadius + 1;
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
           const dx = x - dotCenterX;
           const dy = y - dotCenterY;
-          if (dx * dx + dy * dy <= dotRadius * dotRadius) {
-            const offset = (y * size + x) * 4;
+          const dist = dx * dx + dy * dy;
+          const offset = (y * size + x) * 4;
+          if (dist <= dotRadius * dotRadius) {
+            // 빨간 원 (#FF3B30)
             raw[offset] = 0x30;     // B
             raw[offset + 1] = 0x3B; // G
-            raw[offset + 2] = 0xFF; // R (#FF3B30)
+            raw[offset + 2] = 0xFF; // R
+            raw[offset + 3] = 0xFF; // A
+          } else if (dist <= borderRadius * borderRadius) {
+            // 검은 테두리
+            raw[offset] = 0x00;     // B
+            raw[offset + 1] = 0x00; // G
+            raw[offset + 2] = 0x00; // R
             raw[offset + 3] = 0xFF; // A
           }
         }
