@@ -1,5 +1,4 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import net from 'net';
 
@@ -857,21 +856,34 @@ app.on('quit', () => {
 // Auto Updater
 // ------------------------------------------------------------------
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let autoUpdater: any = null;
+
 function initializeAutoUpdater() {
+  try {
+    // 동적 require: 모듈이 없어도 앱이 크래시하지 않음
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('electron-updater');
+    autoUpdater = mod.autoUpdater;
+  } catch (err) {
+    console.error('[AutoUpdater] electron-updater 모듈 로드 실패:', err);
+    return;
+  }
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', (info: { version: string }) => {
     console.log('[AutoUpdater] Update available:', info.version);
     mainWindow?.webContents.send('update-available', { version: info.version });
   });
 
-  autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', (info: { version: string }) => {
     console.log('[AutoUpdater] Update downloaded:', info.version);
     mainWindow?.webContents.send('update-downloaded', { version: info.version });
   });
 
-  autoUpdater.on('error', (err) => {
+  autoUpdater.on('error', (err: Error) => {
     console.error('[AutoUpdater] Error:', err.message);
   });
 
@@ -879,7 +891,7 @@ function initializeAutoUpdater() {
 }
 
 ipcMain.handle('install-update', () => {
-  autoUpdater.quitAndInstall();
+  autoUpdater?.quitAndInstall();
 });
 
 app.whenReady().then(async () => {
