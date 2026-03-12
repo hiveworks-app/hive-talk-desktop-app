@@ -921,7 +921,7 @@ function initializeAutoUpdater() {
   }
 
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on('update-available', (info: { version: string }) => {
     console.log('[AutoUpdater] Update available:', info.version);
