@@ -18,8 +18,14 @@ const svgrOptions = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const packageJson = require('./package.json');
+
 const nextConfig: NextConfig = {
   output: 'standalone',
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
   turbopack: {
     resolveAlias: {
       '@assets': path.resolve(__dirname, 'assets'),
