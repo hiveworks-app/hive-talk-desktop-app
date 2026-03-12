@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,11 +43,12 @@ export default function LoginPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [autoLogin, setAutoLogin] = useState(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("auto-login") === "true"
-      : false,
+  const autoLoginStored = useSyncExternalStore(
+    (cb) => { window.addEventListener("storage", cb); return () => window.removeEventListener("storage", cb); },
+    () => localStorage.getItem("auto-login") === "true",
+    () => false, // 서버 스냅샷: false (Hydration 불일치 방지)
   );
+  const [autoLogin, setAutoLogin] = useState(autoLoginStored);
 
   const preventBlur = (e: React.MouseEvent) => e.preventDefault();
 

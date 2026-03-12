@@ -77,6 +77,10 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const sendRef = useRef<(data: unknown) => void>(() => {});
   const pendingReadCallbacksRef = useRef<Map<string, () => void>>(new Map());
   const connectWebSocketRef = useRef<(newToken?: string) => void>(() => {});
+  const isElectronRef = useRef(
+    typeof window !== 'undefined' &&
+    !!(window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron,
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const { buildSubscribeMessage } = useWebSocketMessageBuilder({
@@ -323,8 +327,9 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
             console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
           }
 
-          // 알림 (내가 보낸 메시지가 아니고, 방이 비활성일 때)
-          if (!isMySentMessage && !isRoomActive) {
+          // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 Electron 창이 숨겨진 상태일 때)
+          const isWindowHidden = isElectronRef.current && document.visibilityState === 'hidden';
+          if (!isMySentMessage && (!isRoomActive || isWindowHidden)) {
             const senderName = normalizedPayload.sender?.name ?? '사용자';
             const body = normalizedPayload.message.payload && 'content' in normalizedPayload.message.payload
               ? normalizedPayload.message.payload.content
@@ -667,13 +672,19 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // visibilitychange (AppState 대체)
+  // Electron 데스크톱: 창 hide 시에도 WebSocket 유지 (트레이 최소화 상태에서 알림 수신 필요)
+  const isElectron = typeof window !== 'undefined' &&
+    !!(window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron;
+
   useEffect(() => {
+    if (isElectron) return; // Electron에서는 항상 visible 취급
+
     const handleVisibility = () => {
       setIsPageVisible(document.visibilityState === 'visible');
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
+  }, [isElectron]);
 
   // 연결/재연결
   // deps 변경 시 cleanup에서 disconnect → 조건 충족 시 connect

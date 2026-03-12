@@ -38,4 +38,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('notification-read', handler);
     return () => { ipcRenderer.removeListener('notification-read', handler); };
   },
+  // 자동 업데이트
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, info: { version: string }) => callback(info);
+    ipcRenderer.on('update-downloaded', handler);
+    return () => { ipcRenderer.removeListener('update-downloaded', handler); };
+  },
+  installUpdate: () => ipcRenderer.invoke('install-update'),
 });

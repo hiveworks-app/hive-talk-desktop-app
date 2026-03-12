@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import net from 'net';
 
@@ -221,6 +222,13 @@ function createWindow(serverUrl: string) {
 
   mainWindow.on('focus', () => {
     mainWindow?.flashFrame(false);
+  });
+
+  // ESC 키 → 창 숨기기 (트레이로 최소화)
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.key === 'Escape' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta) {
+      mainWindow?.hide();
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -748,11 +756,11 @@ ipcMain.handle('set-badge-count', (_event, count: number) => {
       // 기존 아이콘을 PNG 버퍼로 가져와서 빨간 점 합성
       const size = 16;
       const raw = baseIcon.toBitmap();
-      const dotRadius = 3;
-      const dotCenterX = size - dotRadius - 1;
-      const dotCenterY = dotRadius + 1;
+      const dotRadius = 5;
+      const dotCenterX = size - dotRadius; // 우하단
+      const dotCenterY = size - dotRadius; // 우하단
 
-      // BGRA 포맷 직접 편집: 우상단에 빨간 원 그리기
+      // BGRA 포맷 직접 편집: 우하단에 빨간 원 그리기
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
           const dx = x - dotCenterX;
@@ -845,6 +853,35 @@ app.on('quit', () => {
   nextServer?.kill();
 });
 
+// ------------------------------------------------------------------
+// Auto Updater
+// ------------------------------------------------------------------
+
+function initializeAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Update available:', info.version);
+    mainWindow?.webContents.send('update-available', { version: info.version });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Update downloaded:', info.version);
+    mainWindow?.webContents.send('update-downloaded', { version: info.version });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater] Error:', err.message);
+  });
+
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
 app.whenReady().then(async () => {
   // macOS 메뉴바 앱 이름 설정
   app.setName('HiveTalk');
@@ -905,6 +942,11 @@ app.whenReady().then(async () => {
     const serverUrl = await startNextServer();
     createWindow(serverUrl);
     createTray();
+
+    // 자동 업데이트 (프로덕션에서만)
+    if (app.isPackaged) {
+      initializeAutoUpdater();
+    }
   } catch (err) {
     console.error('Failed to start:', err);
     app.quit();
