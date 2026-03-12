@@ -196,7 +196,22 @@ jobs:
           echo "=== All architectures processed ==="
           ls -la release/*.dmg
 
-      # 서명된 DMG 기준으로 latest-mac.yml 재생성 (해시 불일치 방지)
+      # 서명된 .app으로 ZIP 생성 (electron-updater macOS 자동 업데이트용)
+      - name: Create signed ZIP for auto-update
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          for APP_PATH in release/mac-*/HiveTalk.app; do
+            ARCH_DIR=$(basename "$(dirname "$APP_PATH")")
+            ARCH=$(echo "$ARCH_DIR" | sed 's/mac-//')
+            echo "=== Creating ZIP: HiveTalk-${ARCH}-mac.zip ==="
+            cd "release/$ARCH_DIR"
+            zip -r -y -q "../HiveTalk-${ARCH}-mac.zip" "HiveTalk.app"
+            cd ../..
+          done
+          ls -la release/*.zip
+
+      # 서명된 ZIP 기준으로 latest-mac.yml 재생성 (electron-updater는 macOS에서 ZIP 사용)
       - name: Regenerate latest-mac.yml
         if: matrix.platform == 'mac'
         shell: bash
@@ -207,19 +222,19 @@ jobs:
           echo "version: $VERSION" > "$YML"
           echo "files:" >> "$YML"
 
-          for DMG in release/HiveTalk-*.dmg; do
-            FILENAME=$(basename "$DMG")
-            SHA512=$(openssl dgst -sha512 -binary "$DMG" | base64)
-            SIZE=$(stat -f%z "$DMG")
+          for ZIP in release/HiveTalk-*-mac.zip; do
+            FILENAME=$(basename "$ZIP")
+            SHA512=$(openssl dgst -sha512 -binary "$ZIP" | base64)
+            SIZE=$(stat -f%z "$ZIP")
             echo "  - url: $FILENAME" >> "$YML"
             echo "    sha512: $SHA512" >> "$YML"
             echo "    size: $SIZE" >> "$YML"
           done
 
-          # 기본 파일 (첫 번째 DMG)
-          FIRST_DMG=$(ls release/HiveTalk-*.dmg | head -1)
-          FIRST_NAME=$(basename "$FIRST_DMG")
-          FIRST_SHA=$(openssl dgst -sha512 -binary "$FIRST_DMG" | base64)
+          # 기본 파일 (첫 번째 ZIP)
+          FIRST_ZIP=$(ls release/HiveTalk-*-mac.zip | head -1)
+          FIRST_NAME=$(basename "$FIRST_ZIP")
+          FIRST_SHA=$(openssl dgst -sha512 -binary "$FIRST_ZIP" | base64)
           echo "path: $FIRST_NAME" >> "$YML"
           echo "sha512: $FIRST_SHA" >> "$YML"
           echo "releaseDate: '$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'" >> "$YML"
@@ -233,6 +248,7 @@ jobs:
           name: HiveTalk-${{ matrix.platform }}
           path: |
             release/*.dmg
+            release/*.zip
             release/*.exe
             release/*.AppImage
             release/*.yml
@@ -265,7 +281,7 @@ jobs:
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
 
           # 설치 파일 + electron-updater 메타데이터 (latest*.yml) 수집
-          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "latest*.yml" \))
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.AppImage" -o -name "latest*.yml" \))
 
           # Release 생성 + 설치 파일 업로드
           gh release create "$TAG" $FILES \
