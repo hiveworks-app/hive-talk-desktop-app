@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, ipcMain, Notification, utilityProcess, UtilityProcess, session, screen } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import net from 'net';
 
@@ -852,6 +853,35 @@ app.on('quit', () => {
   nextServer?.kill();
 });
 
+// ------------------------------------------------------------------
+// Auto Updater
+// ------------------------------------------------------------------
+
+function initializeAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Update available:', info.version);
+    mainWindow?.webContents.send('update-available', { version: info.version });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Update downloaded:', info.version);
+    mainWindow?.webContents.send('update-downloaded', { version: info.version });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater] Error:', err.message);
+  });
+
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
 app.whenReady().then(async () => {
   // macOS 메뉴바 앱 이름 설정
   app.setName('HiveTalk');
@@ -912,6 +942,11 @@ app.whenReady().then(async () => {
     const serverUrl = await startNextServer();
     createWindow(serverUrl);
     createTray();
+
+    // 자동 업데이트 (프로덕션에서만)
+    if (app.isPackaged) {
+      initializeAutoUpdater();
+    }
   } catch (err) {
     console.error('Failed to start:', err);
     app.quit();

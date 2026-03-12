@@ -3,6 +3,11 @@ productName: HiveTalk
 artifactName: "${productName}-${arch}.${ext}"
 copyright: Copyright (c) 2026 Hiveworks
 
+publish:
+  provider: github
+  owner: hiveworks-app
+  repo: hive-talk-desktop-app
+
 directories:
   output: release
   buildResources: resources

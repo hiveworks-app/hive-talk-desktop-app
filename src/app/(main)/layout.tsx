@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useAutoUpdate } from '@/shared/hooks/useAutoUpdate';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -35,11 +36,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [authChecked, accessToken]);
 
+  const { updateReady, installUpdate } = useAutoUpdate();
+
   if (!authChecked) return null;
 
   return (
     <WebSocketProvider>
       <div className="relative flex h-full overflow-hidden">
+        {updateReady && (
+          <div className="absolute top-0 right-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
+            <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>
+            <button
+              onClick={installUpdate}
+              className="rounded bg-white px-3 py-1 text-xs font-semibold text-blue-500 transition-colors hover:bg-blue-50"
+            >
+              재시작
+            </button>
+          </div>
+        )}
         <AppNav />
         <div className="flex min-w-0 flex-1">{children}</div>
       </div>
