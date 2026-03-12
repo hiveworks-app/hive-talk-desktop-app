@@ -1,14 +1,25 @@
 {
   "version": "1.0",
-  "enabled": false,
+  "enabled": true,
   "teamName": "",
   "feature": "hive-talk-desktop-app",
   "pdcaPhase": "do",
   "orchestrationPattern": "leader",
   "ctoAgent": "opus",
-  "startedAt": "2026-03-11T06:26:53.638Z",
-  "lastUpdated": "2026-03-11T07:44:49.026Z",
-  "teammates": [],
+  "startedAt": "2026-03-12T00:53:31.473Z",
+  "lastUpdated": "2026-03-12T00:53:31.473Z",
+  "teammates": [
+    {
+      "name": "a1b3315",
+      "role": "Explore",
+      "model": "sonnet",
+      "status": "spawning",
+      "currentTask": null,
+      "taskId": null,
+      "startedAt": "2026-03-12T00:53:31.473Z",
+      "lastActivityAt": "2026-03-12T00:53:31.473Z"
+    }
+  ],
   "progress": {
     "totalTasks": 0,
     "completedTasks": 0,

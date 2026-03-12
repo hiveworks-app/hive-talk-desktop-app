@@ -223,6 +223,13 @@ function createWindow(serverUrl: string) {
     mainWindow?.flashFrame(false);
   });
 
+  // ESC 키 → 창 숨기기 (트레이로 최소화)
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.key === 'Escape' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta) {
+      mainWindow?.hide();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -748,11 +755,11 @@ ipcMain.handle('set-badge-count', (_event, count: number) => {
       // 기존 아이콘을 PNG 버퍼로 가져와서 빨간 점 합성
       const size = 16;
       const raw = baseIcon.toBitmap();
-      const dotRadius = 3;
-      const dotCenterX = size - dotRadius - 1;
-      const dotCenterY = dotRadius + 1;
+      const dotRadius = 5;
+      const dotCenterX = size - dotRadius; // 우하단
+      const dotCenterY = size - dotRadius; // 우하단
 
-      // BGRA 포맷 직접 편집: 우상단에 빨간 원 그리기
+      // BGRA 포맷 직접 편집: 우하단에 빨간 원 그리기
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
           const dx = x - dotCenterX;
