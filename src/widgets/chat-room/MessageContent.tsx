@@ -32,12 +32,14 @@ export function MessageContent({ message, onOpenMedia }: MessageContentProps) {
     const sources = files.map((file, idx) => ({
       key: file.path || `file-${idx}`,
       src: file.meta?.thumbnailPresignedUrl || file.presignedUrl || file.path,
+      storageKey: file.meta?.thumbnail || file.path,
       isVideo: file.meta?.type?.startsWith('video/'),
     }));
     const viewerItems: MediaViewerItem[] = files.map((file, idx) => ({
       id: file.path || `${message.id}-${idx}`,
       type: file.meta?.type?.startsWith('video/') ? 'video' as const : 'image' as const,
       url: file.presignedUrl || file.path,
+      storageKey: file.path,
       author: message.name,
     }));
 

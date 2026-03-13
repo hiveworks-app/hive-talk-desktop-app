@@ -1,18 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
+import { useCreateNoticeMutation } from '@/features/chat-room/notice/queries';
 import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
 import { cn } from '@/shared/lib/cn';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
+import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useUIStore } from '@/store/uiStore';
 import { ChatInput } from '@/widgets/chat-room/ChatInput';
+import type { PendingFileItem } from '@/widgets/chat-room/FileConfirmDialog';
+import { FileConfirmDialog } from '@/widgets/chat-room/FileConfirmDialog';
 import { MessageBubble } from '@/widgets/chat-room/MessageBubble';
+import { NoticeBanner } from '@/widgets/chat-room/NoticeBanner';
 
 const SidePanel = dynamic(
   () => import('@/widgets/side-panel/SidePanel').then(m => m.SidePanel),
@@ -38,7 +44,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const { hasMoreBefore, isBeforeLoading } = useChatRoomRuntimeStore(s => s.loading);
@@ -47,18 +53,113 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // MediaViewer state
-  const [viewerItems, setViewerItems] = useState<MediaViewerItem[]>([]);
+  // 공지 등록
+  const { mutate: createNotice } = useCreateNoticeMutation(roomId, channelType);
+  const showSnackbar = useUIStore(s => s.showSnackbar);
+  const handleSetNotice = useCallback((text: string) => {
+    if (!window.confirm('이 메시지를 공지로 등록하시겠습니까?')) return;
+    createNotice(
+      { title: text, content: text },
+      {
+        onSuccess: () => showSnackbar({ message: '공지가 등록되었습니다.' }),
+        onError: () => showSnackbar({ message: '공지 등록에 실패했습니다.', state: 'error' }),
+      },
+    );
+  }, [createNotice, showSnackbar]);
+
+  // 드래그앤드롭 + 파일 확인 다이얼로그
+  const [pendingItems, setPendingItems] = useState<PendingFileItem[]>([]);
+  const dragCounterRef = useRef(0);
+
+  const handleFilesSelected = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    const items = files.map(file => ({
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+    }));
+    setPendingItems(items);
+  }, []);
+
+  const clearPendingItems = useCallback(() => {
+    setPendingItems(prev => {
+      prev.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
+      return [];
+    });
+  }, []);
+
+  const handleFileConfirm = useCallback(() => {
+    const files = pendingItems.map(item => item.file);
+    const mediaFiles = files.filter(
+      f => f.type.startsWith('image/') || f.type.startsWith('video/'),
+    );
+    const docFiles = files.filter(
+      f => !f.type.startsWith('image/') && !f.type.startsWith('video/'),
+    );
+    if (mediaFiles.length > 0) sendMediaMessage(mediaFiles);
+    if (docFiles.length > 0) sendDocumentMessage(docFiles);
+    clearPendingItems();
+  }, [pendingItems, sendMediaMessage, sendDocumentMessage, clearPendingItems]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    if (e.dataTransfer.files.length > 0) {
+      handleFilesSelected(Array.from(e.dataTransfer.files));
+    }
+  }, []);
+
+  // MediaViewer state — 채팅방 전체 미디어 탐색
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
 
+  const allMediaItems = useMemo(() => {
+    const items: MediaViewerItem[] = [];
+    for (const msg of messages) {
+      if (msg.isDeleted || msg.isLocal) continue;
+      if (
+        msg.messageContentType !== WS_MESSAGE_CONTENT_TYPE.IMAGE &&
+        msg.messageContentType !== WS_MESSAGE_CONTENT_TYPE.MEDIA
+      ) continue;
+      for (const file of msg.files ?? []) {
+        items.push({
+          id: file.path || msg.id,
+          type: file.meta?.type?.startsWith('video/') ? 'video' : 'image',
+          url: file.presignedUrl || file.path,
+          storageKey: file.path,
+          author: msg.name,
+        });
+      }
+    }
+    return items;
+  }, [messages]);
+
   const openMediaViewer = useCallback(
     (items: MediaViewerItem[], startIndex: number) => {
-      setViewerItems(items);
-      setViewerIndex(startIndex);
+      const clickedItem = items[startIndex];
+      if (!clickedItem) return;
+      const globalIndex = allMediaItems.findIndex(m => m.id === clickedItem.id);
+      setViewerIndex(globalIndex >= 0 ? globalIndex : 0);
       setViewerVisible(true);
     },
-    [],
+    [allMediaItems],
   );
 
   const closeMediaViewer = useCallback(() => {
@@ -190,7 +291,13 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <main className="flex flex-1 flex-col overflow-hidden bg-background">
+      <main
+        className="flex flex-1 flex-col overflow-hidden bg-background"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         {/* 헤더 */}
         <header className="electron-drag border-b border-divider">
           <div className="flex items-center justify-between px-4 py-3">
@@ -297,6 +404,9 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           )}
         </header>
 
+        {/* 공지 배너 */}
+        <NoticeBanner roomId={roomId} channelType={channelType} />
+
         {/* 메시지 리스트 */}
         <div
           ref={messagesContainerRef}
@@ -334,6 +444,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
                   index={idx}
                   isFocused={search.focusedMessageId === msg.id}
                   onOpenMedia={openMediaViewer}
+                  onSetNotice={handleSetNotice}
+                  onDeleteMessage={deleteMessage}
                 />
               </div>
             ));
@@ -344,8 +456,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
         {/* 입력 */}
         <ChatInput
           onSend={sendTextMessage}
-          onSendMedia={sendMediaMessage}
-          onSendDocument={sendDocumentMessage}
+          onFilesSelected={handleFilesSelected}
         />
       </main>
 
@@ -361,11 +472,20 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
       {/* 미디어 뷰어 */}
       <MediaViewer
         visible={viewerVisible}
-        items={viewerItems}
+        items={allMediaItems}
         currentIndex={viewerIndex}
         onIndexChange={setViewerIndex}
         onClose={closeMediaViewer}
       />
+
+      {/* 파일 전송 확인 다이얼로그 */}
+      {pendingItems.length > 0 && (
+        <FileConfirmDialog
+          items={pendingItems}
+          onConfirm={handleFileConfirm}
+          onCancel={clearPendingItems}
+        />
+      )}
     </div>
   );
 }

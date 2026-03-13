@@ -27,9 +27,16 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
   const [newProfileKey, setNewProfileKey] = useState<string | null>(null);
   const { data: currentPresignedUrl } = usePresignedUrl(user.profileUrl);
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      showSnackbar({ message: 'JPG, PNG, WebP 이미지만 업로드할 수 있습니다.', state: 'error' });
+      return;
+    }
 
     setPreviewUrl(URL.createObjectURL(file));
     showLoadingOverlay({ message: '이미지를 업로드하는 중...' });
@@ -92,7 +99,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={handleImageChange}
           />
