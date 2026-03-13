@@ -1,6 +1,12 @@
 import { BrowserWindow, session, screen } from 'electron';
 import { getPreloadPath, getIconPath } from './utils';
 
+let escSuppressed = false;
+
+export function setEscSuppressed(value: boolean) {
+  escSuppressed = value;
+}
+
 export function createWindow(
   serverUrl: string,
   deps: { getIsQuitting: () => boolean },
@@ -78,9 +84,9 @@ export function createWindow(
     win.flashFrame(false);
   });
 
-  // ESC 키 → 창 숨기기 (트레이로 최소화)
+  // ESC 키 → 창 숨기기 (트레이로 최소화, overlay가 열려있으면 무시)
   win.webContents.on('before-input-event', (_event, input) => {
-    if (input.key === 'Escape' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta) {
+    if (input.key === 'Escape' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta && !escSuppressed) {
       win.hide();
     }
   });

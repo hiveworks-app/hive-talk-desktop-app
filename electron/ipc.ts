@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, nativeImage, Tray } from 'electron';
 import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
+import { setEscSuppressed } from './window';
 
 export function setupIpcHandlers(deps: {
   getMainWindow: () => BrowserWindow | null;
@@ -96,6 +97,10 @@ export function setupIpcHandlers(deps: {
       const { isLoggedIn } = getTrayAuthState();
       updateTrayMenu(tray, isLoggedIn, isLocked, deps);
     }
+  });
+
+  ipcMain.handle('set-suppress-esc', (_event, suppress: boolean) => {
+    setEscSuppressed(suppress);
   });
 
   ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {

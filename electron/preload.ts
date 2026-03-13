@@ -45,4 +45,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => { ipcRenderer.removeListener('update-downloaded', handler); };
   },
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  setSuppressEsc: (suppress: boolean) => ipcRenderer.invoke('set-suppress-esc', suppress),
 });

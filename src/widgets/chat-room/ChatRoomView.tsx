@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
@@ -8,6 +8,7 @@ import { useChatRoomController } from '@/features/chat-room/useChatRoomControlle
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
 import { cn } from '@/shared/lib/cn';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
+import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
@@ -108,18 +109,40 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     }
   }, []);
 
-  // MediaViewer state
-  const [viewerItems, setViewerItems] = useState<MediaViewerItem[]>([]);
+  // MediaViewer state — 채팅방 전체 미디어 탐색
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
 
+  const allMediaItems = useMemo(() => {
+    const items: MediaViewerItem[] = [];
+    for (const msg of messages) {
+      if (msg.isDeleted || msg.isLocal) continue;
+      if (
+        msg.messageContentType !== WS_MESSAGE_CONTENT_TYPE.IMAGE &&
+        msg.messageContentType !== WS_MESSAGE_CONTENT_TYPE.MEDIA
+      ) continue;
+      for (const file of msg.files ?? []) {
+        items.push({
+          id: file.path || msg.id,
+          type: file.meta?.type?.startsWith('video/') ? 'video' : 'image',
+          url: file.presignedUrl || file.path,
+          storageKey: file.path,
+          author: msg.name,
+        });
+      }
+    }
+    return items;
+  }, [messages]);
+
   const openMediaViewer = useCallback(
     (items: MediaViewerItem[], startIndex: number) => {
-      setViewerItems(items);
-      setViewerIndex(startIndex);
+      const clickedItem = items[startIndex];
+      if (!clickedItem) return;
+      const globalIndex = allMediaItems.findIndex(m => m.id === clickedItem.id);
+      setViewerIndex(globalIndex >= 0 ? globalIndex : 0);
       setViewerVisible(true);
     },
-    [],
+    [allMediaItems],
   );
 
   const closeMediaViewer = useCallback(() => {
@@ -427,7 +450,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
       {/* 미디어 뷰어 */}
       <MediaViewer
         visible={viewerVisible}
-        items={viewerItems}
+        items={allMediaItems}
         currentIndex={viewerIndex}
         onIndexChange={setViewerIndex}
         onClose={closeMediaViewer}

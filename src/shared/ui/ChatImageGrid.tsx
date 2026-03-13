@@ -1,5 +1,7 @@
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
+import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { cn } from '@/shared/lib/cn';
 
 const GAP_PX = 0;
@@ -51,6 +53,7 @@ function buildRows(count: number): RowDef[] {
 interface ImageSource {
   key: string;
   src: string;
+  storageKey?: string;
   isVideo?: boolean;
 }
 
@@ -93,7 +96,11 @@ export function ChatImageGrid({
         style={{ maxWidth: maxWidth }}
       >
         <div className="relative">
-          <img src={src.src} alt="" loading="lazy" className="max-h-48 max-w-full rounded-lg object-cover" />
+          <GridImg
+            storageKey={src.storageKey}
+            fallbackSrc={src.src}
+            className="max-h-48 max-w-full rounded-lg object-cover"
+          />
           {src.isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
@@ -109,7 +116,7 @@ export function ChatImageGrid({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg" style={{ width: maxWidth, maxWidth: maxWidth }}>
+    <div className="overflow-hidden rounded-lg" style={{ width: maxWidth, maxWidth }}>
       {rows.map((row, rowIndex) => {
         const start = rowStartIndices[rowIndex];
         const rowItems = sources.slice(start, start + row.length);
@@ -144,10 +151,9 @@ export function ChatImageGrid({
                   }}
                 >
                   <div className="relative h-full w-full">
-                    <img
-                      src={item.src}
-                      alt=""
-                      loading="lazy"
+                    <GridImg
+                      storageKey={item.storageKey}
+                      fallbackSrc={item.src}
                       className="h-full w-full object-cover"
                     />
                     {item.isVideo && (
@@ -167,5 +173,46 @@ export function ChatImageGrid({
         );
       })}
     </div>
+  );
+}
+
+/* ─── GridImg: presigned URL 자동 갱신 이미지 ─── */
+
+function GridImg({
+  storageKey,
+  fallbackSrc,
+  className,
+}: {
+  storageKey?: string;
+  fallbackSrc: string;
+  className?: string;
+}) {
+  const { data: freshUrl, refetch } = usePresignedUrl(storageKey);
+  const [isBroken, setIsBroken] = useState(false);
+  const retryCountRef = useRef(0);
+
+  const src = freshUrl || fallbackSrc;
+
+  const handleError = useCallback(() => {
+    if (storageKey && retryCountRef.current < 2) {
+      retryCountRef.current += 1;
+      refetch();
+    } else {
+      setIsBroken(true);
+    }
+  }, [storageKey, refetch]);
+
+  if (isBroken) {
+    return <div className={cn('bg-gray-100', className)} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      className={className}
+      onError={handleError}
+    />
   );
 }

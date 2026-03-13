@@ -332,6 +332,14 @@ html[data-electron-win] .electron-safe-top {
   padding-top: 4px;
 }
 
+/* Fixed overlay safe area (fixed 요소는 body padding 무시 → 전체 오프셋 필요) */
+html[data-electron-mac] .electron-fixed-safe-top {
+  padding-top: 48px;
+}
+html[data-electron-win] .electron-fixed-safe-top {
+  padding-top: 32px;
+}
+
 /* Toast 진입 애니메이션 */
 @keyframes toast-in {
   from {
