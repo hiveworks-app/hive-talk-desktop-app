@@ -210,7 +210,6 @@ function GridImg({
     <img
       src={src}
       alt=""
-      loading="lazy"
       className={className}
       onError={handleError}
     />

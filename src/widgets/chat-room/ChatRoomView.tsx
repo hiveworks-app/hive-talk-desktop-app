@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
+import { useCreateNoticeMutation } from '@/features/chat-room/notice/queries';
 import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
@@ -12,10 +13,12 @@ import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useUIStore } from '@/store/uiStore';
 import { ChatInput } from '@/widgets/chat-room/ChatInput';
 import type { PendingFileItem } from '@/widgets/chat-room/FileConfirmDialog';
 import { FileConfirmDialog } from '@/widgets/chat-room/FileConfirmDialog';
 import { MessageBubble } from '@/widgets/chat-room/MessageBubble';
+import { NoticeBanner } from '@/widgets/chat-room/NoticeBanner';
 
 const SidePanel = dynamic(
   () => import('@/widgets/side-panel/SidePanel').then(m => m.SidePanel),
@@ -41,7 +44,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const { hasMoreBefore, isBeforeLoading } = useChatRoomRuntimeStore(s => s.loading);
@@ -49,6 +52,20 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 공지 등록
+  const { mutate: createNotice } = useCreateNoticeMutation(roomId, channelType);
+  const showSnackbar = useUIStore(s => s.showSnackbar);
+  const handleSetNotice = useCallback((text: string) => {
+    if (!window.confirm('이 메시지를 공지로 등록하시겠습니까?')) return;
+    createNotice(
+      { title: text, content: text },
+      {
+        onSuccess: () => showSnackbar({ message: '공지가 등록되었습니다.' }),
+        onError: () => showSnackbar({ message: '공지 등록에 실패했습니다.', state: 'error' }),
+      },
+    );
+  }, [createNotice, showSnackbar]);
 
   // 드래그앤드롭 + 파일 확인 다이얼로그
   const [pendingItems, setPendingItems] = useState<PendingFileItem[]>([]);
@@ -387,6 +404,9 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           )}
         </header>
 
+        {/* 공지 배너 */}
+        <NoticeBanner roomId={roomId} channelType={channelType} />
+
         {/* 메시지 리스트 */}
         <div
           ref={messagesContainerRef}
@@ -424,6 +444,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
                   index={idx}
                   isFocused={search.focusedMessageId === msg.id}
                   onOpenMedia={openMediaViewer}
+                  onSetNotice={handleSetNotice}
+                  onDeleteMessage={deleteMessage}
                 />
               </div>
             ));

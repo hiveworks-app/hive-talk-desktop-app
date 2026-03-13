@@ -211,7 +211,7 @@ function MediaViewerContent({
     } catch {
       window.open(displayUrl, '_blank');
     }
-  }, [displayUrl]);
+  }, [displayUrl, item]);
 
   if (!item) return null;
 

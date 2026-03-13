@@ -35,3 +35,8 @@ export const ROOM_PARTICIPANTS_KEY = (
   roomId: string,
   channelType: WebSocketChannelTypes = WS_CHANNEL_TYPE.DIRECT_MESSAGE,
 ) => [channelType, 'participants', roomId];
+
+export const ROOM_NOTICE_KEY = (
+  roomId: string,
+  channelType: WebSocketChannelTypes = WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+) => [channelType, 'notice', roomId];
