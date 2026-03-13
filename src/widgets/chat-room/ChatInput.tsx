@@ -1,19 +1,15 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { cn } from '@/shared/lib/cn';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
-  onSendMedia: (files: File[]) => void;
-  onSendDocument: (files: File[]) => void;
+  onFilesSelected: (files: File[]) => void;
 }
 
-export function ChatInput({ onSend, onSendMedia, onSendDocument }: ChatInputProps) {
+export function ChatInput({ onSend, onFilesSelected }: ChatInputProps) {
   const [text, setText] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dragCounterRef = useRef(0);
 
   const handleSubmit = () => {
     if (!text.trim()) return;
@@ -29,97 +25,29 @@ export function ChatInput({ onSend, onSendMedia, onSendDocument }: ChatInputProp
     }
   };
 
-  const processFiles = useCallback(
-    (fileList: FileList | File[]) => {
-      const files = Array.from(fileList);
-      if (files.length === 0) return;
-
-      const mediaFiles = files.filter(
-        f => f.type.startsWith('image/') || f.type.startsWith('video/'),
-      );
-      const docFiles = files.filter(
-        f => !f.type.startsWith('image/') && !f.type.startsWith('video/'),
-      );
-
-      if (mediaFiles.length > 0) onSendMedia(mediaFiles);
-      if (docFiles.length > 0) onSendDocument(docFiles);
-    },
-    [onSendMedia, onSendDocument],
-  );
-
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
       const files = e.clipboardData?.files;
       if (files && files.length > 0) {
         e.preventDefault();
-        processFiles(files);
+        onFilesSelected(Array.from(files));
       }
     },
-    [processFiles],
-  );
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current += 1;
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      dragCounterRef.current = 0;
-      if (e.dataTransfer.files.length > 0) {
-        processFiles(e.dataTransfer.files);
-      }
-    },
-    [processFiles],
+    [onFilesSelected],
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-        processFiles(e.target.files);
+        onFilesSelected(Array.from(e.target.files));
         e.target.value = '';
       }
     },
-    [processFiles],
+    [onFilesSelected],
   );
 
   return (
-    <div
-      className={cn(
-        'relative border-t border-divider px-4 py-3 transition-colors',
-        isDragging && 'bg-blue-50',
-      )}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {isDragging && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-blue-50/80">
-          <span className="text-sub font-medium text-primary">파일을 여기에 놓으세요</span>
-        </div>
-      )}
+    <div className="border-t border-divider px-4 py-3">
       <input
         ref={fileInputRef}
         type="file"

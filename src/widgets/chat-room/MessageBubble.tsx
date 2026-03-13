@@ -75,7 +75,7 @@ export function MessageBubble({
         className={cn(
           'flex gap-2 transition-colors',
           isMe ? 'flex-row-reverse' : 'flex-row',
-          isSameSender ? 'mt-0.5' : 'mt-3',
+          isSameSender ? 'mt-1' : 'mt-3',
           isFocused && 'rounded-lg bg-yellow-100',
         )}
       >
@@ -84,7 +84,7 @@ export function MessageBubble({
         )}
         {!isMe && isSameSender && <div className="w-9 shrink-0" />}
 
-        <div className={cn('flex max-w-[70%] flex-col', isMe ? 'items-end' : 'items-start')}>
+        <div className={cn('flex flex-col', isMe ? 'items-end' : 'items-start')} style={{ maxWidth: isMediaType ? 240 : 288 }}>
           {!isMe && !isSameSender && (
             <span className="mb-1 text-sub-sm font-medium text-text-secondary">{message.name}</span>
           )}

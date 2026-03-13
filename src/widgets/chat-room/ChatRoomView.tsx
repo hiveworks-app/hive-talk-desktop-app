@@ -12,6 +12,8 @@ import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { ChatInput } from '@/widgets/chat-room/ChatInput';
+import type { PendingFileItem } from '@/widgets/chat-room/FileConfirmDialog';
+import { FileConfirmDialog } from '@/widgets/chat-room/FileConfirmDialog';
 import { MessageBubble } from '@/widgets/chat-room/MessageBubble';
 
 const SidePanel = dynamic(
@@ -46,6 +48,65 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 드래그앤드롭 + 파일 확인 다이얼로그
+  const [pendingItems, setPendingItems] = useState<PendingFileItem[]>([]);
+  const dragCounterRef = useRef(0);
+
+  const handleFilesSelected = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    const items = files.map(file => ({
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+    }));
+    setPendingItems(items);
+  }, []);
+
+  const clearPendingItems = useCallback(() => {
+    setPendingItems(prev => {
+      prev.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
+      return [];
+    });
+  }, []);
+
+  const handleFileConfirm = useCallback(() => {
+    const files = pendingItems.map(item => item.file);
+    const mediaFiles = files.filter(
+      f => f.type.startsWith('image/') || f.type.startsWith('video/'),
+    );
+    const docFiles = files.filter(
+      f => !f.type.startsWith('image/') && !f.type.startsWith('video/'),
+    );
+    if (mediaFiles.length > 0) sendMediaMessage(mediaFiles);
+    if (docFiles.length > 0) sendDocumentMessage(docFiles);
+    clearPendingItems();
+  }, [pendingItems, sendMediaMessage, sendDocumentMessage, clearPendingItems]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    if (e.dataTransfer.files.length > 0) {
+      handleFilesSelected(Array.from(e.dataTransfer.files));
+    }
+  }, []);
 
   // MediaViewer state
   const [viewerItems, setViewerItems] = useState<MediaViewerItem[]>([]);
@@ -190,7 +251,13 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <main className="flex flex-1 flex-col overflow-hidden bg-background">
+      <main
+        className="flex flex-1 flex-col overflow-hidden bg-background"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         {/* 헤더 */}
         <header className="electron-drag border-b border-divider">
           <div className="flex items-center justify-between px-4 py-3">
@@ -344,8 +411,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
         {/* 입력 */}
         <ChatInput
           onSend={sendTextMessage}
-          onSendMedia={sendMediaMessage}
-          onSendDocument={sendDocumentMessage}
+          onFilesSelected={handleFilesSelected}
         />
       </main>
 
@@ -366,6 +432,15 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
         onIndexChange={setViewerIndex}
         onClose={closeMediaViewer}
       />
+
+      {/* 파일 전송 확인 다이얼로그 */}
+      {pendingItems.length > 0 && (
+        <FileConfirmDialog
+          items={pendingItems}
+          onConfirm={handleFileConfirm}
+          onCancel={clearPendingItems}
+        />
+      )}
     </div>
   );
 }
