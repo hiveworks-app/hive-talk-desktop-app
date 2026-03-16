@@ -2,26 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
-
-/* ── Material Design Filled Icons (18×18) ── */
-
-const IconImage = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-  </svg>
-);
-
-const IconDescription = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-  </svg>
-);
-
-const IconNewLabel = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M21 12l-4.37 6.16c-.37.52-.98.84-1.63.84H3c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h12c.65 0 1.26.32 1.63.84L21 12z" />
-  </svg>
-);
+import { IconDescription, IconImage, IconNewLabel } from '@/shared/ui/icons';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -128,7 +109,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
             className="flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-secondary"
             title="태그"
           >
-            <IconNewLabel />
+            <IconNewLabel size={18} />
           </button>
         </div>
 

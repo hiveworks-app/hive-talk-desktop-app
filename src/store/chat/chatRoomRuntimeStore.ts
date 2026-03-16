@@ -12,6 +12,8 @@ export type {
   ChatRoomRuntimeTypes,
 } from './chatRoomRuntimeStore.type';
 
+const MAX_ROOM_CACHE_SIZE = 10;
+
 const initState = {
   currentRoomId: null as string | null,
   messages: [] as ChatMessageUI[],
@@ -22,6 +24,7 @@ const initState = {
     hasMoreAfter: true,
   },
   pendingReadEvents: new Map<string, Set<string>>(),
+  roomMessageCache: new Map<string, ChatMessageUI[]>(),
   nextMyTags: null as WebSocketReceiveTagProps[] | null,
   searchKeyword: '',
   activeSearchKeyword: '',
@@ -141,8 +144,25 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
     set(state => ({
       messages: state.messages.filter(m => m.fileId !== fileId),
     })),
+  saveRoomMessages: roomId => {
+    const { messages, roomMessageCache } = get();
+    if (!roomId || messages.length === 0) return;
+    const nextCache = new Map(roomMessageCache);
+    nextCache.delete(roomId);
+    nextCache.set(roomId, messages);
+    while (nextCache.size > MAX_ROOM_CACHE_SIZE) {
+      const oldest = nextCache.keys().next().value;
+      if (oldest !== undefined) nextCache.delete(oldest);
+      else break;
+    }
+    set({ roomMessageCache: nextCache });
+  },
+  restoreRoomMessages: roomId => {
+    const cached = get().roomMessageCache.get(roomId);
+    set({ messages: cached ?? [] });
+  },
   requestScrollToBottom: () =>
     set(state => ({ scrollToBottomTrigger: state.scrollToBottomTrigger + 1 })),
   setPendingRemoveTagMessageId: id => set({ pendingRemoveTagMessageId: id }),
-  reset: () => set({ ...initState, pendingReadEvents: new Map() }),
+  reset: () => set({ ...initState, pendingReadEvents: new Map(), roomMessageCache: new Map() }),
 }));

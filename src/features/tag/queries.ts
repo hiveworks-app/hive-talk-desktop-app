@@ -21,7 +21,7 @@ export const useGetTagInfo = () => {
           const res = await apiGetTagCategoryList();
           return res.payload.items;
         },
-        staleTime: 5 * 60 * 1000,
+        staleTime: 1000 * 60 * 60 * 24,
         refetchOnWindowFocus: false,
       },
       {
@@ -30,7 +30,7 @@ export const useGetTagInfo = () => {
           const res = await apiGetTagList();
           return res.payload.items;
         },
-        staleTime: 5 * 60 * 1000,
+        staleTime: 1000 * 60 * 60 * 24,
         refetchOnWindowFocus: false,
       },
     ],
