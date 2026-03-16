@@ -168,6 +168,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesContentRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(initialNotReadCount === 0);
   const prevScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
@@ -255,6 +256,21 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     }
     prevScrollHeightRef.current = 0;
   }, [messages.length]);
+
+  // 이미지 로드 등으로 콘텐츠 높이가 변할 때 하단 유지
+  useEffect(() => {
+    const content = messagesContentRef.current;
+    if (!content) return;
+
+    const observer = new ResizeObserver(() => {
+      if (isNearBottomRef.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }
+    });
+
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -413,6 +429,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           onScroll={handleScroll}
           className="scrollbar-thin flex-1 overflow-y-auto px-4 py-2"
         >
+          <div ref={messagesContentRef}>
           {isBeforeLoading && (
             <div className="flex justify-center py-2">
               <span className="text-sub-sm text-text-tertiary">불러오는 중...</span>
@@ -450,6 +467,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
               </div>
             ));
           })()}
+          </div>
           <div ref={messagesEndRef} />
         </div>
 
