@@ -68,6 +68,8 @@ export const useChatRoomActions = () => {
             categoryDescription: '', code: '', title: '', description: '',
           })),
         );
+      } else {
+        setNextMyTags(null);
       }
 
       sendNewRoomInviteIfNeeded(currentRoomId);
