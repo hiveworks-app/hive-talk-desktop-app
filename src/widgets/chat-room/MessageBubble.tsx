@@ -100,7 +100,7 @@ export function MessageBubble({
             </div>
           )}
           {!isDeleted && (
-            <div className="flex shrink-0 flex-col items-end gap-0.5">
+            <div className={cn('flex shrink-0 flex-col gap-0.5', isMe ? 'items-end' : 'items-start')}>
               {message.notReadCount > 0 && <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>}
               {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
             </div>
