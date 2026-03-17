@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { cn } from '@/shared/lib/cn';
+import { IconPlay } from '@/shared/ui/icons';
 
 const GAP_PX = 0;
 
@@ -103,10 +104,8 @@ export function ChatImageGrid({
           />
           {src.isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                  <polygon points="5,3 19,12 5,21" />
-                </svg>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white">
+                <IconPlay size={20} />
               </div>
             </div>
           )}
@@ -158,10 +157,8 @@ export function ChatImageGrid({
                     />
                     {item.isVideo && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                            <polygon points="5,3 19,12 5,21" />
-                          </svg>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white">
+                          <IconPlay size={14} />
                         </div>
                       </div>
                     )}

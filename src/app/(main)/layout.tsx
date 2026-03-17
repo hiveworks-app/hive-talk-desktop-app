@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiGetTagCategoryList, apiGetTagList } from '@/features/tag/api';
+import { TAG_CATEGORY_KEY, TAG_LIST_KEY } from '@/shared/config/queryKeys';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useAutoUpdate } from '@/shared/hooks/useAutoUpdate';
 
+const TAG_STALE_TIME = 1000 * 60 * 60 * 24; // 24시간
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
   const accessToken = useAuthStore(s => s.accessToken);
 
-  // Zustand persist 복원 완료 후 인증 확인
+  // Zustand persist 복원 완료 후 인증 확인 + 태그 prefetch
   useEffect(() => {
     const check = () => {
       if (!useAuthStore.getState().accessToken) {
@@ -20,6 +26,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         return;
       }
       setAuthChecked(true);
+
+      // 태그 데이터 prefetch (변경되지 않는 데이터이므로 로그인 시 미리 캐싱)
+      queryClient.prefetchQuery({
+        queryKey: [TAG_CATEGORY_KEY],
+        queryFn: async () => (await apiGetTagCategoryList()).payload.items,
+        staleTime: TAG_STALE_TIME,
+      });
+      queryClient.prefetchQuery({
+        queryKey: [TAG_LIST_KEY],
+        queryFn: async () => (await apiGetTagList()).payload.items,
+        staleTime: TAG_STALE_TIME,
+      });
     };
 
     if (useAuthStore.persist.hasHydrated()) {

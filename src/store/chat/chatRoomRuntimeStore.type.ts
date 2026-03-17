@@ -12,6 +12,7 @@ export type ChatRoomRuntimeState = {
   messages: ChatMessageUI[];
   loading: LoadingState;
   pendingReadEvents: Map<string, Set<string>>;
+  roomMessageCache: Map<string, ChatMessageUI[]>;
   setRoomId: (roomId: string | null) => void;
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   replaceMessages: (next: Message[]) => void;
@@ -24,6 +25,8 @@ export type ChatRoomRuntimeState = {
   patchMessageByFileId: (fileId: string, partial: Partial<ChatMessageUI>) => void;
   replaceLocalWithServer: (fileId: string, serverMessage: Message) => void;
   removeLocalMessage: (fileId: string) => void;
+  saveRoomMessages: (roomId: string) => void;
+  restoreRoomMessages: (roomId: string) => void;
   scrollToBottomTrigger: number;
   requestScrollToBottom: () => void;
   pendingRemoveTagMessageId: string | null;
