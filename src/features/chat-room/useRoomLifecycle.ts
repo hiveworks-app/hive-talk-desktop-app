@@ -72,39 +72,24 @@ export function useRoomLifecycle(deps: RoomLifecycleDeps) {
     };
   }, [currentRoomId]);
 
-  // 2. 창 포커스/블러 + visibilitychange (AppState 대체)
+  // 2. visibilitychange (AppState 대체)
   useEffect(() => {
     if (!currentRoomId) return;
-
-    const handleViewIn = () => {
-      if (!isMountedRef.current || viewStateRef.current === 'in') return;
-      send(builders.buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
-      viewStateRef.current = 'in';
-      needsFetchAfterReconnectRef.current = true;
-    };
-
-    const handleViewOut = () => {
-      if (!isMountedRef.current || viewStateRef.current === 'out') return;
-      send(builders.buildViewOutMessageRoom({ channelIdOverride: currentRoomId }));
-      viewStateRef.current = 'out';
-    };
-
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') handleViewIn();
-      else handleViewOut();
+      if (!isMountedRef.current) return;
+      if (document.visibilityState === 'visible') {
+        if (viewStateRef.current !== 'in') {
+          send(builders.buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
+          viewStateRef.current = 'in';
+        }
+        needsFetchAfterReconnectRef.current = true;
+      } else if (viewStateRef.current !== 'out') {
+        send(builders.buildViewOutMessageRoom({ channelIdOverride: currentRoomId }));
+        viewStateRef.current = 'out';
+      }
     };
-
-    const handleFocus = () => handleViewIn();
-    const handleBlur = () => handleViewOut();
-
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [currentRoomId]);
 
   // 3. WebSocket 재연결 시 리스너 재등록 및 메시지 fetch

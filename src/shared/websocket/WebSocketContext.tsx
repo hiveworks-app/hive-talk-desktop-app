@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
@@ -22,10 +22,11 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const routerRef = useRef(router);
   const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
   const loginUserId = useAuthStore(state => state.user)?.id;
+  const [isPageVisible, setIsPageVisible] = useState(true);
   const { buildSubscribeMessage } = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.DIRECT_MESSAGE, channelId: null });
 
   const { send, isConnected, connectWebSocket, disconnectWebSocket, listenersRef, sendRef, pendingReadCallbacksRef } =
-    useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscribeMessage });
+    useWebSocketCore({ WS_URL, loginUserId, isPageVisible, queryClient, buildSubscribeMessage });
 
   useEffect(() => { routerRef.current = router; });
 
@@ -34,12 +35,22 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
   useElectronNotification({ routerRef, sendRef, pendingReadCallbacksRef });
 
+  const isElectron = typeof window !== 'undefined' &&
+    !!(window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron;
+
+  useEffect(() => {
+    if (isElectron) return;
+    const handleVisibility = () => setIsPageVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isElectron]);
+
   useEffect(() => {
     const userId = useAuthStore.getState().user?.id;
-    if (!WS_URL || !userId) return;
+    if (!WS_URL || !userId || !isPageVisible) return;
     connectWebSocket();
     return () => disconnectWebSocket();
-  }, [WS_URL, disconnectWebSocket, connectWebSocket]);
+  }, [WS_URL, isPageVisible, disconnectWebSocket, connectWebSocket]);
 
   const prevConnectedRef = useRef(false);
   useEffect(() => {
