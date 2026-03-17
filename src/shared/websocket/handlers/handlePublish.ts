@@ -48,7 +48,7 @@ export function handlePublish(
 
   const isMySentMessage = normalizedPayload.sender?.userId === String(loginUserId);
   const listener = listenersRef.current[roomId];
-  const isRoomActive = Boolean(listener);
+  const isRoomActive = Boolean(listener) && document.hasFocus();
   if (listener) listener(envelope);
 
   // 채팅방 목록 React Query 캐시 갱신
@@ -70,9 +70,9 @@ export function handlePublish(
     console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
   }
 
-  // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 Electron 창이 숨겨진 상태일 때)
-  const isWindowHidden = isElectronRef.current && document.visibilityState === 'hidden';
-  if (!isMySentMessage && (!isRoomActive || isWindowHidden)) {
+  // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 창에 포커스가 없을 때)
+  const isWindowInactive = isElectronRef.current && !document.hasFocus();
+  if (!isMySentMessage && (!isRoomActive || isWindowInactive)) {
     sendNotification(normalizedPayload, roomId, currentChannelType, targetQueryKey, queryClient);
   }
 }

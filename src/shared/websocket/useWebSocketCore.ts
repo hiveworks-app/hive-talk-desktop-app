@@ -10,12 +10,11 @@ import type { Listener } from './type';
 interface WebSocketCoreConfig {
   WS_URL: string | undefined;
   loginUserId: string | number | undefined;
-  isPageVisible: boolean;
   queryClient: QueryClient;
   buildSubscribeMessage: (opts: { channelIdOverride?: string }) => unknown;
 }
 
-export function useWebSocketCore({ WS_URL, loginUserId, isPageVisible, queryClient, buildSubscribeMessage }: WebSocketCoreConfig) {
+export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscribeMessage }: WebSocketCoreConfig) {
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Record<string, Listener>>({});
   const isConnectingRef = useRef(false);
@@ -44,7 +43,7 @@ export function useWebSocketCore({ WS_URL, loginUserId, isPageVisible, queryClie
 
   const connectWebSocket = useCallback((newToken?: string) => {
     const accessToken = newToken || useAuthStore.getState().accessToken;
-    if (!WS_URL || !accessToken || !loginUserId || !isPageVisible) return;
+    if (!WS_URL || !accessToken || !loginUserId) return;
     if (wsRef.current || isConnectingRef.current) return;
 
     isConnectingRef.current = true;
@@ -89,10 +88,10 @@ export function useWebSocketCore({ WS_URL, loginUserId, isPageVisible, queryClie
       const MAX_RECONNECT = 10;
       const attempt = reconnectAttemptRef.current;
       if (attempt >= MAX_RECONNECT) { console.warn(`[WS] 최대 재연결 시도 횟수(${MAX_RECONNECT})에 도달`); return; }
-      const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+      const delay = attempt === 0 ? 0 : Math.min(1000 * Math.pow(2, attempt - 1), 30000);
       reconnectAttemptRef.current = attempt + 1;
       reconnectTimerRef.current = setTimeout(async () => {
-        if (!forceCloseRef.current && isPageVisible) {
+        if (!forceCloseRef.current) {
           const freshToken = await refreshAccessToken().catch(() => null);
           connectWebSocketRef.current(freshToken ?? undefined);
         }
@@ -100,7 +99,7 @@ export function useWebSocketCore({ WS_URL, loginUserId, isPageVisible, queryClie
     };
 
     wsRef.current = ws;
-  }, [WS_URL, isPageVisible, queryClient, loginUserId, buildSubscribeMessage]);
+  }, [WS_URL, queryClient, loginUserId, buildSubscribeMessage]);
 
   const send = useCallback((data: unknown) => {
     const ws = wsRef.current;
