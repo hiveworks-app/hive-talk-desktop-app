@@ -144,6 +144,18 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
     set(state => ({
       messages: state.messages.filter(m => m.fileId !== fileId),
     })),
+  patchMessageById: (id, partial) =>
+    set(state => {
+      const idx = state.messages.findIndex(m => m.id === id);
+      if (idx === -1) return state;
+      const next = state.messages.slice();
+      next[idx] = { ...next[idx], ...partial };
+      return { messages: next };
+    }),
+  removeMessageById: id =>
+    set(state => ({
+      messages: state.messages.filter(m => m.id !== id),
+    })),
   saveRoomMessages: roomId => {
     const { messages, roomMessageCache } = get();
     if (!roomId || messages.length === 0) return;

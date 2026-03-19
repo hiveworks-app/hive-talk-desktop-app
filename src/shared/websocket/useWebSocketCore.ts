@@ -101,9 +101,21 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
     wsRef.current = ws;
   }, [WS_URL, queryClient, loginUserId, buildSubscribeMessage]);
 
+  const removePendingPublish = useCallback((content: string) => {
+    pendingQueue.current = pendingQueue.current.filter(msg => {
+      const m = msg as Record<string, unknown>;
+      if (m.operationType !== 'PUB') return true;
+      const payload = m.payload as Record<string, unknown> | undefined;
+      if (!payload || payload.messageContentType !== 'TEXT') return true;
+      const inner = payload.payload as Record<string, unknown> | undefined;
+      return inner?.content !== content;
+    });
+  }, []);
+
   const send = useCallback((data: unknown) => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !isOnline) {
       if (forceCloseRef.current || ws?.readyState === WebSocket.CLOSED) return;
       pendingQueue.current.push(data);
       if (!isConnectingRef.current) connectWebSocketRef.current();
@@ -117,6 +129,6 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
 
   return {
     send, isConnected, connectWebSocket, disconnectWebSocket,
-    listenersRef, sendRef, pendingReadCallbacksRef, isElectronRef,
+    listenersRef, sendRef, pendingReadCallbacksRef, isElectronRef, removePendingPublish,
   };
 }

@@ -24,7 +24,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const loginUserId = useAuthStore(state => state.user)?.id;
   const { buildSubscribeMessage } = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.DIRECT_MESSAGE, channelId: null });
 
-  const { send, isConnected, connectWebSocket, disconnectWebSocket, listenersRef, sendRef, pendingReadCallbacksRef } =
+  const { send, isConnected, connectWebSocket, disconnectWebSocket, listenersRef, sendRef, pendingReadCallbacksRef, removePendingPublish } =
     useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscribeMessage });
 
   useEffect(() => { routerRef.current = router; });
@@ -64,7 +64,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     prevConnectedRef.current = isConnected;
   }, [isConnected, queryClient, send]);
 
-  const value: WebSocketContextValue = { send, addListener, removeListener, isConnected };
+  const value: WebSocketContextValue = { send, addListener, removeListener, isConnected, removePendingPublish };
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 };
 

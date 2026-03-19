@@ -35,7 +35,10 @@ export function useChatRoomWsFetchHandlers({
 
       if (isInitialFetchRef.current) {
         isInitialFetchRef.current = false;
-        replaceMessages(mapped);
+        // 실패한 로컬 메시지를 보존하여 재시도/삭제 가능하도록 유지
+        const { messages: currentMessages } = useChatRoomRuntimeStore.getState();
+        const failedLocal = currentMessages.filter(m => m.isLocal && m.localStatus === 'failed');
+        replaceMessages(failedLocal.length > 0 ? [...mapped, ...failedLocal] : mapped);
       } else {
         setMessages(prev => {
           const deletedIds = extractDeletedMessageIds(filtered);

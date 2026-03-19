@@ -50,7 +50,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage, addTagToMessage, removeTagFromMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage, addTagToMessage, removeTagFromMessage, retryTextMessage, removeFailedMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const runtimeRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -169,6 +169,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
                         onSetNotice={handleSetNotice}
                         onDeleteMessage={deleteMessage}
                         onEditTag={handleOpenUpdateTag}
+                        onRetryMessage={retryTextMessage}
+                        onRemoveFailedMessage={removeFailedMessage}
                       />
                     </div>
                   ))}

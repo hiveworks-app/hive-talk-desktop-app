@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
-import { IconChevronDown, IconChevronLeft, IconChevronUp, IconClose, IconSearch, IconSidePanel } from '@/shared/ui/icons';
+import { IconChevronDown, IconChevronLeft, IconChevronUp, IconClose, IconPerson, IconSearch, IconSidePanel } from '@/shared/ui/icons';
 import type { UseChatRoomSearchReturn } from '@/features/chat-room/useChatRoomSearch';
 
 interface ChatRoomHeaderProps {
@@ -33,10 +33,15 @@ export function ChatRoomHeader({
           >
             <IconChevronLeft />
           </button>
-          <h2 className="text-heading-sm font-bold text-text-primary">{roomName || '채팅방'}</h2>
-          {totalUserCount > 0 && (
-            <span className="text-sub-sm text-text-tertiary">{totalUserCount}</span>
-          )}
+          <div className="flex flex-col">
+            <h2 className="text-heading-sm font-bold leading-tight text-text-primary">{roomName || '채팅방'}</h2>
+            {totalUserCount > 0 && (
+              <span className="flex items-center gap-0.5 text-sub-sm text-text-tertiary">
+                <IconPerson size={12} />
+                {totalUserCount}
+              </span>
+            )}
+          </div>
         </div>
         <div className="electron-no-drag flex items-center gap-1">
           <button

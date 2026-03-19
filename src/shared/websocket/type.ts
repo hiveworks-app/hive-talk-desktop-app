@@ -13,6 +13,7 @@ export interface WebSocketContextValue {
   addListener: (id: string, listener: Listener) => void;
   removeListener: (id: string) => void;
   isConnected: boolean;
+  removePendingPublish: (content: string) => void;
 }
 
 // ─── useWebSocketMessageBuilder ───

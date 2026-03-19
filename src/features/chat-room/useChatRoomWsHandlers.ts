@@ -90,7 +90,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     // Optimistic 텍스트 메시지: 로컬 메시지를 서버 메시지로 교체 (가장 오래된 것부터)
     if (m.sender === 'me' && !incomingFileId) {
       const { messages } = useChatRoomRuntimeStore.getState();
-      const localTextId = messages.find(msg => msg.isLocal && msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT)?.id;
+      const localTextId = messages.find(msg => msg.isLocal && msg.localStatus !== 'failed' && msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT)?.id;
       if (localTextId) {
         useChatRoomRuntimeStore.setState(state => ({
           messages: state.messages.map(msg =>
