@@ -27,6 +27,7 @@ export type ChatRoomRuntimeState = {
   removeLocalMessage: (fileId: string) => void;
   saveRoomMessages: (roomId: string) => void;
   restoreRoomMessages: (roomId: string) => void;
+  switchRoom: (prevRoomId: string | null, nextRoomId: string) => void;
   scrollToBottomTrigger: number;
   requestScrollToBottom: () => void;
   pendingRemoveTagMessageId: string | null;

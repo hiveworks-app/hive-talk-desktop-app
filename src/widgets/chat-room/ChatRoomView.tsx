@@ -38,12 +38,15 @@ interface ChatRoomViewProps {
 export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomViewProps) {
   const params = useParams();
   const router = useRouter();
-  const roomId = params?.roomId as string;
+  const urlRoomId = params?.roomId as string | undefined;
 
   const storeRoomId = useChatRoomInfo(s => s.roomId);
+  const invitedUserIds = useChatRoomInfo(s => s.invitedUserIds);
+  const isNewRoom = !storeRoomId && invitedUserIds.length > 0;
+
   useEffect(() => {
-    if (!storeRoomId && roomId) router.replace(routePrefix);
-  }, [storeRoomId, roomId]);
+    if (!storeRoomId && !isNewRoom && urlRoomId) router.replace(routePrefix);
+  }, [storeRoomId, isNewRoom, urlRoomId]);
 
   useChatRoomController();
 
@@ -53,12 +56,13 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const runtimeRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
   const { hasMoreBefore, isBeforeLoading } = useChatRoomRuntimeStore(s => s.loading);
   const scrollToBottomTrigger = useChatRoomRuntimeStore(s => s.scrollToBottomTrigger);
-  const isRoomTransitioning = storeRoomId !== runtimeRoomId;
+  const isRoomTransitioning = !isNewRoom && storeRoomId !== runtimeRoomId;
   const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
+  const effectiveRoomId = isNewRoom ? '' : (storeRoomId || runtimeRoomId || '');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const { mutate: createNotice } = useCreateNoticeMutation(roomId, channelType);
+  const { mutate: createNotice } = useCreateNoticeMutation(effectiveRoomId, channelType);
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const handleSetNotice = useCallback((text: string) => {
     if (!window.confirm('이 메시지를 공지로 등록하시겠습니까?')) return;
@@ -69,7 +73,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   }, [createNotice, showSnackbar]);
 
   const { isTagOpen, handleOpenAddTag, handleOpenUpdateTag, handleTagConfirm, handleSendWithTags } =
-    useTagActions({ roomId, sendTextMessage, addTagToMessage, removeTagFromMessage });
+    useTagActions({ roomId: effectiveRoomId, sendTextMessage, addTagToMessage, removeTagFromMessage });
   const { pendingItems, clearPendingItems, handleFileConfirm, handleFilesSelected, dragHandlers } =
     useFileDragDrop({ onMediaSend: sendMediaMessage, onDocSend: sendDocumentMessage });
   const { viewerIndex, setViewerIndex, viewerVisible, allMediaItems, openMediaViewer, closeMediaViewer } =
@@ -105,7 +109,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     return () => window.removeEventListener('keydown', handler);
   }, [search, isSidePanelOpen, viewerVisible]);
 
-  if (!storeRoomId) return null;
+  if (!storeRoomId && !isNewRoom) return null;
 
   const lastMessageId = lastMessage?.message?.id || messages[messages.length - 1]?.id || '';
   const unreadBoundaryIndex = showUnreadSeparator && initialNotReadCount > 0
@@ -123,7 +127,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           isSidePanelOpen={isSidePanelOpen}
           onToggleSidePanel={() => setIsSidePanelOpen(prev => !prev)}
         />
-        <NoticeBanner roomId={roomId} channelType={channelType} />
+        {effectiveRoomId && <NoticeBanner roomId={effectiveRoomId} channelType={channelType} />}
 
         <div className="relative flex-1 overflow-hidden">
           <div
@@ -131,9 +135,14 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
             onScroll={handleScroll}
             className={cn('h-full px-4 py-2', isRoomTransitioning || messages.length === 0 ? 'overflow-hidden' : 'scrollbar-thin overflow-y-auto')}
           >
-            <div ref={messagesContentRef}>
-              {messages.length === 0 || isRoomTransitioning ? (
+            <div ref={messagesContentRef} className={cn((isNewRoom || (!isRoomTransitioning && messages.length === 0 && !lastMessage)) && 'h-full')}>
+              {isRoomTransitioning || (!isNewRoom && messages.length === 0 && lastMessage) ? (
                 <MessageSkeleton />
+              ) : (isNewRoom || messages.length === 0) ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3">
+                  <img src="/signup-complete.png" alt="꿀벌" className="h-[120px] w-[120px] object-contain" />
+                  <span className="text-sub text-text-tertiary">메시지를 입력하여 대화를 시작하세요.</span>
+                </div>
               ) : (
                 <>
                   {isBeforeLoading && (
@@ -178,7 +187,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
       <SidePanel
         isOpen={isSidePanelOpen}
         onClose={() => setIsSidePanelOpen(false)}
-        roomId={roomId}
+        roomId={effectiveRoomId}
         channelType={channelType}
         lastMessageId={lastMessageId}
       />

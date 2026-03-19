@@ -3,14 +3,19 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
+import { apiDMCreate, apiGMCreate } from '@/features/create-chat-room/api';
 import { useChatMediaUpload } from '@/features/chat-room/useChatMediaUpload';
 import {
+  WS_CHANNEL_TYPE,
   WS_MESSAGE_CONTENT_TYPE,
   RemoveTagMessageProps,
   UpdateTagToMessageProps,
 } from '@/shared/types/websocket';
+import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { formatKoreanTime } from '@/shared/utils/formatTimeUtils';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
+import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 
@@ -23,9 +28,10 @@ export const useChatRoomActions = () => {
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
   const setLoading = useChatRoomRuntimeStore(s => s.setLoading);
   const setNextMyTags = useChatRoomRuntimeStore(s => s.setNextMyTags);
+  const addLocalMessage = useChatRoomRuntimeStore(s => s.addLocalMessage);
 
   const {
-    buildInviteMessage, buildFetchBeforeMessage, buildFetchAfterMessage,
+    buildSubscribeMessage, buildInviteMessage, buildFetchBeforeMessage, buildFetchAfterMessage,
     buildPublishMessage, buildAddTagToMessage, buildRemoveTagToMessage, buildDeleteMessage,
   } = useWebSocketMessageBuilder({ type: channelType, channelId: currentRoomId });
 
@@ -55,11 +61,97 @@ export const useChatRoomActions = () => {
     [sendInvite, queryClient, channelType],
   );
 
-  const { sendMediaMessage, sendDocumentMessage } = useChatMediaUpload(sendNewRoomInviteIfNeeded);
+  // 방이 아직 생성되지 않은 경우 (신규 DM/GM) 메시지 전송 직전에 방 생성
+  const ensureRoomId = useCallback(async (): Promise<string | null> => {
+    const runtimeRoomId = useChatRoomRuntimeStore.getState().currentRoomId;
+    if (runtimeRoomId) return runtimeRoomId;
+
+    const { invitedUserIds, channelType: ct, roomName } = useChatRoomInfo.getState();
+    if (!invitedUserIds || invitedUserIds.length === 0) return null;
+
+    let newRoomId: string | null = null;
+
+    try {
+      if (ct === WS_CHANNEL_TYPE.DIRECT_MESSAGE) {
+        const res = await apiDMCreate(invitedUserIds[0]);
+        newRoomId = res.payload.roomId;
+      } else if (ct === WS_CHANNEL_TYPE.GROUP_MESSAGE) {
+        const myUserId = useAuthStore.getState().user?.id;
+        const res = await apiGMCreate({
+          title: roomName ?? '',
+          userIdList: invitedUserIds.filter(id => id !== String(myUserId)),
+        });
+        newRoomId = res.payload.roomId;
+      }
+    } catch (err) {
+      console.error('[ensureRoomId] 방 생성 실패:', err);
+      return null;
+    }
+
+    if (!newRoomId) return null;
+
+    // 상태 업데이트
+    useChatRoomInfo.getState().setChatRoomInfo({ roomId: newRoomId });
+    useChatRoomRuntimeStore.getState().setRoomId(newRoomId);
+
+    // WebSocket 구독 + 초대
+    send(buildSubscribeMessage({ channelIdOverride: newRoomId }));
+    sendInvite(invitedUserIds, newRoomId);
+    useChatRoomInfo.setState({ invitedUserIds: [] });
+
+    // React Query 캐시 갱신
+    const targetKey = ct === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? DM_ROOM_LIST_KEY : GM_ROOM_LIST_KEY;
+    queryClient.invalidateQueries({ queryKey: targetKey });
+
+    return newRoomId;
+  }, [send, buildSubscribeMessage, sendInvite, queryClient]);
+
+  const { sendMediaMessage, sendDocumentMessage } = useChatMediaUpload(sendNewRoomInviteIfNeeded, ensureRoomId);
+
+  const doSend = useCallback(
+    (roomId: string, content: string, tagList: string[]) => {
+      sendNewRoomInviteIfNeeded(roomId);
+      send(buildPublishMessage({
+        type: WS_MESSAGE_CONTENT_TYPE.TEXT, content, tagList, channelIdOverride: roomId,
+      }));
+
+      const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
+      if (otherUserIsExit && invitedUserIds.length > 0) {
+        sendInvite(invitedUserIds, roomId);
+        useChatRoomInfo.setState({ otherUserIsExit: false });
+      }
+    },
+    [send, buildPublishMessage, sendNewRoomInviteIfNeeded, sendInvite],
+  );
+
+  const addOptimisticTextMessage = useCallback(
+    (content: string) => {
+      const localId = `local-text-${Date.now()}`;
+      const loginUser = useAuthStore.getState().user;
+      const createdAt = new Date().toISOString();
+      addLocalMessage({
+        id: localId,
+        isLocal: true,
+        localStatus: 'uploading',
+        messageContentType: WS_MESSAGE_CONTENT_TYPE.TEXT,
+        text: content,
+        time: formatKoreanTime(createdAt),
+        createdAt,
+        sender: 'me',
+        readUserIds: loginUser?.id ? [String(loginUser.id)] : [],
+        notReadCount: 0,
+        name: loginUser?.name ?? '',
+        tags: [],
+        files: [],
+      });
+      return localId;
+    },
+    [addLocalMessage],
+  );
 
   const sendTextMessage = useCallback(
     (content: string, tagList: string[] = []) => {
-      if (!content.trim() || !currentRoomId) return;
+      if (!content.trim()) return;
 
       if (tagList.length > 0) {
         setNextMyTags(
@@ -72,18 +164,28 @@ export const useChatRoomActions = () => {
         setNextMyTags(null);
       }
 
-      sendNewRoomInviteIfNeeded(currentRoomId);
-      send(buildPublishMessage({
-        type: WS_MESSAGE_CONTENT_TYPE.TEXT, content, tagList, channelIdOverride: currentRoomId,
-      }));
+      // 모든 메시지: optimistic 로컬 메시지 즉시 표시
+      const localId = addOptimisticTextMessage(content);
 
-      const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
-      if (otherUserIsExit && invitedUserIds.length > 0) {
-        sendInvite(invitedUserIds, currentRoomId);
-        useChatRoomInfo.setState({ otherUserIsExit: false });
+      // 기존 방: 동기적으로 즉시 전송
+      const runtimeRoomId = useChatRoomRuntimeStore.getState().currentRoomId;
+      if (runtimeRoomId) {
+        doSend(runtimeRoomId, content, tagList);
+        return;
       }
+
+      // 신규 방: 방 생성 후 전송
+      ensureRoomId().then(roomId => {
+        if (roomId) {
+          doSend(roomId, content, tagList);
+        } else {
+          useChatRoomRuntimeStore.setState(state => ({
+            messages: state.messages.filter(m => m.id !== localId),
+          }));
+        }
+      });
     },
-    [send, buildPublishMessage, currentRoomId, setNextMyTags, sendNewRoomInviteIfNeeded, sendInvite],
+    [setNextMyTags, addOptimisticTextMessage, doSend, ensureRoomId],
   );
 
   const loadMoreBeforeMessage = useCallback(

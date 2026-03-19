@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-17T02:09:31.131Z",
+  "lastUpdated": "2026-03-19T03:28:04.722Z",
   "activeFeatures": [
     "hive-talk-desktop-app",
     "electron",
@@ -33,7 +33,8 @@
     "notifications",
     "config",
     "tag",
-    "password"
+    "password",
+    "new"
   ],
   "primaryFeature": "hive-talk-desktop-app",
   "features": {
@@ -241,9 +242,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T00:36:08.807Z",
-        "lastUpdated": "2026-03-16T07:22:40.680Z"
+        "lastUpdated": "2026-03-19T02:49:33.414Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/create-room/CreateRoomDialog.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/create-room/useCreateRoom.ts"
     },
     "profile": {
       "phase": "do",
@@ -254,9 +255,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T00:36:17.415Z",
-        "lastUpdated": "2026-03-12T07:40:56.579Z"
+        "lastUpdated": "2026-03-19T02:49:24.543Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/profile/ProfileEditMode.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/profile/UserProfileDialog.tsx"
     },
     "chat-room": {
       "phase": "do",
@@ -267,9 +268,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:02:48.500Z",
-        "lastUpdated": "2026-03-17T02:09:31.131Z"
+        "lastUpdated": "2026-03-19T03:28:04.722Z"
       },
-      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/widgets/chat-room/MessageBubble.tsx"
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/features/chat-room/useChatRoomActions.ts"
     },
     "[roomId]": {
       "phase": "do",
@@ -319,7 +320,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T01:34:02.721Z",
-        "lastUpdated": "2026-03-16T05:24:18.851Z"
+        "lastUpdated": "2026-03-19T02:04:53.445Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/store/chat/chatRoomRuntimeStore.ts"
     },
@@ -452,6 +453,19 @@
         "lastUpdated": "2026-03-16T07:40:32.375Z"
       },
       "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/settings/password/page.tsx"
+    },
+    "new": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-19T00:30:00.754Z",
+        "lastUpdated": "2026-03-19T00:30:00.754Z"
+      },
+      "lastFile": "/Users/jjs/Desktop/dawin/hiveworks/hive-talk-desktop-app/src/app/(main)/chat/new/page.tsx"
     }
   },
   "pipeline": {
@@ -462,7 +476,7 @@
   "session": {
     "startedAt": "2026-02-25T00:06:16.511Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-17T02:09:31.131Z"
+    "lastActivity": "2026-03-19T03:28:04.722Z"
   },
   "history": [
     {
@@ -5945,6 +5959,390 @@
     },
     {
       "timestamp": "2026-03-17T02:09:31.131Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:30:00.754Z",
+      "feature": "new",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:30:42.295Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:31:14.768Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:31:44.662Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:10.467Z",
+      "feature": "create-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:27.453Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:31.100Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:36.043Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:49.003Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:32:58.099Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:03.719Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:07.386Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:11.606Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:15.825Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:25.347Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:33:32.759Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:49:06.172Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:50:45.283Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:54:06.581Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:57:20.111Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:57:26.334Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:58:08.361Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:59:02.882Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T00:59:06.172Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:16:03.800Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:18:03.805Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:20:54.503Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:21:03.969Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:23:10.587Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:23:19.005Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:23:28.700Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:23:34.750Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:23:44.887Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:29:02.723Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T01:34:02.840Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:04:53.445Z",
+      "feature": "chat",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:05:10.673Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:05:19.941Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:29:54.169Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:49:18.547Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:49:24.543Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:49:29.328Z",
+      "feature": "create-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:49:33.414Z",
+      "feature": "create-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:49:37.912Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T02:50:09.481Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:03:17.361Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:09:30.116Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:09:43.240Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:09:47.152Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:09:52.152Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:09:56.048Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:16:59.611Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:17:05.464Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:17:18.282Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:17:31.464Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:17:49.743Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:18:04.988Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:20:49.666Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:20:56.481Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:21:12.727Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:21:27.517Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:23:13.314Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:25:22.417Z",
+      "feature": "chat-room",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T03:28:04.722Z",
       "feature": "chat-room",
       "phase": "do",
       "action": "updated"

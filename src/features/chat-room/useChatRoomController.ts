@@ -21,15 +21,13 @@ export const useChatRoomController = () => {
   const { roomId: saveRoomId, channelType, lastMessage } = useChatRoomInfo();
   const { send, addListener, removeListener, isConnected } = useAppWebSocket();
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
-  const setRunTimeRoomId = useChatRoomRuntimeStore(s => s.setRoomId);
   const replaceMessages = useChatRoomRuntimeStore(s => s.replaceMessages);
   const deleteMessageById = useChatRoomRuntimeStore(s => s.deleteMessageById);
   const setLoading = useChatRoomRuntimeStore(s => s.setLoading);
   const replaceLocalWithServer = useChatRoomRuntimeStore(s => s.replaceLocalWithServer);
   const addPendingReadEvent = useChatRoomRuntimeStore(s => s.addPendingReadEvent);
   const clearPendingReadEvents = useChatRoomRuntimeStore(s => s.clearPendingReadEvents);
-  const saveRoomMessages = useChatRoomRuntimeStore(s => s.saveRoomMessages);
-  const restoreRoomMessages = useChatRoomRuntimeStore(s => s.restoreRoomMessages);
+  const switchRoom = useChatRoomRuntimeStore(s => s.switchRoom);
 
   const viewStateRef = useRef<'in' | 'out' | null>(null);
   const isMountedRef = useRef(true);
@@ -83,20 +81,28 @@ export const useChatRoomController = () => {
 
   // 방 변경 감지 및 초기화 (캐시 저장/복원)
   useEffect(() => {
-    if (!saveRoomId) return;
+    if (!saveRoomId) {
+      // 신규 방: runtime store에 이전 방 데이터가 남아있으면 제거
+      if (currentRoomId) {
+        useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
+      }
+      return;
+    }
     if (isFirstMountRef.current || currentRoomId !== saveRoomId) {
       isFirstMountRef.current = false;
-      if (currentRoomId) saveRoomMessages(currentRoomId);
-      restoreRoomMessages(saveRoomId);
       didInitialSyncRef.current = false;
-      setRunTimeRoomId(saveRoomId);
+      switchRoom(currentRoomId, saveRoomId);
     }
   }, [saveRoomId, currentRoomId]);
 
   // 초기 메시지 fetch
   useEffect(() => {
-    if (!currentRoomId || didInitialSyncRef.current) return;
+    if (!currentRoomId || !saveRoomId || didInitialSyncRef.current) return;
     const { messages } = useChatRoomRuntimeStore.getState();
+
+    // 로컬 optimistic 메시지만 있으면 fetch 스킵 (신규 방 생성 직후)
+    if (messages.length > 0 && messages.every(m => m.isLocal)) return;
+
     const anchorId = lastMessage?.message?.id ?? messages[messages.length - 1]?.id;
     if (!anchorId) return;
 
@@ -106,5 +112,5 @@ export const useChatRoomController = () => {
     didInitialSyncRef.current = true;
 
     return () => { didInitialSyncRef.current = false; };
-  }, [currentRoomId, lastMessage?.message?.id]);
+  }, [currentRoomId, saveRoomId, lastMessage?.message?.id]);
 };
