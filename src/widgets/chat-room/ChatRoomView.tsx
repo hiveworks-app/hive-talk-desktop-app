@@ -109,7 +109,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     return () => window.removeEventListener('keydown', handler);
   }, [search, isSidePanelOpen, viewerVisible]);
 
-  if (!storeRoomId && !isNewRoom) return null;
+  if (!storeRoomId && !isNewRoom) return <div className="flex-1 bg-background" />;
 
   const lastMessageId = lastMessage?.message?.id || messages[messages.length - 1]?.id || '';
   const unreadBoundaryIndex = showUnreadSeparator && initialNotReadCount > 0
