@@ -2,17 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateDM } from '@/features/create-chat-room/queries';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
-import { isApiError } from '@/shared/api';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { MemberItem } from '@/shared/types/user';
-import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
-import { useUIStore } from '@/store';
+import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -24,9 +22,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
   useDimmed(isOpen);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const showSnackbar = useUIStore(state => state.showSnackbar);
   const myUserId = useAuthStore(s => s.user?.id);
-  const { mutateAsync: createDM, isPending } = useCreateDM();
 
   if (!isOpen || !member) return null;
 
@@ -39,7 +35,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
 
   const navigateToRoom = (
     roomId: string,
-    lastMessage: WebSocketPublishItem | null = null,
+    lastMessage: import('@/shared/types/websocket').WebSocketPublishItem | null = null,
     invitedUserIds: string[] = [],
   ) => {
     useChatRoomInfo.getState().setChatRoomInfo({
@@ -51,8 +47,11 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       lastMessage,
       invitedUserIds,
     });
+    if (!roomId) {
+      useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
+    }
     onClose();
-    router.push(`/chat/${roomId}`);
+    router.push(roomId ? `/chat/${roomId}` : '/chat/new');
   };
 
   const findExistingRoom = () => {
@@ -64,8 +63,8 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
     });
   };
 
-  const handleStartDM = async () => {
-    if (isMe || isPending) return;
+  const handleStartDM = () => {
+    if (isMe) return;
 
     // 캐시에서 기존 방 확인
     const existing = findExistingRoom();
@@ -74,26 +73,8 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
       return;
     }
 
-    try {
-      const res = await createDM(member.userId);
-      // invitedUserIds 설정 → 첫 메시지 전송 시 INVITE 발송 (모바일 패턴)
-      navigateToRoom(res.payload.roomId, null, [member.userId]);
-    } catch (err) {
-      if (!isApiError(err)) {
-        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
-        return;
-      }
-
-      // 409 Conflict: 이미 존재하는 방 → 목록 새로 조회 후 이동
-      await queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
-      const refetched = findExistingRoom();
-      if (refetched) {
-        navigateToRoom(refetched.roomModel.roomId, refetched.messageList[0] ?? null);
-        showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
-      } else {
-        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
-      }
-    }
+    // 기존 방 없음 → roomId 없이 채팅방 진입 (메시지 전송 시 생성)
+    navigateToRoom('', null, [member.userId]);
   };
 
   return (
@@ -144,10 +125,9 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
           {!isMe && (
             <button
               onClick={handleStartDM}
-              disabled={isPending}
-              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] disabled:bg-disabled"
+              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
             >
-              {isPending ? '생성 중...' : '1:1 채팅 시작'}
+              1:1 채팅 시작
             </button>
           )}
         </div>

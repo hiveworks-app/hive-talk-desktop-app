@@ -101,7 +101,15 @@ export function MessageBubble({
           )}
           {!isDeleted && (
             <div className={cn('flex shrink-0 flex-col gap-0.5', isMe ? 'items-end' : 'items-start')}>
-              {message.notReadCount > 0 && <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>}
+              {(message.isLocal || message.notReadCount > 0) && (
+                <span className="flex h-[14px] items-center">
+                  {message.isLocal ? (
+                    <span className="inline-block h-2 w-2 animate-spin rounded-full border border-primary/30 border-t-primary" />
+                  ) : (
+                    <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>
+                  )}
+                </span>
+              )}
               {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
             </div>
           )}

@@ -15,7 +15,10 @@ import { useUploadProgressStore } from '@/store/chat/uploadProgressStore';
 import { chunk, mapWithConcurrency, makeProgressThrottler } from './chatUploadUtils';
 import { createVideoThumbnail, createImageThumbnail } from './thumbnailUtils';
 
-export function useChatMediaUpload(sendNewRoomInviteIfNeeded: (roomId: string) => void) {
+export function useChatMediaUpload(
+  sendNewRoomInviteIfNeeded: (roomId: string) => void,
+  ensureRoomId: () => Promise<string | null>,
+) {
   const { send } = useAppWebSocket();
   const { channelType } = useChatRoomInfo();
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -59,10 +62,22 @@ export function useChatMediaUpload(sendNewRoomInviteIfNeeded: (roomId: string) =
     [chatFileUploadMutation, channelType],
   );
 
+  const resolveRoomId = useCallback(
+    async (): Promise<string | null> => {
+      const runtimeRoomId = useChatRoomRuntimeStore.getState().currentRoomId;
+      if (runtimeRoomId) return runtimeRoomId;
+      return ensureRoomId();
+    },
+    [ensureRoomId],
+  );
+
   const sendMediaMessage = useCallback(
     async (files: File[]) => {
-      if (!files.length || !currentRoomId) return;
-      sendNewRoomInviteIfNeeded(currentRoomId);
+      if (!files.length) return;
+
+      const roomId = await resolveRoomId();
+      if (!roomId) return;
+      sendNewRoomInviteIfNeeded(roomId);
 
       const loginUserId = useAuthStore.getState().user?.id;
       const readUserIds = loginUserId ? [String(loginUserId)] : [];
@@ -100,7 +115,7 @@ export function useChatMediaUpload(sendNewRoomInviteIfNeeded: (roomId: string) =
           setTransmissionProgress(fileId, { done: total, total, status: 'publishing' });
           send(buildPublishMessage({
             type: WS_MESSAGE_CONTENT_TYPE.IMAGE, fileId, tagList: [],
-            items: uploadFileList, channelIdOverride: currentRoomId,
+            items: uploadFileList, channelIdOverride: roomId,
           }));
         } catch (e) {
           console.warn('sendMediaMessage upload failed:', e);
@@ -114,18 +129,21 @@ export function useChatMediaUpload(sendNewRoomInviteIfNeeded: (roomId: string) =
         const uploaded = await uploadOneMedia(v);
         send(buildPublishMessage({
           type: WS_MESSAGE_CONTENT_TYPE.MEDIA, fileId, tagList: [],
-          items: [uploaded], channelIdOverride: currentRoomId,
+          items: [uploaded], channelIdOverride: roomId,
         }));
       }
     },
-    [currentRoomId, addLocalMessage, uploadOneMedia, send, buildPublishMessage,
-      setTransmissionProgress, patchMessageByFileId, sendNewRoomInviteIfNeeded],
+    [addLocalMessage, uploadOneMedia, send, buildPublishMessage,
+      setTransmissionProgress, patchMessageByFileId, sendNewRoomInviteIfNeeded, resolveRoomId],
   );
 
   const sendDocumentMessage = useCallback(
     async (files: File[]) => {
-      if (!files.length || !currentRoomId) return;
-      sendNewRoomInviteIfNeeded(currentRoomId);
+      if (!files.length) return;
+
+      const roomId = await resolveRoomId();
+      if (!roomId) return;
+      sendNewRoomInviteIfNeeded(roomId);
 
       for (const file of files) {
         const mimeType = file.type || 'application/octet-stream';
@@ -133,11 +151,11 @@ export function useChatMediaUpload(sendNewRoomInviteIfNeeded: (roomId: string) =
         send(buildPublishMessage({
           type: WS_MESSAGE_CONTENT_TYPE.FILE, tagList: [],
           items: [{ path: uploadResult.fileKey, meta: { type: mimeType, size: file.size } }],
-          channelIdOverride: currentRoomId,
+          channelIdOverride: roomId,
         }));
       }
     },
-    [currentRoomId, channelType, chatFileUploadMutation, send, buildPublishMessage, sendNewRoomInviteIfNeeded],
+    [channelType, chatFileUploadMutation, send, buildPublishMessage, sendNewRoomInviteIfNeeded, resolveRoomId],
   );
 
   return { sendMediaMessage, sendDocumentMessage };

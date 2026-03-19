@@ -1,12 +1,13 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/cn';
 import { ChatRoomListSidebar } from '@/widgets/chat-room-list/ChatRoomListSidebar';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
-  const hasActiveRoom = !!params?.roomId;
+  const pathname = usePathname();
+  const hasActiveRoom = !!params?.roomId || pathname === '/chat/new';
 
   return (
     <div className="flex h-full w-full overflow-hidden">

@@ -3,15 +3,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateDM, useCreateGM } from '@/features/create-chat-room/queries';
 import { useGetMembers } from '@/features/members/queries';
-import { isApiError } from '@/shared/api';
-import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useUIStore } from '@/store';
-import { findExistingDMRoom, extractRoomIdFromError } from './createRoomUtils';
+import { findExistingDMRoom } from './createRoomUtils';
 
 type Mode = 'dm' | 'gm';
 
@@ -21,8 +19,6 @@ export function useCreateRoom(onClose: () => void) {
   const showSnackbar = useUIStore(state => state.showSnackbar);
   const myUserId = useAuthStore(s => s.user?.id);
   const { data: members = [], isLoading } = useGetMembers();
-  const { mutateAsync: createDM, isPending: dmPending } = useCreateDM();
-  const { mutateAsync: createGM, isPending: gmPending } = useCreateGM();
 
   const [mode, setMode] = useState<Mode>('dm');
   const [search, setSearch] = useState('');
@@ -38,8 +34,6 @@ export function useCreateRoom(onClose: () => void) {
       m => m.name.toLowerCase().includes(q) || m.department?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q),
     );
   }, [otherMembers, search]);
-
-  const isPending = dmPending || gmPending;
 
   const toggleSelect = (userId: string) => {
     setSelectedIds(prev => {
@@ -73,17 +67,21 @@ export function useCreateRoom(onClose: () => void) {
     useChatRoomInfo.getState().setChatRoomInfo({
       roomId, roomName, channelType, totalUserCount, otherUserIsExit: false, invitedUserIds, lastMessage,
     });
+    if (!roomId) {
+      useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
+    }
     onClose();
-    router.push(`/chat/${roomId}`);
+    router.push(roomId ? `/chat/${roomId}` : '/chat/new');
   }, [onClose, router]);
 
-  const handleSubmit = async () => {
-    if (!canSubmit || isPending) return;
+  const handleSubmit = () => {
+    if (!canSubmit) return;
 
     if (mode === 'dm') {
       const userId = [...selectedIds][0];
       const member = otherMembers.find(m => m.userId === userId);
 
+      // 캐시에서 기존 방 확인
       const existingRoom = findExistingDMRoom(queryClient, userId);
       if (existingRoom) {
         navigateToRoom(
@@ -97,33 +95,11 @@ export function useCreateRoom(onClose: () => void) {
         return;
       }
 
-      try {
-        const res = await createDM(userId);
-        navigateToRoom(res.payload.roomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, null, [userId]);
-      } catch (err) {
-        if (!isApiError(err)) { showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' }); return; }
-        const existingRoomId = extractRoomIdFromError(err);
-        if (existingRoomId) {
-          navigateToRoom(existingRoomId, member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2);
-          showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
-          return;
-        }
-        await queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
-        const refetchedRoom = findExistingDMRoom(queryClient, userId);
-        if (refetchedRoom) {
-          navigateToRoom(
-            refetchedRoom.roomModel.roomId,
-            refetchedRoom.roomModel.participantDetail?.name || member?.name || '채팅방',
-            WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, refetchedRoom.messageList[0] ?? null,
-          );
-          showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
-          return;
-        }
-        showSnackbar({ message: '채팅방 생성에 실패했습니다.', state: 'error' });
-      }
+      // 기존 방 없음 → roomId 없이 채팅방 진입 (메시지 전송 시 생성)
+      navigateToRoom('', member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, null, [userId]);
     } else {
-      const res = await createGM({ title: gmTitle.trim(), userIdList: [...selectedIds] });
-      navigateToRoom(res.payload.roomId, gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1, null, [...selectedIds]);
+      // GM → roomId 없이 채팅방 진입 (메시지 전송 시 생성)
+      navigateToRoom('', gmTitle.trim(), WS_CHANNEL_TYPE.GROUP_MESSAGE, selectedIds.size + 1, null, [...selectedIds]);
     }
   };
 
@@ -133,7 +109,7 @@ export function useCreateRoom(onClose: () => void) {
     selectedIds, toggleSelect,
     gmTitle, setGmTitle,
     otherMembers, filtered,
-    isLoading, isPending,
+    isLoading, isPending: false,
     canSubmit, handleSubmit,
   };
 }

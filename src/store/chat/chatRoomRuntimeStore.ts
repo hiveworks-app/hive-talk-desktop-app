@@ -161,6 +161,14 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
     const cached = get().roomMessageCache.get(roomId);
     set({ messages: cached ?? [] });
   },
+  switchRoom: (prevRoomId, nextRoomId) => {
+    // 같은 방이면 초기화하지 않음 (ensureRoomId에서 이미 설정한 경우)
+    if (prevRoomId === nextRoomId) return;
+    set({
+      currentRoomId: nextRoomId,
+      messages: [],
+    });
+  },
   requestScrollToBottom: () =>
     set(state => ({ scrollToBottomTrigger: state.scrollToBottomTrigger + 1 })),
   setPendingRemoveTagMessageId: id => set({ pendingRemoveTagMessageId: id }),
