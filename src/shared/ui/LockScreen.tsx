@@ -37,6 +37,11 @@ export function LockScreen() {
   const handleUnlock = async () => {
     if (!password.trim() || !user?.email || !deviceInfo) return;
 
+    if (!navigator.onLine) {
+      setError('오프라인 상태에서는 사용할 수 없습니다.');
+      return;
+    }
+
     setIsVerifying(true);
     setError('');
 

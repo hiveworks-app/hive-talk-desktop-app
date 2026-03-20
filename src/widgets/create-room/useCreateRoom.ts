@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMembers } from '@/features/members/queries';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
@@ -14,7 +14,7 @@ import { findExistingDMRoom } from './createRoomUtils';
 type Mode = 'dm' | 'gm';
 
 export function useCreateRoom(onClose: () => void) {
-  const router = useRouter();
+  const router = useAppRouter();
   const queryClient = useQueryClient();
   const showSnackbar = useUIStore(state => state.showSnackbar);
   const myUserId = useAuthStore(s => s.user?.id);

@@ -23,7 +23,7 @@ export function ToastContainer() {
           key={toast.id}
           onClick={() => removeToast(toast.id)}
           className={cn(
-            'animate-toast-in rounded-lg px-4 py-2.5 text-sub font-medium text-white shadow-lg',
+            'animate-toast-in w-max max-w-[90vw] rounded-lg px-4 py-2.5 text-sub font-medium text-white shadow-lg',
             STATE_STYLES[toast.state ?? 'info'],
           )}
         >

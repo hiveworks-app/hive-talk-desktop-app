@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -10,7 +10,7 @@ import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { SettingItem } from './_components/SettingItem';
 
 export default function SettingsPage() {
-  const router = useRouter();
+  const router = useAppRouter();
   const queryClient = useQueryClient();
   const { showSnackbar } = useUIStore();
   const [showProfile, setShowProfile] = useState(false);

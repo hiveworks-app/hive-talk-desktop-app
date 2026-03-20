@@ -43,3 +43,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI/Tool auto-generated state
+.bkit/
+.claude/agent-memory/
+docs/.bkit-memory.json
+docs/.pdca-snapshots/
+docs/.pdca-status.json

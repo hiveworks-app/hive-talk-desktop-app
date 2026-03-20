@@ -62,6 +62,11 @@ export function useLoginForm() {
       return;
     }
 
+    if (!navigator.onLine) {
+      setLoginError('오프라인 상태에서는 로그인할 수 없습니다.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const deviceId = getBrowserDeviceId();

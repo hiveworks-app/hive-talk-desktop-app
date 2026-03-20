@@ -9,6 +9,7 @@ import {
   useGetEMRoomList,
 } from "@/features/chat-room-list/queries";
 import { cn } from "@/shared/lib/cn";
+import { useUIStore } from "@/store/uiStore";
 import { toSafeNumber } from "@/shared/utils/utils";
 import IconBottomMemberDefault from "@assets/icons/bottom-member-default.svg";
 import IconBottomChatDefault from "@assets/icons/bottom-chat-default.svg";
@@ -62,6 +63,7 @@ const NAV_ITEMS = [
 
 export function AppNav() {
   const pathname = usePathname();
+  const showSnackbar = useUIStore(s => s.showSnackbar);
   const { companyChatBadge, externalChatBadge, totalUnread } =
     useTotalUnreadCount();
 
@@ -90,6 +92,12 @@ export function AppNav() {
               key={item.href}
               href={item.href}
               title={item.label}
+              onClick={(e) => {
+                if (!navigator.onLine) {
+                  e.preventDefault();
+                  showSnackbar({ message: '오프라인 상태에서는 이동할 수 없습니다.' });
+                }
+              }}
               className={cn(
                 "electron-no-drag flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
                 isActive

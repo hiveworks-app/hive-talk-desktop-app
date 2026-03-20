@@ -10,6 +10,7 @@ import { TagChip } from '@/shared/ui/TagChip';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { DateSeparator } from './DateSeparator';
+import { FailedMessageActions } from './FailedMessageActions';
 import { MessageContent } from './MessageContent';
 import { MessageContextMenu } from './MessageContextMenu';
 
@@ -23,18 +24,22 @@ interface MessageBubbleProps {
   onSetNotice?: (text: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onEditTag?: (message: ChatMessageUI) => void;
+  onRetryMessage?: (messageId: string) => void;
+  onRemoveFailedMessage?: (messageId: string) => void;
 }
 
 export function MessageBubble({
   message, prevMessage, nextMessage, index, isFocused,
   onOpenMedia, onSetNotice, onDeleteMessage, onEditTag,
+  onRetryMessage, onRemoveFailedMessage,
 }: MessageBubbleProps) {
   const isMe = message.sender === 'me';
   const isSystem = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT;
   const isDeleted = message.isDeleted;
   const isMediaType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
   const isTextMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !isDeleted;
-  const hasContextMenu = !isDeleted && !isSystem;
+  const isFailed = message.isLocal && message.localStatus === 'failed';
+  const hasContextMenu = !isDeleted && !isSystem && !isFailed;
   const hasTags = !isDeleted && (message.tags?.length ?? 0) > 0;
 
   const showDateSeparator = !prevMessage || message.createdAt.slice(0, 10) !== prevMessage.createdAt.slice(0, 10);
@@ -66,7 +71,7 @@ export function MessageBubble({
   const bubbleContent = (
     <div
       data-msg-index={index}
-      className={cn('flex gap-2 transition-colors', isMe ? 'flex-row-reverse' : 'flex-row', isSameSender ? 'mt-1' : 'mt-3', isFocused && 'rounded-lg bg-yellow-100')}
+      className={cn('flex gap-2 transition-colors', isMe ? 'flex-row-reverse' : 'flex-row', isSameSender ? 'mt-1' : 'mt-2', isFocused && 'rounded-lg bg-yellow-100')}
     >
       {!isMe && !isSameSender && (
         <ProfileCircle name={message.name} size="sm" storageKey={message.thumbnailProfileUrl || message.profileImageUrl} />
@@ -101,16 +106,23 @@ export function MessageBubble({
           )}
           {!isDeleted && (
             <div className={cn('flex shrink-0 flex-col gap-0.5', isMe ? 'items-end' : 'items-start')}>
-              {(message.isLocal || message.notReadCount > 0) && (
-                <span className="flex h-[14px] items-center">
-                  {message.isLocal ? (
-                    <span className="inline-block h-2 w-2 animate-spin rounded-full border border-primary/30 border-t-primary" />
-                  ) : (
-                    <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>
-                  )}
-                </span>
+              {message.isLocal ? (
+                isFailed ? (
+                  <FailedMessageActions
+                    onRetry={() => onRetryMessage?.(message.id)}
+                    onDelete={() => onRemoveFailedMessage?.(message.id)}
+                  />
+                ) : (
+                  <span className="text-[10px] leading-normal text-primary">
+                    <span className="inline-block h-[10px] w-[10px] animate-spin rounded-full border border-primary/30 border-t-primary align-middle" />
+                  </span>
+                )
+              ) : (
+                <>
+                  {message.notReadCount > 0 && <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>}
+                  {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
+                </>
               )}
-              {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
             </div>
           )}
         </div>

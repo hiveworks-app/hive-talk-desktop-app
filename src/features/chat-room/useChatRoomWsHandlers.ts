@@ -2,7 +2,7 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { createWsMessageParser } from '@/features/chat-room/createWsMessageParser';
 import { ParticipantsManager } from '@/features/chat-room/domain';
@@ -44,7 +44,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     replaceLocalWithServer, participantsManager, recalculateAllMessagesNotReadCount, isMountedRef,
   } = params;
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const router = useAppRouter();
 
   const { handleFetchBeforeHistory, handleFetchAfterHistory, handleReadMessage } =
     useChatRoomWsFetchHandlers(params);
@@ -90,7 +90,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     // Optimistic 텍스트 메시지: 로컬 메시지를 서버 메시지로 교체 (가장 오래된 것부터)
     if (m.sender === 'me' && !incomingFileId) {
       const { messages } = useChatRoomRuntimeStore.getState();
-      const localTextId = messages.find(msg => msg.isLocal && msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT)?.id;
+      const localTextId = messages.find(msg => msg.isLocal && msg.localStatus !== 'failed' && msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT)?.id;
       if (localTextId) {
         useChatRoomRuntimeStore.setState(state => ({
           messages: state.messages.map(msg =>

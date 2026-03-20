@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 
 export default function ChatRoomError({
   error,
@@ -10,7 +10,7 @@ export default function ChatRoomError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const router = useRouter();
+  const router = useAppRouter();
 
   useEffect(() => {
     console.error('[ChatRoomError]', error);

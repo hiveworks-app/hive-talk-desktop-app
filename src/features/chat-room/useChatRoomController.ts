@@ -6,6 +6,7 @@ import { createWsMessageParser } from '@/features/chat-room/createWsMessageParse
 import { ParticipantsManager, readCountCalculator } from '@/features/chat-room/domain';
 import { usePendingReads } from '@/features/chat-room/usePendingReads';
 import { useRoomLifecycle } from '@/features/chat-room/useRoomLifecycle';
+import { useLocalMessageFailureDetector } from '@/features/chat-room/useLocalMessageFailureDetector';
 import { useChatRoomWsHandlers } from '@/features/chat-room/useChatRoomWsHandlers';
 import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { ParticipantItemsType } from '@/shared/types/chatRoom';
@@ -19,7 +20,8 @@ import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 export const useChatRoomController = () => {
   const queryClient = useQueryClient();
   const { roomId: saveRoomId, channelType, lastMessage } = useChatRoomInfo();
-  const { send, addListener, removeListener, isConnected } = useAppWebSocket();
+  const { send, addListener, removeListener, isConnected, removePendingPublish } = useAppWebSocket();
+  useLocalMessageFailureDetector(isConnected, removePendingPublish);
   const currentRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
   const replaceMessages = useChatRoomRuntimeStore(s => s.replaceMessages);
   const deleteMessageById = useChatRoomRuntimeStore(s => s.deleteMessageById);

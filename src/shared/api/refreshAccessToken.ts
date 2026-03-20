@@ -65,6 +65,10 @@ export async function refreshAccessToken(): Promise<string | null> {
 
       return data.payload.accessToken as string;
     } catch {
+      // 오프라인 상태면 네트워크 복구 시 재시도할 수 있도록 로그아웃하지 않음
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return null;
+      }
       handleForceLogout();
       return null;
     } finally {

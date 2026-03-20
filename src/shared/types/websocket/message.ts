@@ -47,6 +47,7 @@ export type ChatMessageUI = Message & {
   localStatus?: LocalSendStatus;
   localUris?: string[];
   dimmed?: boolean;
+  retryPayload?: { content: string; tagList: string[]; roomId: string };
 };
 
 interface WebSocketMessageBase {

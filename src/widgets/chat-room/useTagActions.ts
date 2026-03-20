@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect } from 'react';
 import type { ChatMessageUI } from '@/shared/types/websocket';
+import { isOffline } from '@/shared/utils/offlineGuard';
+import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useSelectedTagStore, useTagStore } from '@/store/tag/tagStore';
 
@@ -32,6 +34,7 @@ export function useTagActions({
   }, [openAddMode]);
 
   const handleOpenUpdateTag = useCallback((message: ChatMessageUI) => {
+    if (isOffline()) return;
     openUpdateMode(message);
   }, [openUpdateMode]);
 
@@ -47,10 +50,12 @@ export function useTagActions({
       const removedTagIds = [...originalTagIds].filter(id => !currentTagIdSet.has(id));
 
       if (addedTagIds.length > 0 || removedTagIds.length > 0) {
+        const myUserId = String(useAuthStore.getState().user?.id ?? '');
         const normalizedTags = selectedTags.map(t => ({
           ...t,
           tagId: Number(t.tagId),
           categoryId: Number(t.categoryId),
+          userId: t.userId ?? myUserId,
         }));
         useChatRoomRuntimeStore
           .getState()

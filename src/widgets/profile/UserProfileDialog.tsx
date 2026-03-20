@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
@@ -20,7 +20,7 @@ interface UserProfileDialogProps {
 
 export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialogProps) {
   useDimmed(isOpen);
-  const router = useRouter();
+  const router = useAppRouter();
   const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
 

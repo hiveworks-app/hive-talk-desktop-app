@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { isOffline } from '@/shared/utils/offlineGuard';
 import { IconDescription, IconImage, IconNewLabel } from '@/shared/ui/icons';
 
 interface ChatInputProps {
@@ -89,7 +90,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => imageInputRef.current?.click()}
+            onClick={() => { if (!isOffline()) imageInputRef.current?.click(); }}
             className="flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-secondary"
             title="앨범"
           >
@@ -97,7 +98,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
           </button>
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { if (!isOffline()) fileInputRef.current?.click(); }}
             className="flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-secondary"
             title="파일"
           >
@@ -105,7 +106,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
           </button>
           <button
             type="button"
-            onClick={onEditTag}
+            onClick={() => { if (!isOffline()) onEditTag?.(); }}
             className="flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-secondary"
             title="태그"
           >

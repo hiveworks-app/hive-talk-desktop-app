@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useAppRouter } from "@/shared/hooks/useAppRouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   apiGetDMLastMessage,
@@ -28,7 +29,7 @@ interface ChatRoomItemProps {
 }
 
 export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
   const { roomModel, messageList, notReadCount } = room;

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useCreateNoticeMutation } from '@/features/chat-room/notice/queries';
 import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
@@ -37,7 +38,7 @@ interface ChatRoomViewProps {
 
 export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomViewProps) {
   const params = useParams();
-  const router = useRouter();
+  const router = useAppRouter();
   const urlRoomId = params?.roomId as string | undefined;
 
   const storeRoomId = useChatRoomInfo(s => s.roomId);
@@ -50,7 +51,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage, addTagToMessage, removeTagFromMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage, addTagToMessage, removeTagFromMessage, retryTextMessage, removeFailedMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const runtimeRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -109,7 +110,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
     return () => window.removeEventListener('keydown', handler);
   }, [search, isSidePanelOpen, viewerVisible]);
 
-  if (!storeRoomId && !isNewRoom) return null;
+  if (!storeRoomId && !isNewRoom) return <div className="flex-1 bg-background" />;
 
   const lastMessageId = lastMessage?.message?.id || messages[messages.length - 1]?.id || '';
   const unreadBoundaryIndex = showUnreadSeparator && initialNotReadCount > 0
@@ -169,6 +170,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
                         onSetNotice={handleSetNotice}
                         onDeleteMessage={deleteMessage}
                         onEditTag={handleOpenUpdateTag}
+                        onRetryMessage={retryTextMessage}
+                        onRemoveFailedMessage={removeFailedMessage}
                       />
                     </div>
                   ))}

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { apiGetSignupTerms, apiSignup } from '@/features/signup/api';
 import type { SignupTerm, SignupTermItem } from '@/features/signup/type';
-import { isApiError } from '@/shared/api';
+import { getErrorMessage } from '@/shared/api';
 import { parsePhoneParts } from '@/shared/utils/phone';
 import { useUIStore } from '@/store';
 
@@ -67,7 +67,7 @@ export function useSignupForm() {
       });
       setStep('COMPLETE');
     } catch (err) {
-      const msg = isApiError(err) ? err.message : '회원가입에 실패했습니다.';
+      const msg = getErrorMessage(err, '회원가입에 실패했습니다.');
       showSnackbar({ message: msg, state: 'error' });
     } finally {
       hideLoadingOverlay();
