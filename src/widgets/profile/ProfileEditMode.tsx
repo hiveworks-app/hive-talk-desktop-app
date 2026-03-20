@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useMyProfileUpdate, useMyProfileImageUpload } from '@/features/profile/queries';
-import { isApiError } from '@/shared/api';
+import { getErrorMessage } from '@/shared/api';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { useUIStore } from '@/store';
@@ -51,7 +51,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
     } catch (err) {
       setPreviewUrl(null);
       showSnackbar({
-        message: isApiError(err) ? err.message : '이미지 업로드에 실패했습니다.',
+        message: getErrorMessage(err, '이미지 업로드에 실패했습니다.'),
         state: 'error',
       });
     } finally {
@@ -84,7 +84,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
       onDone();
     } catch (err) {
       showSnackbar({
-        message: isApiError(err) ? err.message : '프로필 수정에 실패했습니다.',
+        message: getErrorMessage(err, '프로필 수정에 실패했습니다.'),
         state: 'error',
       });
     }

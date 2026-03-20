@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { apiEmailVerifications, apiEmailVerificationChecker, apiChangePassword } from '@/features/change-password/api';
-import { isApiError } from '@/shared/api';
+import { getErrorMessage } from '@/shared/api';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store';
@@ -29,7 +29,7 @@ export function useChangePassword() {
       showSnackbar({ message: '인증 코드가 이메일로 발송되었습니다.', state: 'success' });
       setStep('CODE');
     } catch (err) {
-      showSnackbar({ message: isApiError(err) ? err.message : '인증 코드 발송에 실패했습니다.', state: 'error' });
+      showSnackbar({ message: getErrorMessage(err, '인증 코드 발송에 실패했습니다.'), state: 'error' });
     } finally { setIsLoading(false); }
   };
 
@@ -42,7 +42,7 @@ export function useChangePassword() {
       showSnackbar({ message: '인증이 완료되었습니다.', state: 'success' });
       setStep('PASSWORD');
     } catch (err) {
-      showSnackbar({ message: isApiError(err) ? err.message : '인증번호가 올바르지 않습니다.', state: 'error' });
+      showSnackbar({ message: getErrorMessage(err, '인증번호가 올바르지 않습니다.'), state: 'error' });
     } finally { setIsLoading(false); }
   };
 
@@ -56,7 +56,7 @@ export function useChangePassword() {
       showSnackbar({ message: '비밀번호가 변경되었습니다.', state: 'success' });
       router.push('/settings');
     } catch (err) {
-      showSnackbar({ message: isApiError(err) ? err.message : '비밀번호 변경에 실패했습니다.', state: 'error' });
+      showSnackbar({ message: getErrorMessage(err, '비밀번호 변경에 실패했습니다.'), state: 'error' });
     } finally { setIsLoading(false); }
   };
 

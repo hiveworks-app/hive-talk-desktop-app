@@ -289,9 +289,21 @@ export const useChatRoomActions = () => {
 
       // 이전 전송이 pending queue에 남아있을 수 있으므로 먼저 제거 (중복 방지)
       removePendingPublish(content);
-      useChatRoomRuntimeStore
-        .getState()
-        .patchMessageById(messageId, { localStatus: "uploading" });
+
+      // 재시도: 현재 시간으로 갱신 + 메시지를 맨 아래로 이동
+      const now = new Date().toISOString();
+      useChatRoomRuntimeStore.setState((state) => ({
+        messages: [
+          ...state.messages.filter((m) => m.id !== messageId),
+          {
+            ...msg,
+            localStatus: "uploading" as const,
+            createdAt: now,
+            time: formatKoreanTime(now),
+            retryPayload: { content, tagList, roomId: effectiveRoomId },
+          },
+        ],
+      }));
       doSend(effectiveRoomId, content, tagList);
       startSendTimer(messageId);
     },

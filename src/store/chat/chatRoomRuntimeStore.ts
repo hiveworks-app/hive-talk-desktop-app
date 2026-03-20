@@ -103,7 +103,10 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
         const exists = state.messages.some(m => m.fileId === msg.fileId);
         if (exists) return state;
       }
-      return { messages: [...state.messages, msg] };
+      // 실패한 로컬 메시지를 항상 맨 아래로 유지
+      const failed = state.messages.filter(m => m.isLocal && m.localStatus === 'failed');
+      const rest = state.messages.filter(m => !(m.isLocal && m.localStatus === 'failed'));
+      return { messages: [...rest, msg, ...failed] };
     }),
   patchMessageByFileId: (fileId, partial) =>
     set(state => {

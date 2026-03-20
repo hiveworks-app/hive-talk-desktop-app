@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiDMCreate, apiGMCreate } from '@/features/create-chat-room/api';
 import { GMCreateRequestProps } from '@/features/create-chat-room/type';
-import { isApiError } from '@/shared/api';
+import { getErrorMessage } from '@/shared/api';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { useUIStore } from '@/store';
 
@@ -39,7 +39,7 @@ export const useCreateGM = () => {
     },
     onError: (err: unknown) => {
       showSnackbar({
-        message: isApiError(err) ? err.message : '채팅방 생성에 실패했습니다.',
+        message: getErrorMessage(err, '채팅방 생성에 실패했습니다.'),
         state: 'error',
       });
     },

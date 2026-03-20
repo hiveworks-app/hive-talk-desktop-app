@@ -44,6 +44,11 @@ export function isApiError<TPayload = unknown>(err: unknown): err is ApiError<TP
   return err instanceof ApiError;
 }
 
+/** API 에러면 서버 메시지, 아니면 fallback 메시지를 반환 */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  return isApiError(err) ? (err.message || fallback) : fallback;
+}
+
 async function rawRequest(path: string, options: RequestOptions = {}) {
   const { method = 'GET', body, headers = {}, signal } = options;
 
