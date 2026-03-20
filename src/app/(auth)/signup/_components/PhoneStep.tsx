@@ -66,6 +66,11 @@ export function PhoneStep({
   const handleNext = async () => {
     if (!canSubmit) return;
 
+    if (!navigator.onLine) {
+      setSendError('오프라인 상태에서는 사용할 수 없습니다.');
+      return;
+    }
+
     setIsVerifying(true);
     try {
       await apiVerifySms({ ...parsePhoneParts(phone), code: verificationCode });

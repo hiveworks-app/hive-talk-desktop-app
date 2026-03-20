@@ -76,6 +76,17 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       forceCloseRef.current = false;
       const reason = e.reason ?? '';
 
+      // 오프라인이면 토큰 갱신/재연결 시도 없이 online 이벤트에서 재연결
+      if (!navigator.onLine) {
+        const handleOnline = () => {
+          window.removeEventListener('online', handleOnline);
+          reconnectAttemptRef.current = 0;
+          connectWebSocketRef.current();
+        };
+        window.addEventListener('online', handleOnline);
+        return;
+      }
+
       if (reason.includes('401') || e.code === 1006) {
         try {
           const newTk = await refreshAccessToken();

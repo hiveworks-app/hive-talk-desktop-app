@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, createContext, useCallback, useContext, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
@@ -18,7 +18,7 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
 export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const router = useAppRouter();
   const routerRef = useRef(router);
   const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
   const loginUserId = useAuthStore(state => state.user)?.id;

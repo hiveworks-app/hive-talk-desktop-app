@@ -63,6 +63,11 @@ export async function request<TResponse>(
   options: RequestOptions = {},
 ): Promise<ApiResponse<TResponse>> {
   const { method = 'GET', body, headers = {}, signal } = options;
+
+  if (method !== 'GET' && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new ApiError({ status: 0, message: '오프라인 상태에서는 사용할 수 없습니다.' });
+  }
+
   const { accessToken } = useAuthStore.getState();
 
   const authHeaders =
@@ -139,6 +144,12 @@ export async function publicRequest<TResponse>(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiResponse<TResponse>> {
+  const { method = 'GET' } = options;
+
+  if (method !== 'GET' && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new ApiError({ status: 0, message: '오프라인 상태에서는 사용할 수 없습니다.' });
+  }
+
   const res = await rawRequest(path, options);
 
   if (!res.ok) {
@@ -158,6 +169,10 @@ export async function uploadToPresignedUrl(
   fileBody: Blob | ArrayBuffer,
   contentType: string,
 ) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('오프라인 상태에서는 사용할 수 없습니다.');
+  }
+
   const res = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': contentType },

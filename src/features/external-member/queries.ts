@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EXTERNAL_MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { isApiError } from '@/shared/api';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
 import {
@@ -36,8 +37,8 @@ export const useInviteExternalUser = () => {
       showSnackbar({ message: '초대를 보냈습니다.', state: 'success' });
       queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
     },
-    onError: () => {
-      showSnackbar({ message: '초대에 실패했습니다.', state: 'error' });
+    onError: (err: unknown) => {
+      showSnackbar({ message: isApiError(err) ? err.message : '초대에 실패했습니다.', state: 'error' });
     },
   });
 };
@@ -52,8 +53,8 @@ export const useCancelExternalInvite = () => {
       showSnackbar({ message: '초대를 취소했습니다.', state: 'success' });
       queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
     },
-    onError: () => {
-      showSnackbar({ message: '초대 취소에 실패했습니다.', state: 'error' });
+    onError: (err: unknown) => {
+      showSnackbar({ message: isApiError(err) ? err.message : '초대 취소에 실패했습니다.', state: 'error' });
     },
   });
 };

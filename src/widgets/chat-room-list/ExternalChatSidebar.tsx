@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiGetEMLastMessage } from '@/features/chat-room/api';
 import { useGetEMRoomList } from '@/features/chat-room-list/queries';
@@ -43,7 +44,7 @@ export function ExternalChatSidebar() {
 }
 
 function EMRoomItem({ room }: { room: GetChatRoomListItemType }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
   const { roomModel, messageList, notReadCount } = room;

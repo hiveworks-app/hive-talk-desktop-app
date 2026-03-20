@@ -16,6 +16,7 @@ import { formatKoreanTime } from "@/shared/utils/formatTimeUtils";
 import { useAppWebSocket } from "@/shared/websocket/WebSocketContext";
 import { useWebSocketMessageBuilder } from "@/shared/websocket/useWebSocketMessageBuilder";
 import { useAuthStore } from "@/store/auth/authStore";
+import { isOffline } from "@/shared/utils/offlineGuard";
 import { useChatRoomRuntimeStore } from "@/store/chat/chatRoomRuntimeStore";
 import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
 
@@ -358,6 +359,7 @@ export const useChatRoomActions = () => {
 
   const deleteMessage = useCallback(
     (messageId: string) => {
+      if (isOffline()) return;
       send(buildDeleteMessage({ messageId }));
     },
     [send, buildDeleteMessage],
@@ -365,6 +367,7 @@ export const useChatRoomActions = () => {
 
   const addTagToMessage = useCallback(
     (params: UpdateTagToMessageProps) => {
+      if (isOffline()) return;
       send(buildAddTagToMessage(params));
     },
     [send, buildAddTagToMessage],
@@ -372,6 +375,7 @@ export const useChatRoomActions = () => {
 
   const removeTagFromMessage = useCallback(
     (params: RemoveTagMessageProps) => {
+      if (isOffline()) return;
       useChatRoomRuntimeStore
         .getState()
         .setPendingRemoveTagMessageId(params.messageId);

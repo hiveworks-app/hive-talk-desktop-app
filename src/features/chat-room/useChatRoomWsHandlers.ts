@@ -2,7 +2,7 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { createWsMessageParser } from '@/features/chat-room/createWsMessageParser';
 import { ParticipantsManager } from '@/features/chat-room/domain';
@@ -44,7 +44,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     replaceLocalWithServer, participantsManager, recalculateAllMessagesNotReadCount, isMountedRef,
   } = params;
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const router = useAppRouter();
 
   const { handleFetchBeforeHistory, handleFetchAfterHistory, handleReadMessage } =
     useChatRoomWsFetchHandlers(params);

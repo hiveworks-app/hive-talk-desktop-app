@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useMyProfileUpdate, useMyProfileImageUpload } from '@/features/profile/queries';
+import { isApiError } from '@/shared/api';
+import { isOffline } from '@/shared/utils/offlineGuard';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { useUIStore } from '@/store';
 import type { AuthSaveUserInfoTypes } from '@/store/auth/authStore';
@@ -38,15 +40,20 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
       return;
     }
 
+    if (isOffline()) return;
+
     setPreviewUrl(URL.createObjectURL(file));
     showLoadingOverlay({ message: '이미지를 업로드하는 중...' });
 
     try {
       const result = await uploadImage({ file });
       setNewProfileKey(result.fileKey);
-    } catch {
+    } catch (err) {
       setPreviewUrl(null);
-      showSnackbar({ message: '이미지 업로드에 실패했습니다.', state: 'error' });
+      showSnackbar({
+        message: isApiError(err) ? err.message : '이미지 업로드에 실패했습니다.',
+        state: 'error',
+      });
     } finally {
       hideLoadingOverlay();
     }
@@ -58,21 +65,29 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
       return;
     }
 
+    if (isOffline()) return;
+
     const profileKey = newProfileKey ?? user.profileUrl ?? null;
     const thumbKey = newProfileKey ?? user.thumbnailProfileUrl ?? null;
 
-    await updateProfile({
-      name: name.trim(),
-      department: department.trim() || null,
-      job: job.trim() || null,
-      phoneHead: phoneHead.trim() || null,
-      phoneMid: phoneMid.trim() || null,
-      phoneTail: phoneTail.trim() || null,
-      profileUrl: profileKey,
-      thumbnailProfileUrl: thumbKey,
-    });
-
-    onDone();
+    try {
+      await updateProfile({
+        name: name.trim(),
+        department: department.trim() || null,
+        job: job.trim() || null,
+        phoneHead: phoneHead.trim() || null,
+        phoneMid: phoneMid.trim() || null,
+        phoneTail: phoneTail.trim() || null,
+        profileUrl: profileKey,
+        thumbnailProfileUrl: thumbKey,
+      });
+      onDone();
+    } catch (err) {
+      showSnackbar({
+        message: isApiError(err) ? err.message : '프로필 수정에 실패했습니다.',
+        state: 'error',
+      });
+    }
   };
 
   const avatarSrc = previewUrl ?? currentPresignedUrl;

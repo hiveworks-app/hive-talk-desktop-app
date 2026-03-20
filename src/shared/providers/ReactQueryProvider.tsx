@@ -1,6 +1,7 @@
 'use client';
 
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryClient } from '@tanstack/react-query';
+import { ApiError } from '@/shared/api';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { get, set, del } from 'idb-keyval';
@@ -32,12 +33,20 @@ export function ReactQueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        mutationCache: new MutationCache({
+          onMutate: () => {
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+              throw new ApiError({ status: 0, message: '오프라인 상태에서는 사용할 수 없습니다.' });
+            }
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60,
             gcTime: TWENTY_FOUR_HOURS,
             retry: 1,
             refetchOnWindowFocus: false,
+            networkMode: 'offlineFirst',
           },
         },
       }),

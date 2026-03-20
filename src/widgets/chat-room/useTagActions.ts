@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from 'react';
 import type { ChatMessageUI } from '@/shared/types/websocket';
+import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useSelectedTagStore, useTagStore } from '@/store/tag/tagStore';
@@ -33,6 +34,7 @@ export function useTagActions({
   }, [openAddMode]);
 
   const handleOpenUpdateTag = useCallback((message: ChatMessageUI) => {
+    if (isOffline()) return;
     openUpdateMode(message);
   }, [openUpdateMode]);
 

@@ -3,7 +3,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiUpdateMyProfile, apiUpdateMyProfileImage } from '@/features/profile/api';
 import { MyProfileImageUpdateResponsePayload } from '@/features/profile/type';
-import { uploadToPresignedUrl } from '@/shared/api';
+import { isApiError, uploadToPresignedUrl } from '@/shared/api';
 import { toStringSafe } from '@/shared/utils/utils';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -59,9 +59,9 @@ export const useMyProfileImageUpload = () => {
 
       return payload;
     },
-    onError: () => {
+    onError: (err: unknown) => {
       showSnackbar({
-        message: '프로필 이미지 수정 요청에 실패했습니다.',
+        message: isApiError(err) ? err.message : '프로필 이미지 수정 요청에 실패했습니다.',
         state: 'error',
       });
     },

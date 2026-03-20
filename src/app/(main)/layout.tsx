@@ -9,6 +9,7 @@ import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useAutoUpdate } from '@/shared/hooks/useAutoUpdate';
+import { OfflineBanner } from '@/shared/ui/OfflineBanner';
 
 const TAG_STALE_TIME = 1000 * 60 * 60 * 24; // 24시간
 
@@ -61,6 +62,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <WebSocketProvider>
       <div className="relative flex h-full overflow-hidden">
+        <OfflineBanner />
         {updateReady && (
           <div className="absolute right-0 bottom-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
             <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>

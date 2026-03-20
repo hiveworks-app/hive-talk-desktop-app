@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { del } from 'idb-keyval';
+import { isApiError } from '@/shared/api';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
 import { apiLogin, apiLogout } from './api';
@@ -25,9 +26,9 @@ export const useLogout = () => {
       logout();
       router.replace('/login');
     },
-    onError: () => {
+    onError: (err: unknown) => {
       showSnackbar({
-        message: '로그아웃에 실패했습니다. 다시 시도해주세요.',
+        message: isApiError(err) ? err.message : '로그아웃에 실패했습니다. 다시 시도해주세요.',
         state: 'error',
       });
     },

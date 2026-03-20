@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
 import { cn } from '@/shared/lib/cn';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -10,6 +10,7 @@ import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket
 import { IconChevronLeft, IconChevronRight, IconClose, IconImage, IconDescription, IconAdd, IconLogout } from '@/shared/ui/icons';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
+import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
 import { MediaTab } from './MediaTab';
 import { FilesTab } from './FilesTab';
@@ -26,7 +27,7 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId }: SidePanelProps) {
   const [view, setView] = useState<SidePanelView>('main');
-  const router = useRouter();
+  const router = useAppRouter();
   const { send } = useAppWebSocket();
   const { buildExitMessageRoom } = useWebSocketMessageBuilder({
     type: channelType,
@@ -58,6 +59,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
 
   const handleExitRoom = () => {
     if (!roomId) return;
+    if (isOffline()) return;
     if (!window.confirm('채팅방을 나가시겠습니까?')) return;
     send(buildExitMessageRoom({ channelIdOverride: roomId }));
     const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
