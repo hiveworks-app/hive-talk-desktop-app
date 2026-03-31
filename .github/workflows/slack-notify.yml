@@ -25,8 +25,10 @@ jobs:
           REPO_URL="https://github.com/${INPUT_REPO}"
 
           PROJECT_NAME="${INPUT_REPO##*/}"
+          EMOJI_NAME=$(echo "${PROJECT_NAME}" | cut -d'-' -f1,2 | tr -d '-')
+          DEVICE_EMOJI=":desktop_computer:"
           COMMITS=$(gh api "repos/${INPUT_REPO}/pulls/${INPUT_PR_NUMBER}/commits" --jq '.[].commit.message' | while IFS= read -r line; do echo "\n\t\t\t\t• $(echo "$line" | head -1)"; done | tr -d '\n')
-          TEXT=":partymerge: *${PROJECT_NAME}* | *PR MERGE* | <${REPO_URL}/pull/${INPUT_PR_NUMBER}|#${INPUT_PR_NUMBER} ${INPUT_PR_TITLE}>\n\t\t\t\t👤 ${INPUT_ACTOR}${COMMITS}"
+          TEXT=":${EMOJI_NAME}: ${DEVICE_EMOJI} *${PROJECT_NAME}* | *PR MERGE* | <${REPO_URL}/pull/${INPUT_PR_NUMBER}|#${INPUT_PR_NUMBER} ${INPUT_PR_TITLE}>\n\t\t\t\t👤 ${INPUT_ACTOR}${COMMITS}"
 
           {
             echo "text<<EOF"
