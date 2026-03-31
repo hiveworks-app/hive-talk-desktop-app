@@ -110,12 +110,12 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               <IconChevronRight size={16} className="text-text-tertiary" />
             </button>
             {previewMedia.length > 0 && (
-              <div className="flex gap-1.5 px-4 pb-3">
+              <div className="grid grid-cols-4 gap-2 px-4 pb-3">
                 {previewMedia.map(media => (
                   <button
                     key={media.id}
                     onClick={() => setView('media')}
-                    className="aspect-square flex-1 overflow-hidden rounded bg-gray-100"
+                    className="aspect-square overflow-hidden rounded bg-gray-100"
                   >
                     <img
                       src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}

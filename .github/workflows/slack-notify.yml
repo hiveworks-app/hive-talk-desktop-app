@@ -1,0 +1,46 @@
+name: Slack Notification
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Set notification message
+        id: message
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_PR_TITLE: ${{ github.event.pull_request.title }}
+          INPUT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_ACTOR: ${{ github.actor }}
+          INPUT_REPO: ${{ github.repository }}
+        run: |
+          REPO_URL="https://github.com/${INPUT_REPO}"
+
+          PROJECT_NAME="${INPUT_REPO##*/}"
+          COMMITS=$(gh api "repos/${INPUT_REPO}/pulls/${INPUT_PR_NUMBER}/commits" --jq '.[].commit.message' | while IFS= read -r line; do echo "\n\t\t\t\t• $(echo "$line" | head -1)"; done | tr -d '\n')
+          TEXT=":partymerge: *${PROJECT_NAME}* | *PR MERGE* | <${REPO_URL}/pull/${INPUT_PR_NUMBER}|#${INPUT_PR_NUMBER} ${INPUT_PR_TITLE}>\n\t\t\t\t👤 ${INPUT_ACTOR}${COMMITS}"
+
+          {
+            echo "text<<EOF"
+            echo "${TEXT}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send to Slack
+        if: steps.message.outputs.text != ''
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "${{ steps.message.outputs.text }}"
+            }
