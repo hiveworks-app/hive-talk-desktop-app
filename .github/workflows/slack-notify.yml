@@ -38,11 +38,11 @@ jobs:
 
       - name: Send to Slack
         if: steps.message.outputs.text != ''
-        uses: slackapi/slack-github-action@v2
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            {
-              "text": "${{ steps.message.outputs.text }}"
-            }
+        env:
+          SLACK_TEXT: ${{ steps.message.outputs.text }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          ESCAPED=$(echo "$SLACK_TEXT" | sed 's/"/\\"/g')
+          curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+            -H 'Content-type: application/json' \
+            -d "{\"text\": \"${ESCAPED}\"}"
