@@ -44,9 +44,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+<<<<<<< Updated upstream
 # AI/Tool auto-generated state
 .bkit/
 .claude/agent-memory/
 docs/.bkit-memory.json
 docs/.pdca-snapshots/
 docs/.pdca-status.json
+=======
+# docs (bkit/PDCA 로컬 문서 - 버전 관리 제외)
+/docs/
+>>>>>>> Stashed changes
