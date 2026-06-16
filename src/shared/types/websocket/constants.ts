@@ -12,6 +12,12 @@ export const WS_OPERATION = {
   ADD_TAG: 'ADD_TAG',
   REMOVE_TAG: 'REMOVE_TAG',
   EXIT_MESSAGE_ROOM: 'EXIT_MESSAGE_ROOM',
+  ACCOUNT: 'ACCOUNT', // 계정 관련 이벤트 (정지 등)
+} as const;
+
+/** 계정 이벤트 하위 타입 — socketResponseType의 channelType 슬롯에 실린다 */
+export const WS_ACCOUNT_EVENT = {
+  SUSPENDED: 'SUSPENDED',
 } as const;
 
 export const WS_CHNANNEL_URL_TYPE = {

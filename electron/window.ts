@@ -43,7 +43,7 @@ export function createWindow(
   // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
   // URL 필터를 사용하여 localhost 페이지/에셋 로딩에 영향을 주지 않음
   session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.treefrog.kr/*', '*://treefrog.kr/*', '*://*.ncloudstorage.com/*'] },
+    { urls: ['*://*.hiveworks.co.kr/*', '*://hiveworks.co.kr/*', '*://*.ncloudstorage.com/*'] },
     (details, callback) => {
       const headers = { ...details.responseHeaders };
 

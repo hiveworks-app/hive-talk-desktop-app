@@ -5,6 +5,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import { useAuthStore } from '@/store/auth/authStore';
 import { routeMessage } from './handlers/messageRouter';
+import { createHeartbeat, isPongMessage, type HeartbeatController } from './heartbeat';
 import type { Listener } from './type';
 
 interface WebSocketCoreConfig {
@@ -29,9 +30,18 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
   const isElectronRef = useRef(
     typeof window !== 'undefined' && !!(window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron,
   );
+  // 애플리케이션 레벨 하트비트: Cloudflare idle 끊김 방지 + 좀비 소켓 감지
+  const heartbeatRef = useRef<HeartbeatController | null>(null);
+  if (heartbeatRef.current === null) {
+    heartbeatRef.current = createHeartbeat({
+      // 죽은 연결 판정 → close()로 기존 onclose 재연결 경로(백오프/토큰갱신)에 태움
+      onDead: ws => { try { ws.close(); } catch { /* 이미 닫힘 */ } },
+    });
+  }
   const [isConnected, setIsConnected] = useState(false);
 
   const disconnectWebSocket = useCallback(() => {
+    heartbeatRef.current?.stop();
     const ws = wsRef.current;
     if (ws) { forceCloseRef.current = true; listenersRef.current = {}; ws.close(); }
     wsRef.current = null;
@@ -53,12 +63,21 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       wsRef.current = ws;
       reconnectAttemptRef.current = 0;
       setIsConnected(true);
+      heartbeatRef.current?.start(ws);
       pendingQueue.current.forEach(msg => ws.send(JSON.stringify(msg)));
       pendingQueue.current = [];
       isConnectingRef.current = false;
     };
 
     ws.onmessage = event => {
+      // 모든 인바운드는 생존 증거 — PONG 대기 해제 (PING/PONG 생존 판정의 기준)
+      heartbeatRef.current?.notifyInbound();
+
+      // PONG은 생존 신호 역할만 하므로 라우팅 등 후속 처리를 생략
+      let parsed: unknown = null;
+      try { parsed = JSON.parse(event.data); } catch { /* 비 JSON은 그대로 라우팅 */ }
+      if (isPongMessage(parsed)) return;
+
       routeMessage(event.data, {
         queryClient, listenersRef, processedReadEventsRef, pendingReadCallbacksRef,
         sendRef, isElectronRef, buildSubscribeMessage,
@@ -69,6 +88,7 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
     ws.onerror = (err) => { console.warn('[WS] ⚠️ 연결 실패:', err); isConnectingRef.current = false; };
 
     ws.onclose = async e => {
+      heartbeatRef.current?.stop();
       wsRef.current = null;
       setIsConnected(false);
       isConnectingRef.current = false;

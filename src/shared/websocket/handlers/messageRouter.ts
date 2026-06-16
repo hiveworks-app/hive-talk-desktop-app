@@ -8,6 +8,7 @@ import {
   isAddTagBroadcast,
   isRemoveTagBroadcast,
   isExitMessageRoomBroadcast,
+  isBroadcastAccountSuspended,
   parseSocketResponseType,
 } from '@/shared/types/websocket';
 import type { MessageHandlerDeps } from './types';
@@ -20,6 +21,7 @@ import {
   handleRemoveTag,
   handleExitRoom,
 } from './handleOther';
+import { handleAccountSuspended } from './handleAccountSuspended';
 
 export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   let envelope: WebSocketEnvelope;
@@ -40,6 +42,12 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
     globalChannelType =
       channelType ||
       (parseSocketResponseType(envelope.socketResponseType)?.channelType as WebSocketChannelTypes | undefined);
+  }
+
+  // 🚫 실시간 계정 정지 — 본인이면 강제 로그아웃 (최우선 처리)
+  if (isBroadcastAccountSuspended(envelope)) {
+    handleAccountSuspended(envelope, deps);
+    return;
   }
 
   if (isRoomInvite(envelope)) {
