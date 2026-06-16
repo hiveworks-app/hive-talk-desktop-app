@@ -17,3 +17,6 @@ export const MAX_IMAGES_PER_MESSAGE = 30;
 export const IMAGE_UPLOAD_CONCURRENCY = 4;
 
 export const IS_DELETE_MESSAGE_COMMENTS = '삭제된 메시지입니다.';
+
+// 신고 카테고리 캐시 유지 시간 (운영 중 변경이 드물어 1시간)
+export const REPORT_CATEGORIES_STALE_TIME_MS = 60 * 60 * 1000;
