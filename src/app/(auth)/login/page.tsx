@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AccountSuspendedDialog } from "@/shared/ui/AccountSuspendedDialog";
+import { consumePendingSuspendedNotice, type PendingSuspendedNotice } from "@/shared/utils/pendingSuspendedNotice";
 import { useLoginForm } from "@/features/auth/useLoginForm";
 import { Button } from "@/shared/ui/Button";
 import { Checkbox } from "@/shared/ui/Checkbox";
@@ -25,6 +28,16 @@ export default function LoginPage() {
   } = useLoginForm();
 
   const preventBlur = (e: React.MouseEvent) => e.preventDefault();
+
+  // 실시간 계정 정지로 강제 로그아웃된 경우, 로그인 화면 진입 시 정지 안내 1회 표시.
+  // localStorage는 클라이언트 전용이라 SSR/렌더가 아닌 마운트 후 effect에서 동기화한다
+  // (렌더 중 읽으면 server=null / client=notice 로 hydration 불일치 발생).
+  const [pendingNotice, setPendingNotice] = useState<PendingSuspendedNotice | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 클라이언트 전용 1회 동기화 (hydration 불일치 방지 위해 effect 사용)
+    setPendingNotice(consumePendingSuspendedNotice());
+  }, []);
 
   if (accessToken && !isProcessing) return null;
 
@@ -122,6 +135,12 @@ export default function LoginPage() {
           계정정보를 잊어버렸어요
         </Link>
       </div>
+
+      <AccountSuspendedDialog
+        open={pendingNotice !== null}
+        info={pendingNotice?.info ?? null}
+        onClose={() => setPendingNotice(null)}
+      />
     </div>
   );
 }

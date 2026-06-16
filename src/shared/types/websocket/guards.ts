@@ -1,5 +1,5 @@
 import type { TagListType } from '../tag';
-import { WS_OPERATION, WS_RESPONSE_TYPE, WS_MESSAGE_CONTENT_TYPE } from './constants';
+import { WS_OPERATION, WS_RESPONSE_TYPE, WS_MESSAGE_CONTENT_TYPE, WS_ACCOUNT_EVENT } from './constants';
 import type { SocketResponseTypeMeta, WebSocketOperationTypes, WebSocketChannelTypes } from './constants';
 import type { WebSocketReceiveMessageProps, WebSocketMediaFileMessage } from './message';
 import type {
@@ -14,6 +14,7 @@ import type {
   WebSocketChatRoomExitPayload,
   WebSocketPublishItem,
 } from './envelope';
+import type { AccountSuspendedBroadcastPayload } from '../account';
 
 export const parseSocketResponseType = (v: unknown): SocketResponseTypeMeta | null => {
   if (typeof v !== 'string') return null;
@@ -184,4 +185,18 @@ export function isExitMessageRoomBroadcast(
   const meta = getSocketMeta(data);
   if (!meta || meta.responseType !== WS_RESPONSE_TYPE.BROADCAST) return false;
   return meta.operationType === WS_OPERATION.EXIT_MESSAGE_ROOM;
+}
+
+// 🎲 BROADCAST ACCOUNT/SUSPENDED (실시간 계정 정지) 판별
+export function isBroadcastAccountSuspended(
+  data: WebSocketEnvelope,
+): data is WebSocketBroadcastProps<AccountSuspendedBroadcastPayload> {
+  const meta = getSocketMeta(data);
+  if (!meta || meta.responseType !== WS_RESPONSE_TYPE.BROADCAST) return false;
+  if (meta.operationType !== WS_OPERATION.ACCOUNT) return false;
+  // channelType 슬롯에 SUSPENDED가 실린다 (chat 채널 타입과 무관한 값이라 string 비교)
+  if ((meta.channelType as string | undefined) !== WS_ACCOUNT_EVENT.SUSPENDED) return false;
+
+  const res = data.response as WebSocketReceiveBroadCastResponseProps<unknown>;
+  return typeof res.payload === 'object' && res.payload !== null;
 }
