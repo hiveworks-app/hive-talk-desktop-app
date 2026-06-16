@@ -2,6 +2,9 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getSidePanelBeforeFileQuery } from '@/features/chat-room-side-panel/queries';
+import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
+import { IconDownload } from '@/shared/ui/icons';
+import { Spinner } from '@/shared/ui/Spinner';
 import type { MediaListType } from '@/shared/types/media';
 import type { WebSocketChannelTypes } from '@/shared/types/websocket';
 
@@ -15,6 +18,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery(
     getSidePanelBeforeFileQuery(roomId, lastMessageId, channelType),
   );
+  const { download, downloadingId } = useFileDownload();
 
   const allFiles: MediaListType[] = data?.pages.flat() ?? [];
 
@@ -30,12 +34,10 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
     <div className="py-1">
       {allFiles.map(file => {
         const fileName = file.path.split('/').pop() || '파일';
+        const isDownloading = downloadingId === file.id;
         return (
-          <a
+          <div
             key={file.id}
-            href={file.presignedUrl || file.path}
-            target="_blank"
-            rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 text-sub-sm text-text-tertiary">
@@ -46,11 +48,20 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sub text-text-primary">{fileName}</div>
-              <div className="text-sub-sm text-text-tertiary">
-                {file.author} · {file.fileSize ? `${(file.fileSize / 1024).toFixed(1)}KB` : ''}
+              <div className="truncate text-sub-sm text-text-tertiary">
+                {file.author}{file.fileSize ? ` · ${(file.fileSize / 1024).toFixed(1)}KB` : ''}
               </div>
             </div>
-          </a>
+            <button
+              type="button"
+              onClick={() => download(file.id, file.presignedUrl ?? file.path, fileName)}
+              disabled={isDownloading}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-gray-100 hover:text-primary disabled:opacity-50"
+              aria-label="다운로드"
+            >
+              {isDownloading ? <Spinner /> : <IconDownload size={16} />}
+            </button>
+          </div>
         );
       })}
       {hasNextPage && (
