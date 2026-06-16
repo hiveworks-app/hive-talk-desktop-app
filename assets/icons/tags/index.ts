@@ -1,0 +1,21 @@
+// Tag Icons (다중 색상 아이콘 - process-icons 제외 대상)
+export { default as TagWorkDelay } from './work-delay.svg';
+export { default as TagShortage } from './shortage.svg';
+export { default as TagWrongInput } from './wrong-input.svg';
+export { default as TagReceivingDelay } from './receiving-delay.svg';
+export { default as TagDowntime } from './downtime.svg';
+export { default as TagEquipmentStop } from './equipment-stop.svg';
+export { default as TagMold } from './mold.svg';
+export { default as TagEquipmentFailure } from './equipment-failure.svg';
+export { default as TagManpowerShortage } from './manpower-shortage.svg';
+export { default as TagDefect } from './defect.svg';
+export { default as TagNonconformity } from './nonconformity.svg';
+export { default as TagInspectionIssue } from './inspection-issue.svg';
+export { default as TagRework } from './rework.svg';
+export { default as TagPlanChange } from './plan-change.svg';
+export { default as TagInfoMismatch } from './info-mismatch.svg';
+export { default as TagVendorIssue } from './vendor-issue.svg';
+export { default as TagCustomerIssue } from './customer-issue.svg';
+export { default as TagImprovementNeeded } from './improvement-needed.svg';
+export { default as TagClaim } from './claim.svg';
+export { default as TagDisposal } from './disposal.svg';

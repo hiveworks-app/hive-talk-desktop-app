@@ -1,205 +1,41 @@
-// Basic Icons
-export { default as IconAddFilled } from './add-filled.svg';
-export { default as IconAdd } from './add.svg';
+// Arrow Back
+export { default as IconArrowBack } from './arrow_back.svg';
 
-export { default as IconCheckFilled } from './check-filled.svg';
-export { default as IconCheck } from './check.svg';
+// Arrow Down
+export { default as IconArrowDown } from './arrow-down.svg';
 
-export { default as IconCameraFilled } from './camera-filled.svg';
-export { default as IconCamera } from './camera.svg';
+// Calender
+export { default as IconCalender } from './calender.svg';
 
-export { default as IconDeleteFilled } from './delete-filled.svg';
-export { default as IconDelete } from './delete.svg';
-
-export { default as IconCloseFilled } from './close-filled.svg';
-export { default as IconClose } from './close.svg';
-
-export { default as IconCloseCircleFilled } from './close-circle-filled.svg';
-export { default as IconCloseCircle } from './close-circle.svg';
-
-// Arrow Icons
-export { default as IconArrowSDownFilled } from './arrow-s-down-filled.svg';
-export { default as IconArrowSDown } from './arrow-s-down.svg';
-
-export { default as IconArrowSUpFilled } from './arrow-s-up-filled.svg';
-export { default as IconArrowSUp } from './arrow-s-up.svg';
-
-export { default as IconArrowSLeftFilled } from './arrow-s-left-filled.svg';
-export { default as IconArrowSLeft } from './arrow-s-left.svg';
-
-export { default as IconArrowSRightFilled } from './arrow-s-right-filled.svg';
-export { default as IconArrowSRight } from './arrow-s-right.svg';
-
-export { default as IconArrowUpFilled } from './arrow-up-filled.svg';
-export { default as IconArrowUp } from './arrow-up.svg';
+// Chat Scroll Bottom
+export { default as IconChatScrollBottom } from './chat-scroll-bottom.svg';
 
 // Communication Icons
 export { default as IconChatFilled } from './chat-filled.svg';
-export { default as IconChat } from './chat.svg';
-
-export { default as IconGroupChatFilled } from './group-chat-filled.svg';
-export { default as IconGroupChat } from './group-chat.svg';
-
-export { default as IconChatNewFilled } from './chat-new-filled.svg';
-export { default as IconChatNew } from './chat-new.svg';
-
-export { default as IconPhoneFilled } from './phone-filled.svg';
-export { default as IconPhone } from './phone.svg';
-
-export { default as IconVidiconFilled } from './vidicon-filled.svg';
-export { default as IconVidicon } from './vidicon.svg';
-
-export { default as IconVideoAddFilled } from './video-add-filled.svg';
-export { default as IconVideoAdd } from './video-add.svg';
-
-// User & Profile Icons
-export { default as IconUserFilled } from './user-filled.svg';
-export { default as IconUser } from './user.svg';
-
-export { default as IconUserAddFilled } from './user-add-filled.svg';
-export { default as IconUserAdd } from './user-add.svg';
-
-// Navigation Icons
-export { default as IconHomeFilled } from './home-filled.svg';
-export { default as IconHome } from './home.svg';
-
-export { default as IconSearchFilled } from './search-filled.svg';
-export { default as IconSearch } from './search.svg';
-
-export { default as IconSettingsFilled } from './settings-filled.svg';
-export { default as IconSettings } from './settings.svg';
-
-export { default as IconNotificationFilled } from './notification-filled.svg';
-export { default as IconNotification } from './notification.svg';
-
-// Media Icons
-export { default as IconPlayFilled } from './play-filled.svg';
-export { default as IconPlay } from './play.svg';
-
-export { default as IconPauseFilled } from './pause-filled.svg';
-export { default as IconPause } from './pause.svg';
-
-export { default as IconStopFilled } from './stop-filled.svg';
-export { default as IconStop } from './stop.svg';
-
-export { default as IconVolumeUpFilled } from './volume-up-filled.svg';
-export { default as IconVolumeUp } from './volume-up.svg';
-
-export { default as IconVolumeDownFilled } from './volume-down-filled.svg';
-export { default as IconVolumeDown } from './volume-down.svg';
-
-export { default as IconVolumeMuteFilled } from './volume-mute-filled.svg';
-export { default as IconVolumeMute } from './volume-mute.svg';
-
-export { default as IconMusicFilled } from './music-filled.svg';
-export { default as IconMusic } from './music.svg';
-
-export { default as IconRhythmFilled } from './rhythm-filled.svg';
-export { default as IconRhythm } from './rhythm.svg';
 
 // Action Icons
-export { default as IconBookmarkFilled } from './bookmark-filled.svg';
-export { default as IconBookmark } from './bookmark.svg';
-
+export { default as IconDeleteFilled } from './delete-filled.svg';
+export { default as IconStarEmpty } from './star-empty.svg';
 export { default as IconStarFilled } from './star-filled.svg';
-export { default as IconStar } from './star.svg';
 
-export { default as IconStarHalfFilled } from './star-half-filled.svg';
-export { default as IconStarHalf } from './star-half.svg';
-
-export { default as IconHeartFilled } from './heart-filled.svg';
-export { default as IconHeart } from './heart.svg';
-
-export { default as IconThumbUpFilled } from './thumb-up-filled.svg';
-export { default as IconThumbUp } from './thumb-up.svg';
-
-export { default as IconUploadFilled } from './upload-filled.svg';
-export { default as IconUpload } from './upload.svg';
-
-export { default as IconDownloadFilled } from './download-filled.svg';
-export { default as IconDownload } from './download.svg';
-
-export { default as IconShareBoxFilled } from './share-box-filled.svg';
-export { default as IconShareBox } from './share-box.svg';
-
-// Utility Icons
-export { default as IconMoreFilled } from './more-filled.svg';
-export { default as IconMore } from './more.svg';
-
-export { default as IconMore2Filled } from './more-2-filled.svg';
-export { default as IconMore2 } from './more-2.svg';
-
-export { default as IconRefreshFilled } from './refresh-filled.svg';
-export { default as IconRefresh } from './refresh.svg';
-
-export { default as IconRestartFilled } from './restart-filled.svg';
-export { default as IconRestart } from './restart.svg';
-
-export { default as IconTimeFilled } from './time-filled.svg';
-export { default as IconTime } from './time.svg';
-
-export { default as IconWifiFilled } from './wifi-filled.svg';
-export { default as IconWifi } from './wifi.svg';
-
-export { default as IconQrScanFilled } from './qr-scan-filled.svg';
-export { default as IconQrScan } from './qr-scan.svg';
-
-export { default as IconMicFilled } from './mic-filled.svg';
-export { default as IconMic } from './mic.svg';
-
-export { default as IconEyeFilled } from './eye-filled.svg';
-export { default as IconEye } from './eye.svg';
-
-export { default as IconEyeOffFilled } from './eye-off-filled.svg';
-export { default as IconEyeOff } from './eye-off.svg';
+// Navigation Icons
+export { default as IconSettingsFilled } from './settings-filled.svg';
 
 // Status Icons
-export { default as IconInformationFilled } from './information-filled.svg';
-export { default as IconInformation } from './information.svg';
-
-export { default as IconErrorWarningFilled } from './error-warning-filled.svg';
 export { default as IconErrorWarning } from './error-warning.svg';
 
-export { default as IconCheckboxBlankCircleFilled } from './checkbox-blank-circle-filled.svg';
-export { default as IconCheckboxBlankCircle } from './checkbox-blank-circle.svg';
-
-export { default as IconIndeterminateCircleFilled } from './indeterminate-circle-filled.svg';
-export { default as IconIndeterminateCircle } from './indeterminate-circle.svg';
-
-// Display Icons
-export { default as IconFullscreenFilled } from './fullscreen-filled.svg';
-export { default as IconFullscreen } from './fullscreen.svg';
-
-export { default as IconFullscreenExitFilled } from './fullscreen-exit-filled.svg';
-export { default as IconFullscreenExit } from './fullscreen-exit.svg';
-
-// Business Icons
-export { default as IconWalletFilled } from './wallet-filled.svg';
-export { default as IconWallet } from './wallet.svg';
-
-export { default as IconShoppingBagFilled } from './shopping-bag-filled.svg';
-export { default as IconShoppingBag } from './shopping-bag.svg';
-
-// File Icons
-export { default as IconFileListFilled } from './file-list-filled.svg';
-export { default as IconFileList } from './file-list.svg';
-
-// List Icons
-export { default as IconListSettingsFilled } from './list-settings-filled.svg';
-export { default as IconListSettings } from './list-settings.svg';
-
-// Emotion Icons
-export { default as IconEmotionHappyFilled } from './emotion-happy-filled.svg';
-export { default as IconEmotionHappy } from './emotion-happy.svg';
+// Utility Icons
+export { default as IconCircleClose } from './circle-close.svg';
+export { default as IconCloseStroke } from './close-stroke.svg';
 
 // Chats Tail Icons
 export { default as IconBubbleMe } from './bubble-me.svg';
 export { default as IconBubbleYou } from './bubble-you.svg';
 
 // Members Header Icons
-export { default as IconAddMemberDefault } from './add-member-default.svg';
 export { default as IconSearchDefault } from './search-default.svg';
-export { default as IconSettingDefault } from './setting-default.svg';
+export { default as IconAddMemberDefault } from './static/add-member-default.svg';
+export { default as IconFindFile } from './static/find-file.svg';
 
 // Bottom Navigation Icons
 export { default as IconBottomChatDefault } from './bottom-chat-default.svg';
@@ -210,127 +46,101 @@ export { default as IconBottomSettingDefault } from './bottom-setting-default.sv
 // Arrow Right
 export { default as IconArrowRightDefault } from './arrow-right-default.svg';
 
-// Icon type for all available icons
-export type IconName =
-  | 'IconAdd'
-  | 'IconAddFilled'
-  | 'IconCheck'
-  | 'IconCheckFilled'
-  | 'IconCamera'
-  | 'IconCameraFilled'
-  | 'IconDelete'
-  | 'IconDeleteFilled'
-  | 'IconClose'
-  | 'IconCloseFilled'
-  | 'IconCloseCircle'
-  | 'IconCloseCircleFilled'
-  | 'IconArrowSDown'
-  | 'IconArrowSDownFilled'
-  | 'IconArrowSUp'
-  | 'IconArrowSUpFilled'
-  | 'IconArrowSLeft'
-  | 'IconArrowSLeftFilled'
-  | 'IconArrowSRight'
-  | 'IconArrowSRightFilled'
-  | 'IconArrowUp'
-  | 'IconArrowUpFilled'
-  | 'IconChat'
-  | 'IconChatFilled'
-  | 'IconGroupChat'
-  | 'IconGroupChatFilled'
-  | 'IconChatNew'
-  | 'IconChatNewFilled'
-  | 'IconPhone'
-  | 'IconPhoneFilled'
-  | 'IconVidicon'
-  | 'IconVidiconFilled'
-  | 'IconVideoAdd'
-  | 'IconVideoAddFilled'
-  | 'IconUser'
-  | 'IconUserFilled'
-  | 'IconUserAdd'
-  | 'IconUserAddFilled'
-  | 'IconHome'
-  | 'IconHomeFilled'
-  | 'IconSearch'
-  | 'IconSearchFilled'
-  | 'IconSettings'
-  | 'IconSettingsFilled'
-  | 'IconNotification'
-  | 'IconNotificationFilled'
-  | 'IconPlay'
-  | 'IconPlayFilled'
-  | 'IconPause'
-  | 'IconPauseFilled'
-  | 'IconStop'
-  | 'IconStopFilled'
-  | 'IconVolumeUp'
-  | 'IconVolumeUpFilled'
-  | 'IconVolumeDown'
-  | 'IconVolumeDownFilled'
-  | 'IconVolumeMute'
-  | 'IconVolumeMuteFilled'
-  | 'IconMusic'
-  | 'IconMusicFilled'
-  | 'IconRhythm'
-  | 'IconRhythmFilled'
-  | 'IconBookmark'
-  | 'IconBookmarkFilled'
-  | 'IconStar'
-  | 'IconStarFilled'
-  | 'IconStarHalf'
-  | 'IconStarHalfFilled'
-  | 'IconHeart'
-  | 'IconHeartFilled'
-  | 'IconThumbUp'
-  | 'IconThumbUpFilled'
-  | 'IconUpload'
-  | 'IconUploadFilled'
-  | 'IconDownload'
-  | 'IconDownloadFilled'
-  | 'IconShareBox'
-  | 'IconShareBoxFilled'
-  | 'IconMore'
-  | 'IconMoreFilled'
-  | 'IconMore2'
-  | 'IconMore2Filled'
-  | 'IconRefresh'
-  | 'IconRefreshFilled'
-  | 'IconRestart'
-  | 'IconRestartFilled'
-  | 'IconTime'
-  | 'IconTimeFilled'
-  | 'IconWifi'
-  | 'IconWifiFilled'
-  | 'IconQrScan'
-  | 'IconQrScanFilled'
-  | 'IconMic'
-  | 'IconMicFilled'
-  | 'IconEye'
-  | 'IconEyeFilled'
-  | 'IconEyeOff'
-  | 'IconEyeOffFilled'
-  | 'IconInformation'
-  | 'IconInformationFilled'
-  | 'IconErrorWarning'
-  | 'IconErrorWarningFilled'
-  | 'IconCheckboxBlankCircle'
-  | 'IconCheckboxBlankCircleFilled'
-  | 'IconIndeterminateCircle'
-  | 'IconIndeterminateCircleFilled'
-  | 'IconFullscreen'
-  | 'IconFullscreenFilled'
-  | 'IconFullscreenExit'
-  | 'IconFullscreenExitFilled'
-  | 'IconWallet'
-  | 'IconWalletFilled'
-  | 'IconShoppingBag'
-  | 'IconShoppingBagFilled'
-  | 'IconFileList'
-  | 'IconFileListFilled'
-  | 'IconListSettings'
-  | 'IconListSettingsFilled'
-  | 'IconEmotionHappy'
-  | 'IconEmotionHappyFilled'
-  | 'IconBubbleMe'
-  | 'IconBubbleYou';
+// Loading Indicator
+export { default as IconLoadingIndicator } from './loading-indicator.svg';
+
+// Envelope
+export { default as IconEnvelope } from './envelope.svg';
+
+// Drag Handle
+export { default as IconDragHandle } from './drag-handle.svg';
+
+// Linked Default
+export { default as IconLinkedDefault } from './linked-default.svg';
+
+// Topbar Menu
+export { default as IconTopbarMenu } from './topbar-menu.svg';
+
+// External Symbol
+export { default as IconExternalSymbol } from './external-symbol.svg';
+
+// Non-member (협력멤버 미등록 — 친구 아니고 같은 회사도 아닌 외부인)
+export { default as IconNonMember } from './non-member.svg';
+
+// Create Chat Room
+export { default as IconCreateChatFilled } from './create-chat-filled.svg';
+
+// Setting Default
+export { default as IconSettingDefault } from './setting-default.svg';
+
+// Tag Icons
+export { default as IconRecentWorkTagDefault } from './recent-work-tag-default.svg';
+export * from './tags';
+
+// Circle Plus
+export { default as IconCirclePlus } from './static/circle-plus.svg';
+
+// Chat Room Bottom Icons
+export { default as IconHamburgerButton } from './hambuger-button.svg';
+export { default as IconPlus } from './plus.svg';
+export { default as IconSend } from './send.svg';
+export { default as IconTag } from './tag.svg';
+
+// Option Icons
+export { default as IconDefaultCamera } from './chat-room-bottom-camera.svg';
+export { default as IconDownload } from './download.svg';
+export { default as IconDropDown } from './drop-down.svg';
+export { default as IconFileDefault } from './file-default.svg';
+export { default as IconOptionCopy } from './option-copy-stroke.svg';
+export { default as IconOptionDelete } from './option-delete-stroke.svg';
+export { default as IconOptionNotice } from './option-notice-stroke.svg';
+export { default as IconPreviewDefault } from './preview-default.svg';
+export { default as IconFileExcel } from './static/file-excel.svg';
+export { default as IconFileHangul } from './static/file-hangul.svg';
+export { default as IconFilePdf } from './static/file-pdf.svg';
+export { default as IconFilePpt } from './static/file-ppt.svg';
+export { default as IconFileWord } from './static/file-word.svg';
+export { default as IconNoticeDefault } from './static/notice-default.svg';
+export { default as IconNoticeNew } from './static/notice-new.svg';
+
+// Check
+export { default as IconCheck } from './check.svg';
+
+// Bundle Image (묶음 사진 표시)
+export { default as IconBundleImage } from './bundle-image.svg';
+
+// Leave
+export { default as IconLeave } from './leave.svg';
+
+// Edit
+export { default as IconEdit } from './edit.svg';
+export { default as IconPencil } from './pencil.svg';
+
+// Upload Image (이미지 placeholder — 채팅 업로드 오버레이 / 보관함 사진 메뉴 등)
+export { default as IconUploadImage } from './upload-image.svg';
+
+// Video
+export { default as IconCirclePlay } from './static/circle-play.svg';
+
+// Flash
+export { default as IconFlashOff } from './flash-off.svg';
+export { default as IconFlashOn } from './flash-on.svg';
+
+// Camera Rotation
+export { default as IconCameraRotation } from './camera-rotation.svg';
+
+// Account Info / Account Detail
+export { default as IconAccountCardProfile } from './static/hivetalk-account-card-profile.svg';
+export { default as IconAccountCardSafety } from './static/hivetalk-account-card-safety.svg';
+export { default as IconAccountVerifiedCheck } from './static/hivetalk-account-verified-check.svg';
+
+// password
+export { default as IconPasswordVisibilityOff } from './password-visibility-off.svg';
+export { default as IconPasswordVisibilityOn } from './password-visibility-on.svg';
+
+// Message delete
+export { default as IconMessageDelete } from './message-delete.svg';
+export { default as IconMessageResend } from './message-resend.svg';
+
+// 신고
+export { default as IconSirenDefault } from './siren-default.svg';
