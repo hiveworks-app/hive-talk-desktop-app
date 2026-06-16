@@ -27,6 +27,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
   const [phoneTail, setPhoneTail] = useState(user.phoneTail ?? '');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [newProfileKey, setNewProfileKey] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const { data: currentPresignedUrl } = usePresignedUrl(user.profileUrl);
 
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -42,6 +43,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
 
     if (isOffline()) return;
 
+    setRemoveImage(false);
     setPreviewUrl(URL.createObjectURL(file));
     showLoadingOverlay({ message: '이미지를 업로드하는 중...' });
 
@@ -59,6 +61,13 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
     }
   };
 
+  // 기본 이미지로 변경 — 저장 시 profileUrl/thumbnail을 null로 명시 전송한다.
+  const handleUseDefault = () => {
+    setPreviewUrl(null);
+    setNewProfileKey(null);
+    setRemoveImage(true);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       showSnackbar({ message: '이름을 입력해주세요.', state: 'error' });
@@ -67,8 +76,8 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
 
     if (isOffline()) return;
 
-    const profileKey = newProfileKey ?? user.profileUrl ?? null;
-    const thumbKey = newProfileKey ?? user.thumbnailProfileUrl ?? null;
+    const profileKey = removeImage ? null : (newProfileKey ?? user.profileUrl ?? null);
+    const thumbKey = removeImage ? null : (newProfileKey ?? user.thumbnailProfileUrl ?? null);
 
     try {
       await updateProfile({
@@ -90,7 +99,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
     }
   };
 
-  const avatarSrc = previewUrl ?? currentPresignedUrl;
+  const avatarSrc = removeImage ? null : (previewUrl ?? currentPresignedUrl);
 
   return (
     <div className="p-5">
@@ -119,6 +128,15 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
             onChange={handleImageChange}
           />
         </button>
+        {avatarSrc && (
+          <button
+            type="button"
+            onClick={handleUseDefault}
+            className="text-sub-sm text-text-tertiary transition-colors hover:text-text-secondary hover:underline"
+          >
+            기본 이미지로 변경
+          </button>
+        )}
       </div>
 
       {/* 입력 필드 */}
