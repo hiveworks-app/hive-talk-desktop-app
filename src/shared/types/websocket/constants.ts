@@ -8,6 +8,8 @@ export const WS_OPERATION = {
   FETCH_MESSAGE_BEFORE: 'FETCH_MESSAGE_BEFORE',
   PUB: 'PUB',
   DELETE_MESSAGE: 'DELETE_MESSAGE',
+  REPORTED: 'REPORTED', // 신고 접수된 메시지 마스킹 (신고자 본인 접속 기기 전체)
+  REPORT_HIDDEN: 'REPORT_HIDDEN', // 신고 확정(운영 숨김) — 방 참여자 전체 시스템 안내 대체
   READ_MESSAGE: 'READ_MESSAGE',
   ADD_TAG: 'ADD_TAG',
   REMOVE_TAG: 'REMOVE_TAG',
@@ -44,6 +46,7 @@ export const WS_MESSAGE_CONTENT_TYPE = {
   FILE: 'FILE',
   SUBMIT_INVITE: 'SUBMIT_INVITE',
   SUBMIT_EXIT: 'SUBMIT_EXIT',
+  SYSTEM_REPORTED: 'SYSTEM_REPORTED', // 신고 확정 시 메시지를 대체하는 시스템 안내
 } as const;
 
 export type WebSocketOperationTypes = (typeof WS_OPERATION)[keyof typeof WS_OPERATION];

@@ -53,3 +53,7 @@ export type WebSocketHistoryPayload = WebSocketPublishItem[];
 export type WebSocketSingleMessagePayload = WebSocketPublishItem;
 export type WebSocketReadMessagePayload = { items: WebSocketReceiveReadItemProps[] };
 export type WebSocketChatRoomExitPayload = { roomId: string; userId: string };
+/** REPORTED(신고 접수 마스킹) broadcast payload — content는 마스킹 대체 문구 */
+export type WebSocketReportedMessagePayload = { roomId: string; messageId: string; content: string };
+/** REPORT_HIDDEN(신고 확정 숨김) broadcast payload — content는 시스템 안내 문구 */
+export type WebSocketReportHiddenPayload = { roomId: string; messageId: string; messageContentType: string; content: string };
