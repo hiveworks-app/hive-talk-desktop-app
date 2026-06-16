@@ -3,7 +3,7 @@
 import { cn } from '@/shared/lib/cn';
 import { IconClose } from '@/shared/ui/icons';
 import IconSearchDefault from '@assets/icons/search-default.svg';
-import IconAddMemberDefault from '@assets/icons/add-member-default.svg';
+import IconAddMemberDefault from '@assets/icons/static/add-member-default.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
