@@ -9,6 +9,7 @@ import {
   isRemoveTagBroadcast,
   isExitMessageRoomBroadcast,
   isBroadcastAccountSuspended,
+  isBroadcastProfileUpdated,
   parseSocketResponseType,
 } from '@/shared/types/websocket';
 import type { MessageHandlerDeps } from './types';
@@ -22,6 +23,7 @@ import {
   handleExitRoom,
 } from './handleOther';
 import { handleAccountSuspended } from './handleAccountSuspended';
+import { handleProfileUpdated } from './handleProfileUpdated';
 
 export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   let envelope: WebSocketEnvelope;
@@ -47,6 +49,12 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   // 🚫 실시간 계정 정지 — 본인이면 강제 로그아웃 (최우선 처리)
   if (isBroadcastAccountSuspended(envelope)) {
     handleAccountSuspended(envelope, deps);
+    return;
+  }
+
+  // 👤 프로필 변경 실시간 반영 (멤버/참여자/이미지 캐시 갱신)
+  if (isBroadcastProfileUpdated(envelope)) {
+    handleProfileUpdated(envelope, deps);
     return;
   }
 

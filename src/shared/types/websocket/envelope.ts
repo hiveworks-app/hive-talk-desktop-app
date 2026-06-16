@@ -57,3 +57,19 @@ export type WebSocketChatRoomExitPayload = { roomId: string; userId: string };
 export type WebSocketReportedMessagePayload = { roomId: string; messageId: string; content: string };
 /** REPORT_HIDDEN(신고 확정 숨김) broadcast payload — content는 시스템 안내 문구 */
 export type WebSocketReportHiddenPayload = { roomId: string; messageId: string; messageContentType: string; content: string };
+/** PROFILE/UPDATED(프로필 변경 실시간) broadcast payload */
+export interface ProfileUpdatedPayload {
+  userId: string;
+  name: string;
+  department: string | null;
+  job: string | null;
+  email?: string;
+  profileUrl: string | null;
+  profilePresignedUrl?: string | null;
+  thumbnailProfileUrl: string | null;
+  thumbnailProfilePresignedUrl?: string | null;
+  companyName?: string;
+  companyId?: string;
+  role?: string;
+  isExternal?: boolean;
+}
