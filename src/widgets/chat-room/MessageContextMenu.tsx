@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { cn } from '@/shared/lib/cn';
-import { IconCampaign, IconContentCopy, IconDelete, IconNewLabel } from '@/shared/ui/icons';
+import { IconCampaign, IconContentCopy, IconDelete, IconNewLabel, IconReport } from '@/shared/ui/icons';
 
 interface ContextMenuItem {
   label: string;
@@ -21,6 +21,7 @@ interface MessageContextMenuProps {
   onSetNotice?: () => void;
   onEditTag: () => void;
   onDelete?: () => void;
+  onReport?: () => void;
 }
 
 export function MessageContextMenu({
@@ -32,6 +33,7 @@ export function MessageContextMenu({
   onSetNotice,
   onEditTag,
   onDelete,
+  onReport,
 }: MessageContextMenuProps) {
   const items = useMemo<ContextMenuItem[]>(() => {
     const list: ContextMenuItem[] = [];
@@ -39,8 +41,9 @@ export function MessageContextMenu({
     if (isTextMessage && onSetNotice) list.push({ label: '공지 등록', icon: <IconCampaign />, onSelect: onSetNotice });
     list.push({ label: '태그 수정', icon: <IconNewLabel />, onSelect: onEditTag });
     if (isMe && onDelete) list.push({ label: '삭제', icon: <IconDelete />, state: 'error', onSelect: onDelete });
+    if (!isMe && onReport) list.push({ label: '신고', icon: <IconReport />, onSelect: onReport });
     return list;
-  }, [isTextMessage, isMe, onCopy, onSetNotice, onEditTag, onDelete]);
+  }, [isTextMessage, isMe, onCopy, onSetNotice, onEditTag, onDelete, onReport]);
 
   if (!enabled) return <>{children}</>;
 

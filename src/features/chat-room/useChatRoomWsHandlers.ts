@@ -11,10 +11,11 @@ import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { TagListType } from '@/shared/types/tag';
 import {
   Message, WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE, WebSocketChannelTypes, WebSocketEnvelope,
+  WebSocketMessageType,
   WebSocketPublishItem, isAddTagBroadcast, isAddTagSession, isBroadcast, isDeleteMessage,
   isExitMessageRoomBroadcast, isExitMessageRoomSession, isFetchAfterMessage, isFetchBeforeMessage,
   isFetchMessage, isMediaFileMessage, isPublish, isReadMessage, isRemoveTagBroadcast,
-  isRemoveTagSession, isSub, isViewInMessage, isViewOutMessage,
+  isRemoveTagSession, isReportedMessageBroadcast, isReportHiddenBroadcast, isSub, isViewInMessage, isViewOutMessage,
 } from '@/shared/types/websocket';
 import { ParticipantItemsType } from '@/shared/types/chatRoom';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -63,6 +64,18 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     const dedup = normalized.filter(item => { if (seen.has(item.tagId)) return false; seen.add(item.tagId); return true; });
     setMessages(prev => prev.map(m => (m.id === targetMessageId ? { ...m, tags: dedup } : m)));
   }, [setMessages]);
+
+  // 신고 마스킹: REPORTED → 마스킹 텍스트(TEXT) / REPORT_HIDDEN → 시스템 안내(SYSTEM_REPORTED)
+  const maskReportedMessage = useCallback(
+    (messageId: string, content: string, contentType: WebSocketMessageType) => {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === messageId ? { ...m, text: content, messageContentType: contentType, files: [], tags: [] } : m,
+        ),
+      );
+    },
+    [setMessages],
+  );
 
   const handleParticipantChange = useCallback((eventType: 'EXIT' | 'INVITE', roomId: string) => {
     participantsManager.refetchParticipants(roomId, channelType).then(() => {
@@ -122,6 +135,19 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     if (isFetchAfterMessage(data)) { handleFetchAfterHistory(data.response.payload, roomId); return; }
     if (isAddTagSession(data) || isRemoveTagSession(data)) return;
     if (!isBroadcast(data)) return;
+
+    // 신고 마스킹(REPORTED/REPORT_HIDDEN) — REPORTED엔 response.channelType이 없어 채널 필터보다 먼저 처리
+    if (isReportedMessageBroadcast(data)) {
+      const p = data.response.payload;
+      if (p.roomId === roomId && p.messageId) maskReportedMessage(p.messageId, p.content, WS_MESSAGE_CONTENT_TYPE.TEXT);
+      return;
+    }
+    if (isReportHiddenBroadcast(data)) {
+      const p = data.response.payload;
+      if (p.roomId === roomId && p.messageId) maskReportedMessage(p.messageId, p.content, WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED);
+      return;
+    }
+
     if (data.response.channelType !== channelType) return;
     if (isSub(data)) return;
 
@@ -152,6 +178,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
   }, [
     handleExitMessageRoom, handleFetchBeforeHistory, handleFetchAfterHistory,
     handleTagBroadcast, deleteMessageById, handleReadMessage, handlePublishMessage, channelType,
+    maskReportedMessage,
   ]);
 
   return { handleWsMessage };

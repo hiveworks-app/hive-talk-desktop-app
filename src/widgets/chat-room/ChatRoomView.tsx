@@ -9,6 +9,7 @@ import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
 import { cn } from '@/shared/lib/cn';
+import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
@@ -17,6 +18,7 @@ import { ChatInput } from './ChatInput';
 import { ChatRoomHeader } from './ChatRoomHeader';
 import { FileConfirmDialog } from './FileConfirmDialog';
 import { MessageBubble } from './MessageBubble';
+import { ReportMessageDialog } from './ReportMessageDialog';
 import { MessageSkeleton } from './MessageSkeleton';
 import { NoticeBanner } from './NoticeBanner';
 import { SelectedTagOverlay } from './SelectedTagOverlay';
@@ -61,6 +63,11 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
   const effectiveRoomId = isNewRoom ? '' : (storeRoomId || runtimeRoomId || '');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const reportRoomType =
+    channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE ? 'GM'
+      : channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? 'EM'
+        : 'DM';
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { mutate: createNotice } = useCreateNoticeMutation(effectiveRoomId, channelType);
@@ -172,6 +179,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
                         onEditTag={handleOpenUpdateTag}
                         onRetryMessage={retryTextMessage}
                         onRemoveFailedMessage={removeFailedMessage}
+                        onReportMessage={setReportTargetId}
                       />
                     </div>
                   ))}
@@ -203,6 +211,15 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
       />
       {pendingItems.length > 0 && (
         <FileConfirmDialog items={pendingItems} onConfirm={handleFileConfirm} onCancel={clearPendingItems} />
+      )}
+      {reportTargetId !== null && (
+        <ReportMessageDialog
+          open
+          roomType={reportRoomType}
+          roomId={effectiveRoomId}
+          messageId={reportTargetId}
+          onClose={() => setReportTargetId(null)}
+        />
       )}
     </div>
   );

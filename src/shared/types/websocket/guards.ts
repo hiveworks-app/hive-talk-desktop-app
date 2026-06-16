@@ -12,6 +12,8 @@ import type {
   WebSocketSingleMessagePayload,
   WebSocketReadMessagePayload,
   WebSocketChatRoomExitPayload,
+  WebSocketReportedMessagePayload,
+  WebSocketReportHiddenPayload,
   WebSocketPublishItem,
 } from './envelope';
 import type { AccountSuspendedBroadcastPayload } from '../account';
@@ -199,4 +201,22 @@ export function isBroadcastAccountSuspended(
 
   const res = data.response as WebSocketReceiveBroadCastResponseProps<unknown>;
   return typeof res.payload === 'object' && res.payload !== null;
+}
+
+// 🎲 REPORTED(신고 접수된 메시지 마스킹) BROADCAST 판별
+export function isReportedMessageBroadcast(
+  data: WebSocketEnvelope,
+): data is WebSocketBroadcastProps<WebSocketReportedMessagePayload> {
+  const meta = getSocketMeta(data);
+  if (!meta || meta.responseType !== WS_RESPONSE_TYPE.BROADCAST) return false;
+  return meta.operationType === WS_OPERATION.REPORTED;
+}
+
+// 🎲 REPORT_HIDDEN(신고 확정 숨김) BROADCAST 판별
+export function isReportHiddenBroadcast(
+  data: WebSocketEnvelope,
+): data is WebSocketBroadcastProps<WebSocketReportHiddenPayload> {
+  const meta = getSocketMeta(data);
+  if (!meta || meta.responseType !== WS_RESPONSE_TYPE.BROADCAST) return false;
+  return meta.operationType === WS_OPERATION.REPORT_HIDDEN;
 }

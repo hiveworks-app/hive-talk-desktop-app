@@ -26,15 +26,16 @@ interface MessageBubbleProps {
   onEditTag?: (message: ChatMessageUI) => void;
   onRetryMessage?: (messageId: string) => void;
   onRemoveFailedMessage?: (messageId: string) => void;
+  onReportMessage?: (messageId: string) => void;
 }
 
 export function MessageBubble({
   message, prevMessage, nextMessage, index, isFocused,
   onOpenMedia, onSetNotice, onDeleteMessage, onEditTag,
-  onRetryMessage, onRemoveFailedMessage,
+  onRetryMessage, onRemoveFailedMessage, onReportMessage,
 }: MessageBubbleProps) {
   const isMe = message.sender === 'me';
-  const isSystem = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT;
+  const isSystem = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED;
   const isDeleted = message.isDeleted;
   const isMediaType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
   const isTextMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !isDeleted;
@@ -141,6 +142,7 @@ export function MessageBubble({
         onSetNotice={onSetNotice ? () => onSetNotice(message.text) : undefined}
         onEditTag={() => onEditTag?.(message)}
         onDelete={onDeleteMessage ? () => onDeleteMessage(message.id) : undefined}
+        onReport={!isMe && onReportMessage ? () => onReportMessage(message.id) : undefined}
       >
         {bubbleContent}
       </MessageContextMenu>
