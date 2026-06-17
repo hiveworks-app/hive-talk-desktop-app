@@ -34,4 +34,6 @@ export interface MemberItem {
   profileImageUrl?: string | null;
   profilePresignedUrl?: string | null;
   thumbnailProfileUrl?: string | null;
+  /** 협력멤버(외부) 여부 — /app/users가 isExternal로 사내/협력을 함께 구분해 응답 (RN 패리티) */
+  isExternal?: boolean;
 }
