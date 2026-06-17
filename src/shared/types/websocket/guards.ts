@@ -14,6 +14,7 @@ import type {
   WebSocketChatRoomExitPayload,
   WebSocketReportedMessagePayload,
   WebSocketReportHiddenPayload,
+  ProfileUpdatedPayload,
   WebSocketPublishItem,
 } from './envelope';
 import type { AccountSuspendedBroadcastPayload } from '../account';
@@ -219,4 +220,11 @@ export function isReportHiddenBroadcast(
   const meta = getSocketMeta(data);
   if (!meta || meta.responseType !== WS_RESPONSE_TYPE.BROADCAST) return false;
   return meta.operationType === WS_OPERATION.REPORT_HIDDEN;
+}
+
+// 🎲 BROADCAST/PROFILE/UPDATED (프로필 변경 실시간 수신) 판별
+export function isBroadcastProfileUpdated(
+  data: WebSocketEnvelope,
+): data is WebSocketBroadcastProps<ProfileUpdatedPayload> {
+  return typeof data.socketResponseType === 'string' && data.socketResponseType === 'BROADCAST/PROFILE/UPDATED';
 }
