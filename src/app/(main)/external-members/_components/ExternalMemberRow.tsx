@@ -1,6 +1,6 @@
 'use client';
 
-import { useCancelExternalInvite } from '@/features/external-member/queries';
+import { useCancelExternalInvite, useDeleteExternalContact } from '@/features/external-member/queries';
 import type { ExternalInviteStatus, ExternalMemberItem } from '@/features/external-member/type';
 import { cn } from '@/shared/lib/cn';
 
@@ -16,7 +16,14 @@ interface ExternalMemberRowProps {
 
 export function ExternalMemberRow({ member }: ExternalMemberRowProps) {
   const { mutateAsync: cancel, isPending } = useCancelExternalInvite();
+  const { mutate: deleteContact, isPending: isDeleting } = useDeleteExternalContact();
   const status = STATUS_LABEL[member.inviteStatus];
+
+  const handleDelete = () => {
+    if (window.confirm(`'${member.name}' 외부 멤버를 삭제하시겠습니까?`)) {
+      deleteContact(String(member.userId));
+    }
+  };
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
@@ -52,6 +59,15 @@ export function ExternalMemberRow({ member }: ExternalMemberRowProps) {
           className="shrink-0 rounded-lg border border-red-200 px-2.5 py-1.5 text-sub-sm text-red-500 hover:bg-red-50 disabled:opacity-50"
         >
           {isPending ? '취소중' : '취소'}
+        </button>
+      )}
+      {member.inviteStatus === 'ACCEPTED' && (
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="shrink-0 rounded-lg border border-red-200 px-2.5 py-1.5 text-sub-sm text-red-500 hover:bg-red-50 disabled:opacity-50"
+        >
+          {isDeleting ? '삭제중' : '삭제'}
         </button>
       )}
     </div>

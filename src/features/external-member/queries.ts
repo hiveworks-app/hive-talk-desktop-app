@@ -8,6 +8,8 @@ import {
   RECEIVED_INVITES_KEY,
 } from '@/shared/config/queryKeys';
 import { getErrorMessage } from '@/shared/api';
+import { apiDeletePinnedMember } from '@/features/pinned-members/api';
+import type { MemberItem } from '@/shared/types/user';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
 import {
@@ -16,6 +18,7 @@ import {
   apiInviteExternalUser,
   apiCancelExternalInvite,
   apiRespondInvite,
+  apiDeleteExternalContact,
 } from './api';
 import type { InviteExternalUserRequest, InviteResultType, ReceivedInviteItem } from './type';
 
@@ -110,6 +113,43 @@ export const useRespondInvite = () => {
     },
     onError: (err: unknown) => {
       showSnackbar({ message: getErrorMessage(err, '처리에 실패했습니다.'), state: 'error' });
+    },
+  });
+};
+
+/**
+ * 외부친구(협력멤버) 삭제.
+ * 고정(관심멤버) 상태면 contact 삭제 전에 먼저 unpin — 역순이면 서버에 stale pinned 잔존
+ * (재-친구 시 isPinned/관심멤버 섹션 불일치). unpin 실패해도 삭제는 진행(이후 invalidate가 정정).
+ */
+export const useDeleteExternalContact = () => {
+  const queryClient = useQueryClient();
+  const showSnackbar = useUIStore(s => s.showSnackbar);
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const pinned = queryClient.getQueryData<MemberItem[]>(PINNED_MEMBERS_KEY);
+      const wasPinned = pinned?.some(m => String(m.userId) === userId) ?? false;
+      if (wasPinned) {
+        try {
+          await apiDeletePinnedMember([Number(userId)]);
+        } catch (err) {
+          console.warn('[deleteExternalContact] 관심멤버 자동 해제 실패:', err);
+        }
+      }
+      return apiDeleteExternalContact(Number(userId));
+    },
+    onSuccess: (_res, userId) => {
+      queryClient.setQueryData<MemberItem[]>(
+        PINNED_MEMBERS_KEY,
+        prev => prev?.filter(m => String(m.userId) !== userId) ?? [],
+      );
+      queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
+      queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+      showSnackbar({ message: '외부 멤버를 삭제했습니다.', state: 'info' });
+    },
+    onError: (err: unknown) => {
+      showSnackbar({ message: getErrorMessage(err, '삭제에 실패했습니다.'), state: 'error' });
     },
   });
 };

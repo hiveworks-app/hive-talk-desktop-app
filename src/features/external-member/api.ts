@@ -39,3 +39,7 @@ export const apiRespondInvite = (inviteId: string, result: InviteResultType) =>
     `/app/externals/invites/${inviteId}/received/${result}`,
     { method: "PUT" },
   );
+
+/** 외부친구(협력멤버) 삭제 — contactId === userId */
+export const apiDeleteExternalContact = (contactId: number) =>
+  request<void>(`/app/externals/${contactId}`, { method: "DELETE" });
