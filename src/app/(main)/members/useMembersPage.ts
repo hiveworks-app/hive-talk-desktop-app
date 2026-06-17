@@ -5,8 +5,6 @@ import { useGetMembers } from '@/features/members/queries';
 import { useGetExternalMembers } from '@/features/external-member/queries';
 import {
   useGetPinnedMembers,
-  usePinnedMemberIds,
-  useTogglePinnedMember,
   useReorderPinnedMembers,
 } from '@/features/pinned-members/queries';
 import type { ExternalMemberItem } from '@/features/external-member/type';
@@ -23,12 +21,19 @@ function normalizeCompanyMember(item: MemberItem): NormalizedMember {
     name: item.name,
     description: [item.department, item.job].filter(Boolean).join(' · '),
     storageKey: item.profileUrl,
+    isExternal: false,
   };
 }
 
 function normalizeExternalMember(item: ExternalMemberItem): NormalizedMember {
   const statusText = item.inviteStatus === 'PENDING' ? '초대 대기' : item.inviteStatus === 'EXPIRED' ? '초대 만료' : '';
-  return { id: `external-${item.userId}`, name: item.name, description: statusText, storageKey: item.thumbnailProfileUrl };
+  return {
+    id: `external-${item.userId}`,
+    name: item.name,
+    description: statusText,
+    storageKey: item.thumbnailProfileUrl,
+    isExternal: true,
+  };
 }
 
 export function useMembersPage() {
@@ -49,24 +54,12 @@ export function useMembersPage() {
   const { data: members = [], isLoading: membersLoading } = useGetMembers();
   const { data: externalMembers = [], isLoading: externalLoading } = useGetExternalMembers();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
-  const pinnedIdSet = usePinnedMemberIds();
-  const { toggle: togglePin, isPending: isTogglingPin } = useTogglePinnedMember();
   const { reorder: reorderPinned } = useReorderPinnedMembers();
 
   const filteredCompany = useMemo(() => filterByhangeulSearch(members, search, item => item.name), [members, search]);
   const filteredExternal = useMemo(() => filterByhangeulSearch(externalMembers, search, item => item.name), [externalMembers, search]);
   const filteredPinned = useMemo(() => filterByhangeulSearch(pinnedMembers, search, item => item.name), [pinnedMembers, search]);
   const pinnedDisplay = useMemo(() => filteredPinned.map(normalizeCompanyMember), [filteredPinned]);
-
-  const handleTogglePin = useCallback(
-    (id: string) => {
-      const userId = id.replace(/^(company|external)-/, '');
-      const member =
-        members.find(m => String(m.userId) === userId) ?? pinnedMembers.find(m => String(m.userId) === userId);
-      if (member) togglePin(member);
-    },
-    [members, pinnedMembers, togglePin],
-  );
 
   const handleReorderPinned = useCallback(
     (orderedIds: string[]) => {
@@ -96,6 +89,6 @@ export function useMembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, pinnedIdSet, handleTogglePin, isTogglingPin, handleReorderPinned,
+    pinnedDisplay, handleReorderPinned,
   };
 }

@@ -1,50 +1,47 @@
 'use client';
 
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
-import IconStarFilled from '@assets/icons/star-filled.svg';
-import IconStarEmpty from '@assets/icons/star-empty.svg';
+import IconExternalSymbol from '@assets/icons/external-symbol.svg';
 
 interface NormalizedMember {
   id: string;
   name: string;
   description: string;
   storageKey?: string | null;
+  /** 협력멤버(외부) 여부 — true면 이름 옆에 ∞ 배지 표시 */
+  isExternal: boolean;
 }
 
 interface MemberListItemProps {
   member: NormalizedMember;
   onClick: () => void;
-  /** 관심 멤버 고정 여부 — onTogglePin이 있을 때만 별 표시 */
-  isPinned?: boolean;
-  /** 별 토글 핸들러 (없으면 별 버튼 미표시 — 예: 외부 멤버) */
-  onTogglePin?: () => void;
 }
 
 export type { NormalizedMember };
 
-export function MemberListItem({ member, onClick, isPinned = false, onTogglePin }: MemberListItemProps) {
+export function MemberListItem({ member, onClick }: MemberListItemProps) {
   return (
-    <div className="flex w-full items-center gap-2.5 px-4 py-1.5 transition-colors hover:bg-gray-50">
-      <button onClick={onClick} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-        <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} />
-        <span className="flex-1 truncate text-sub text-text-primary">{member.name}</span>
-        {member.description && (
-          <span className="shrink-0 text-sub-sm text-text-secondary">{member.description}</span>
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 px-4 py-[7px] text-left transition-colors hover:bg-gray-50"
+    >
+      {/* 아바타 40px (Figma 멤버 아이템 기준 — sm=36px 오버라이드) */}
+      <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} className="h-10 w-10" />
+      {/* 이름(+협력멤버 ∞ 배지): 이름은 길면 말줄임, 배지는 고정 */}
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="min-w-0 truncate text-[16px] leading-[22px] tracking-[-0.16px] text-text-primary">
+          {member.name}
+        </span>
+        {member.isExternal && (
+          <IconExternalSymbol width={18} height={10} className="shrink-0 text-text-tertiary" />
         )}
-      </button>
-      {onTogglePin && (
-        <button
-          onClick={onTogglePin}
-          aria-label={isPinned ? '관심 멤버 해제' : '관심 멤버 등록'}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded hover:bg-gray-200"
-        >
-          {isPinned ? (
-            <IconStarFilled width={18} height={18} />
-          ) : (
-            <IconStarEmpty width={18} height={18} className="opacity-50" />
-          )}
-        </button>
+      </span>
+      {/* 부서·직급: 남은 공간을 채워 우측 정렬, 길면 말줄임 (Figma 패리티) */}
+      {member.description && (
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">
+          {member.description}
+        </span>
       )}
-    </div>
+    </button>
   );
 }
