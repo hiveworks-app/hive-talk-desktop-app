@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/cn';
 import { IconClose } from '@/shared/ui/icons';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconAddMemberDefault from '@assets/icons/static/add-member-default.svg';
+import IconEnvelope from '@assets/icons/envelope.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
@@ -18,7 +19,7 @@ export default function MembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, pinnedIdSet, handleTogglePin, handleReorderPinned,
+    pinnedDisplay, handleReorderPinned,
   } = useMembersPage();
 
   return (
@@ -32,6 +33,10 @@ export default function MembersPage() {
             </button>
             <button className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
               <IconAddMemberDefault width={20} height={20} />
+            </button>
+            {/* TODO: 초대(편지봉투) 동작 연결 필요 — 모바일의 초대 진입점 대응 */}
+            <button className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
+              <IconEnvelope width={20} height={20} />
             </button>
           </div>
         </div>
@@ -59,7 +64,7 @@ export default function MembersPage() {
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {isOrgMember && (
-          <div className="flex items-center gap-2.5 px-4 py-3.5">
+          <div className="flex items-center gap-1.5 px-4 py-3.5">
             <Chip label="전체" active={activeChip === 'all'} onClick={() => setActiveChip('all')} />
             <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => setActiveChip('company')} />
             <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => setActiveChip('external')} />
@@ -76,34 +81,27 @@ export default function MembersPage() {
               {pinnedDisplay.length > 0 && (
                 <div className="border-b border-divider pb-3.5">
                   <div className="flex items-end gap-1 px-4 pt-1">
-                    <IconStarFilled width={20} height={20} />
-                    <span className="text-sub-sm text-text-secondary">관심 멤버 ({pinnedDisplay.length})</span>
+                    <IconStarFilled width={20} height={20} className="text-yellow" />
+                    <span className="text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
                   </div>
                   <PinnedMembersList
                     items={pinnedDisplay}
                     onClickMember={handleMemberPress}
-                    onTogglePin={handleTogglePin}
                     onReorder={handleReorderPinned}
                   />
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-sub-sm text-text-secondary">전체멤버 ({displayMembers.length})</span>
+                <span className="text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">전체멤버 ({displayMembers.length})</span>
               </div>
               <div className="flex flex-col">
-                {displayMembers.map(item => {
-                  const canPin = item.id.startsWith('company-');
-                  const rawId = item.id.replace(/^(company|external)-/, '');
-                  return (
-                    <MemberListItem
-                      key={item.id}
-                      member={item}
-                      onClick={() => handleMemberPress(item.id)}
-                      isPinned={pinnedIdSet.has(rawId)}
-                      onTogglePin={canPin ? () => handleTogglePin(item.id) : undefined}
-                    />
-                  );
-                })}
+                {displayMembers.map(item => (
+                  <MemberListItem
+                    key={item.id}
+                    member={item}
+                    onClick={() => handleMemberPress(item.id)}
+                  />
+                ))}
               </div>
             </>
           )}

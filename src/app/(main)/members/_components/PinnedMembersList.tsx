@@ -7,7 +7,6 @@ import { MemberListItem, type NormalizedMember } from './MemberListItem';
 interface PinnedMembersListProps {
   items: NormalizedMember[];
   onClickMember: (id: string) => void;
-  onTogglePin: (id: string) => void;
   /** 드래그 종료 시 새 순서(정규화 id 배열) 전달 */
   onReorder: (orderedIds: string[]) => void;
 }
@@ -18,7 +17,7 @@ interface PinnedMembersListProps {
  *   → useEffect 동기화 없이 prop 변화에 자연스럽게 따라감
  * - 2명 미만이면 드래그 비활성
  */
-export function PinnedMembersList({ items, onClickMember, onTogglePin, onReorder }: PinnedMembersListProps) {
+export function PinnedMembersList({ items, onClickMember, onReorder }: PinnedMembersListProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOrder, setDragOrder] = useState<NormalizedMember[] | null>(null);
 
@@ -61,8 +60,6 @@ export function PinnedMembersList({ items, onClickMember, onTogglePin, onReorder
           <MemberListItem
             member={item}
             onClick={() => onClickMember(item.id)}
-            isPinned
-            onTogglePin={() => onTogglePin(item.id)}
           />
         </div>
       ))}
