@@ -9,6 +9,8 @@ import type {
   WebSocketReceiveReadItemProps,
   WebSocketReceiveTagProps,
 } from '@/shared/types/websocket';
+import { PUSH_SETTINGS_KEY } from '@/shared/config/queryKeys';
+import type { PushSettingsResponse } from '@/features/notification-settings/type';
 import type { MessageHandlerDeps } from './types';
 import { getTargetQueryKey } from './types';
 
@@ -84,6 +86,11 @@ function sendNotification(
   targetQueryKey: readonly string[] | null,
   queryClient: { getQueryData: <T>(key: readonly string[]) => T | undefined },
 ) {
+  // 채팅 알림 마스터 OFF면 데스크톱 로컬 알림도 억제 (서버 push와 동일 정책).
+  // 설정 미로딩(undefined) 시에는 기존처럼 알림 표시.
+  const pushSettings = queryClient.getQueryData<PushSettingsResponse>(PUSH_SETTINGS_KEY);
+  if (pushSettings && !pushSettings.allRoomsPushEnabled) return;
+
   const senderName = payload.sender?.name ?? '사용자';
   const body = payload.message.payload && 'content' in payload.message.payload
     ? payload.message.payload.content
