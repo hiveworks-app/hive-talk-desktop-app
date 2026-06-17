@@ -25,6 +25,7 @@ export interface LoginResponseProps {
   phoneTail: string | null;
   lastLoginAt: Date;
   profileUrl: string | null;
+  companyName: string | null; // 협력멤버(GUEST)의 소속 회사명
   role: string;
   accessToken: string;
   refreshToken: string;
