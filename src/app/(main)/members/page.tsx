@@ -17,6 +17,7 @@ export default function MembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
+    pinnedDisplay, pinnedIdSet, handleTogglePin,
   } = useMembersPage();
 
   return (
@@ -71,24 +72,42 @@ export default function MembersPage() {
             <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">멤버가 없습니다</span></div>
           ) : (
             <>
-              <div className="border-b border-divider pb-3.5">
-                <div className="flex items-end gap-1 px-4">
-                  <IconStarFilled width={20} height={20} />
-                  <span className="text-sub-sm text-text-secondary">관심 멤버 (3)</span>
+              {pinnedDisplay.length > 0 && (
+                <div className="border-b border-divider pb-3.5">
+                  <div className="flex items-end gap-1 px-4 pt-1">
+                    <IconStarFilled width={20} height={20} />
+                    <span className="text-sub-sm text-text-secondary">관심 멤버 ({pinnedDisplay.length})</span>
+                  </div>
+                  <div className="mt-1 flex flex-col">
+                    {pinnedDisplay.map(item => (
+                      <MemberListItem
+                        key={item.id}
+                        member={item}
+                        onClick={() => handleMemberPress(item.id)}
+                        isPinned
+                        onTogglePin={() => handleTogglePin(item.id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-1 flex flex-col">
-                  {[1, 2, 3].map(i => (
-                    <MemberListItem key={i} member={{ id: `favorite-${i}`, name: `홍길동${i}`, description: '생산2팀 · 대리' }} onClick={() => handleMemberPress(`favorite-${i}`)} />
-                  ))}
-                </div>
-              </div>
+              )}
               <div className="flex items-center gap-1 px-4 py-3">
                 <span className="text-sub-sm text-text-secondary">전체멤버 ({displayMembers.length})</span>
               </div>
               <div className="flex flex-col">
-                {displayMembers.map(item => (
-                  <MemberListItem key={item.id} member={item} onClick={() => handleMemberPress(item.id)} />
-                ))}
+                {displayMembers.map(item => {
+                  const canPin = item.id.startsWith('company-');
+                  const rawId = item.id.replace(/^(company|external)-/, '');
+                  return (
+                    <MemberListItem
+                      key={item.id}
+                      member={item}
+                      onClick={() => handleMemberPress(item.id)}
+                      isPinned={pinnedIdSet.has(rawId)}
+                      onTogglePin={canPin ? () => handleTogglePin(item.id) : undefined}
+                    />
+                  );
+                })}
               </div>
             </>
           )}

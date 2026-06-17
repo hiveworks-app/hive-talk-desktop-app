@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetExternalMembers } from '@/features/external-member/queries';
+import { useGetPinnedMembers, usePinnedMemberIds, useTogglePinnedMember } from '@/features/pinned-members/queries';
 import type { ExternalMemberItem } from '@/features/external-member/type';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
@@ -42,9 +43,24 @@ export function useMembersPage() {
 
   const { data: members = [], isLoading: membersLoading } = useGetMembers();
   const { data: externalMembers = [], isLoading: externalLoading } = useGetExternalMembers();
+  const { data: pinnedMembers = [] } = useGetPinnedMembers();
+  const pinnedIdSet = usePinnedMemberIds();
+  const { toggle: togglePin, isPending: isTogglingPin } = useTogglePinnedMember();
 
   const filteredCompany = useMemo(() => filterByhangeulSearch(members, search, item => item.name), [members, search]);
   const filteredExternal = useMemo(() => filterByhangeulSearch(externalMembers, search, item => item.name), [externalMembers, search]);
+  const filteredPinned = useMemo(() => filterByhangeulSearch(pinnedMembers, search, item => item.name), [pinnedMembers, search]);
+  const pinnedDisplay = useMemo(() => filteredPinned.map(normalizeCompanyMember), [filteredPinned]);
+
+  const handleTogglePin = useCallback(
+    (id: string) => {
+      const userId = id.replace(/^(company|external)-/, '');
+      const member =
+        members.find(m => String(m.userId) === userId) ?? pinnedMembers.find(m => String(m.userId) === userId);
+      if (member) togglePin(member);
+    },
+    [members, pinnedMembers, togglePin],
+  );
 
   const displayMembers = useMemo(() => {
     const company = filteredCompany.map(normalizeCompanyMember);
@@ -67,5 +83,6 @@ export function useMembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
+    pinnedDisplay, pinnedIdSet, handleTogglePin, isTogglingPin,
   };
 }
