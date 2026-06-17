@@ -29,7 +29,7 @@ export function MemberListItem({ member, onClick }: MemberListItemProps) {
       <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} className="h-10 w-10" />
       {/* 이름(+협력멤버 ∞ 배지): 이름은 길면 말줄임, 배지는 고정 */}
       <span className="flex min-w-0 items-center gap-1">
-        <span className="min-w-0 truncate text-[16px] leading-[22px] tracking-[-0.16px] text-text-primary">
+        <span className="min-w-0 truncate text-body text-text-primary">
           {member.name}
         </span>
         {member.isExternal && (
@@ -38,7 +38,7 @@ export function MemberListItem({ member, onClick }: MemberListItemProps) {
       </span>
       {/* 부서·직급: 남은 공간을 채워 우측 정렬, 길면 말줄임 (Figma 패리티) */}
       {member.description && (
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">
+        <span className="min-w-0 flex-1 truncate text-right text-sub-sm text-text-secondary">
           {member.description}
         </span>
       )}

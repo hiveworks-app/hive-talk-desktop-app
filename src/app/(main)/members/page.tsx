@@ -82,7 +82,7 @@ export default function MembersPage() {
                 <div className="border-b border-divider pb-3.5">
                   <div className="flex items-end gap-1 px-4 pt-1">
                     <IconStarFilled width={20} height={20} className="text-yellow" />
-                    <span className="text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
+                    <span className="text-sub-sm text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
                   </div>
                   <PinnedMembersList
                     items={pinnedDisplay}
@@ -92,7 +92,7 @@ export default function MembersPage() {
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-[13px] leading-[16px] tracking-[0.13px] text-text-secondary">전체멤버 ({displayMembers.length})</span>
+                <span className="text-sub-sm text-text-secondary">전체멤버 ({displayMembers.length})</span>
               </div>
               <div className="flex flex-col">
                 {displayMembers.map(item => (

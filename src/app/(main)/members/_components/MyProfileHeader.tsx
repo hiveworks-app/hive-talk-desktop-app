@@ -21,11 +21,11 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
       >
         <ProfileCircle name={name ?? '?'} size="lg" storageKey={profileUrl} />
         <div className="min-w-0 flex-1">
-          <div className="text-[18px] font-semibold leading-[26px] tracking-[-0.18px] text-text-primary">
+          <div className="text-heading-md font-semibold text-text-primary">
             {name}
           </div>
           {(department || job) && (
-            <div className="flex items-center gap-[5px] text-[13px] leading-[16px] tracking-[0.13px] text-text-primary">
+            <div className="flex items-center gap-[5px] text-sub-sm text-text-primary">
               <span>{[department, job].filter(Boolean).join(' · ')}</span>
               <IconArrowRightDefault width={16} height={16} className="text-gray-500" />
             </div>
