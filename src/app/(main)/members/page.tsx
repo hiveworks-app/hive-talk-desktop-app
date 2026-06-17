@@ -19,7 +19,7 @@ export default function MembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, handleReorderPinned,
+    pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
   } = useMembersPage();
 
   return (
@@ -74,8 +74,8 @@ export default function MembersPage() {
         <div className="scrollbar-thin flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">로딩 중...</span></div>
-          ) : displayMembers.length === 0 ? (
-            <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">멤버가 없습니다</span></div>
+          ) : !hasContent ? (
+            <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">아직 함께할 멤버가 없어요.</span></div>
           ) : (
             <>
               {pinnedDisplay.length > 0 && (
@@ -92,7 +92,7 @@ export default function MembersPage() {
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-sub-sm text-text-secondary">전체멤버 ({displayMembers.length})</span>
+                <span className="text-sub-sm text-text-secondary">{memberSectionLabel} ({displayMembers.length})</span>
               </div>
               <div className="flex flex-col">
                 {displayMembers.map(item => (
