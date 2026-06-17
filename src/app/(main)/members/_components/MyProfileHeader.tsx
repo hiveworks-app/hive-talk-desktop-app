@@ -21,13 +21,13 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
       >
         <ProfileCircle name={name ?? '?'} size="lg" storageKey={profileUrl} />
         <div className="min-w-0 flex-1">
-          <div className="text-body font-semibold text-text-primary">
+          <div className="text-[18px] font-semibold leading-[26px] tracking-[-0.18px] text-text-primary">
             {name}
           </div>
           {(department || job) && (
-            <div className="flex items-center gap-1 text-sub-sm text-text-primary">
+            <div className="flex items-center gap-[5px] text-[13px] leading-[16px] tracking-[0.13px] text-text-primary">
               <span>{[department, job].filter(Boolean).join(' · ')}</span>
-              <IconArrowRightDefault width={14} height={14} className="text-gray-900" />
+              <IconArrowRightDefault width={16} height={16} className="text-gray-500" />
             </div>
           )}
         </div>
@@ -36,9 +36,9 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
       {/* 우측: 설정 아이콘 */}
       <button
         onClick={onOpenProfile}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-gray-300 p-1.5 text-gray-500 transition-colors hover:bg-gray-400"
+        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-gray-300 text-gray-500 transition-colors hover:bg-gray-400"
       >
-        <IconSettingsFilled width={24} height={24} />
+        <IconSettingsFilled width={22} height={22} />
       </button>
     </div>
   );
