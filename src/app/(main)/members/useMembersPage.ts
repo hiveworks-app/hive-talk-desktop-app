@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetExternalMembers } from '@/features/external-member/queries';
-import { useGetPinnedMembers, usePinnedMemberIds, useTogglePinnedMember } from '@/features/pinned-members/queries';
+import {
+  useGetPinnedMembers,
+  usePinnedMemberIds,
+  useTogglePinnedMember,
+  useReorderPinnedMembers,
+} from '@/features/pinned-members/queries';
 import type { ExternalMemberItem } from '@/features/external-member/type';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
@@ -46,6 +51,7 @@ export function useMembersPage() {
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
   const pinnedIdSet = usePinnedMemberIds();
   const { toggle: togglePin, isPending: isTogglingPin } = useTogglePinnedMember();
+  const { reorder: reorderPinned } = useReorderPinnedMembers();
 
   const filteredCompany = useMemo(() => filterByhangeulSearch(members, search, item => item.name), [members, search]);
   const filteredExternal = useMemo(() => filterByhangeulSearch(externalMembers, search, item => item.name), [externalMembers, search]);
@@ -60,6 +66,13 @@ export function useMembersPage() {
       if (member) togglePin(member);
     },
     [members, pinnedMembers, togglePin],
+  );
+
+  const handleReorderPinned = useCallback(
+    (orderedIds: string[]) => {
+      reorderPinned(orderedIds.map(id => id.replace(/^(company|external)-/, '')));
+    },
+    [reorderPinned],
   );
 
   const displayMembers = useMemo(() => {
@@ -83,6 +96,6 @@ export function useMembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, pinnedIdSet, handleTogglePin, isTogglingPin,
+    pinnedDisplay, pinnedIdSet, handleTogglePin, isTogglingPin, handleReorderPinned,
   };
 }

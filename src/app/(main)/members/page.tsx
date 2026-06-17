@@ -9,6 +9,7 @@ import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
+import { PinnedMembersList } from './_components/PinnedMembersList';
 import { Chip } from './_components/Chip';
 import { useMembersPage } from './useMembersPage';
 
@@ -17,7 +18,7 @@ export default function MembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, pinnedIdSet, handleTogglePin,
+    pinnedDisplay, pinnedIdSet, handleTogglePin, handleReorderPinned,
   } = useMembersPage();
 
   return (
@@ -78,17 +79,12 @@ export default function MembersPage() {
                     <IconStarFilled width={20} height={20} />
                     <span className="text-sub-sm text-text-secondary">관심 멤버 ({pinnedDisplay.length})</span>
                   </div>
-                  <div className="mt-1 flex flex-col">
-                    {pinnedDisplay.map(item => (
-                      <MemberListItem
-                        key={item.id}
-                        member={item}
-                        onClick={() => handleMemberPress(item.id)}
-                        isPinned
-                        onTogglePin={() => handleTogglePin(item.id)}
-                      />
-                    ))}
-                  </div>
+                  <PinnedMembersList
+                    items={pinnedDisplay}
+                    onClickMember={handleMemberPress}
+                    onTogglePin={handleTogglePin}
+                    onReorder={handleReorderPinned}
+                  />
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
