@@ -6,6 +6,7 @@ import {
   MEMBERS_KEY,
   PINNED_MEMBERS_KEY,
   RECEIVED_INVITES_KEY,
+  SENT_INVITES_KEY,
 } from '@/shared/config/queryKeys';
 import { getErrorMessage } from '@/shared/api';
 import { apiDeletePinnedMember } from '@/features/pinned-members/api';
@@ -15,12 +16,13 @@ import { useAuthStore } from '@/store/auth/authStore';
 import {
   apiGetExternalMembers,
   apiGetReceivedInvites,
+  apiGetSentInvites,
   apiInviteExternalUser,
   apiCancelExternalInvite,
   apiRespondInvite,
   apiDeleteExternalContact,
 } from './api';
-import type { InviteExternalUserRequest, InviteResultType, ReceivedInviteItem } from './type';
+import type { InviteExternalUserRequest, InviteResultType, ReceivedInviteItem, SentInviteItem } from './type';
 
 export const useGetExternalMembers = (search?: string) => {
   const { user } = useAuthStore();
@@ -66,6 +68,28 @@ export const useCancelExternalInvite = () => {
     onError: (err: unknown) => {
       showSnackbar({ message: getErrorMessage(err, '초대 취소에 실패했습니다.'), state: 'error' });
     },
+  });
+};
+
+/** 보낸 초대 목록 조회 (원본 → UI 아이템 정규화) */
+export const useSentInvites = () => {
+  const { user } = useAuthStore();
+
+  return useQuery<SentInviteItem[]>({
+    queryKey: SENT_INVITES_KEY,
+    queryFn: async () => {
+      const res = await apiGetSentInvites();
+      return res.payload.items.map(item => ({
+        inviteId: item.inviteId,
+        userId: item.userModel.userId,
+        name: item.userModel.name,
+        profileUrl: item.userModel.profileUrl,
+        sentAt: item.receivedAt,
+        status: item.result,
+      }));
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60,
   });
 };
 

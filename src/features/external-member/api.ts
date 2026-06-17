@@ -6,6 +6,7 @@ import type {
   InviteResultType,
   ReceivedInvitesPayload,
   RespondInvitePayload,
+  SentInvitesPayload,
 } from "./type";
 
 export const apiGetExternalMembers = (search?: string) => {
@@ -25,6 +26,12 @@ export const apiInviteExternalUser = (data: InviteExternalUserRequest) =>
 export const apiCancelExternalInvite = (userId: number) =>
   request<void>(`/app/externals/${userId}/invite`, {
     method: "DELETE",
+  });
+
+/** 보낸 초대 목록 조회 */
+export const apiGetSentInvites = () =>
+  request<SentInvitesPayload>("/app/externals/invites/sent", {
+    method: "GET",
   });
 
 /** 받은 초대 목록 조회 */
