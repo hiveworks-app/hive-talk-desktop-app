@@ -1,3 +1,5 @@
+// contextIsolation 환경에서 렌더러→메인 Sentry IPC 브릿지 설정 (가장 먼저)
+import '@sentry/electron/preload';
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {

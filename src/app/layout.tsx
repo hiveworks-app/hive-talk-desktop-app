@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ReactQueryProvider } from '@/shared/providers/ReactQueryProvider';
+import { SentryInit } from '@/shared/libs/sentry/SentryInit';
 import { ElectronPlatformDetector } from '@/shared/ui/ElectronPlatformDetector';
 import { ElectronTrayHandler } from '@/shared/ui/ElectronTrayHandler';
 import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
@@ -49,6 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <SentryInit />
         <ReactQueryProvider>
           <ElectronPlatformDetector />
           <ElectronTrayHandler />

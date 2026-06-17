@@ -1,9 +1,13 @@
 import { app, BrowserWindow, Menu, nativeTheme, Tray } from 'electron';
+import { initMainSentry } from './sentry';
 import { startNextServer, killNextServer } from './server';
 import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
 import { initializeAutoUpdater } from './autoUpdater';
+
+// Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
+initMainSentry();
 
 // 시스템 테마와 관계없이 항상 Light 모드 강제
 nativeTheme.themeSource = 'light';
