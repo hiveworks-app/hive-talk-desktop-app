@@ -18,6 +18,10 @@ import {
   apiGetReceivedInvites,
   apiGetSentInvites,
   apiInviteExternalUser,
+  apiInviteExternalByEmail,
+  apiInviteExternalByPhone,
+  apiSearchExternalByEmail,
+  apiSearchExternalByPhone,
   apiCancelExternalInvite,
   apiRespondInvite,
   apiDeleteExternalContact,
@@ -67,6 +71,38 @@ export const useCancelExternalInvite = () => {
     },
     onError: (err: unknown) => {
       showSnackbar({ message: getErrorMessage(err, '초대 취소에 실패했습니다.'), state: 'error' });
+    },
+  });
+};
+
+/** 이메일로 외부 사람 검색 */
+export const useSearchExternalByEmail = () =>
+  useMutation({ mutationFn: (email: string) => apiSearchExternalByEmail(email) });
+
+/** 연락처(전화번호)로 외부 사람 검색 */
+export const useSearchExternalByPhone = () =>
+  useMutation({ mutationFn: (phoneFull: string) => apiSearchExternalByPhone(phoneFull) });
+
+/** 이메일로 외부 사람 초대 (성공 시 보낸초대·외부멤버 목록 갱신) */
+export const useInviteExternalByEmail = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) => apiInviteExternalByEmail({ email }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SENT_INVITES_KEY });
+      queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
+    },
+  });
+};
+
+/** 연락처(전화번호)로 외부 사람 초대 (성공 시 보낸초대·외부멤버 목록 갱신) */
+export const useInviteExternalByPhone = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (phoneFull: string) => apiInviteExternalByPhone({ phoneFull }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SENT_INVITES_KEY });
+      queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
     },
   });
 };

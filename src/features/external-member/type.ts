@@ -91,3 +91,43 @@ export interface ReceivedInviteItem {
   profileUrl?: string;
   result: string;
 }
+
+/** 이메일로 외부 사람 검색 응답 */
+export interface SearchExternalByEmailPayload {
+  userId: number;
+  name: string;
+  email: string;
+  thumbnailProfileUrl?: string;
+  company?: string;
+  department?: string;
+  job?: string;
+}
+
+/** 연락처(전화번호)로 외부 사람 검색 응답 */
+export interface SearchExternalByPhonePayload {
+  userId: number;
+  name: string;
+  phone: string;
+  thumbnailProfileUrl?: string;
+  company?: string;
+  department?: string;
+  job?: string;
+}
+
+/** 이메일로 외부 사람 초대 요청/응답 */
+export interface InviteExternalByEmailRequest {
+  email: string;
+}
+export interface InviteExternalByEmailPayload {
+  userId: number;
+  inviteStatus: ExternalInviteStatus;
+}
+
+/** 연락처(전화번호)로 외부 사람 초대 요청/응답 */
+export interface InviteExternalByPhoneRequest {
+  phoneFull: string;
+}
+export interface InviteExternalByPhonePayload {
+  userId: number;
+  inviteStatus: ExternalInviteStatus;
+}
