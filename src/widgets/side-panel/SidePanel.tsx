@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
+import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
@@ -12,8 +13,10 @@ import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { MediaTab } from './MediaTab';
 import { FilesTab } from './FilesTab';
+import { InviteMemberDialog } from './InviteMemberDialog';
 
 type SidePanelView = 'main' | 'media' | 'files';
 
@@ -29,14 +32,18 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   const [view, setView] = useState<SidePanelView>('main');
   const router = useAppRouter();
   const { send } = useAppWebSocket();
-  const { buildExitMessageRoom } = useWebSocketMessageBuilder({
+  const { buildExitMessageRoom, buildInviteMessage } = useWebSocketMessageBuilder({
     type: channelType,
     channelId: roomId,
   });
   const currentUserId = useAuthStore(s => s.user?.id);
+  const queryClient = useQueryClient();
+  const showSnackbar = useUIStore(s => s.showSnackbar);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
-  // 패널 닫힐 때 메인 뷰로 복귀
+  // 패널 닫힐 때 메인 뷰로 복귀 (open 상태에 내부 view 동기화 — 의도된 effect)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isOpen) setView('main');
   }, [isOpen]);
 
@@ -65,6 +72,16 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
     const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
     router.push(routePrefix);
     onClose();
+  };
+
+  const handleInvite = (userIds: string[]) => {
+    if (!roomId || userIds.length === 0) return;
+    if (isOffline()) return;
+    send(buildInviteMessage({ inviteUserIdArray: userIds, channelIdOverride: roomId }));
+    showSnackbar({ message: `${userIds.length}명을 초대했습니다.`, state: 'success' });
+    setIsInviteOpen(false);
+    // SUBMIT_INVITE 브로드캐스트가 늦을 수 있어 참여자 목록 명시 무효화
+    queryClient.invalidateQueries({ queryKey: ROOM_PARTICIPANTS_KEY(roomId, channelType) });
   };
 
   const handleBack = () => setView('main');
@@ -147,7 +164,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
 
             {/* 대화상대 초대 */}
             <div className="px-4 py-1.5">
-              <button className="flex items-center gap-3">
+              <button onClick={() => setIsInviteOpen(true)} className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
                   <IconAdd size={18} className="text-primary" />
                 </div>
@@ -226,6 +243,13 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       >
         {panelContent}
       </div>
+
+      <InviteMemberDialog
+        open={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        existingUserIds={participants.map(p => String(p.userId))}
+        onInvite={handleInvite}
+      />
     </>
   );
 }
