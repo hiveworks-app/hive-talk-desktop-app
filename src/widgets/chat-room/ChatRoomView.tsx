@@ -141,7 +141,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
-            className={cn('h-full px-4 py-2', isRoomTransitioning || messages.length === 0 ? 'overflow-hidden' : 'scrollbar-thin overflow-y-auto')}
+            className={cn('h-full px-4 py-2', isRoomTransitioning || messages.length === 0 ? 'overflow-hidden' : 'scrollbar-thin overflow-x-hidden overflow-y-auto')}
           >
             <div ref={messagesContentRef} className={cn((isNewRoom || (!isRoomTransitioning && messages.length === 0 && !lastMessage)) && 'h-full')}>
               {isRoomTransitioning || (!isNewRoom && messages.length === 0 && lastMessage) ? (
