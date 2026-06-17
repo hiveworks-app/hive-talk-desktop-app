@@ -17,6 +17,7 @@ export const MY_ORGANIZATION_KEY = ['myOrganization'];
 export const ORGANIZATION_MEMBERS_KEY = (search?: string) => ['organizationMembers', search ?? ''];
 export const DEPARTMENTS_KEY = ['departments'];
 export const EXTERNAL_MEMBERS_KEY = (search?: string) => ['externalMembers', search ?? ''];
+export const RECEIVED_INVITES_KEY = ['receivedInvites'];
 export const REPORT_CATEGORIES_KEY = ['reportCategories'];
 export const PUSH_SETTINGS_KEY = ['pushSettings'];
 

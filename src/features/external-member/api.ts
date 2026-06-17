@@ -3,6 +3,9 @@ import type {
   ExternalMembersGetPayload,
   InviteExternalUserRequest,
   InviteExternalUserResponse,
+  InviteResultType,
+  ReceivedInvitesPayload,
+  RespondInvitePayload,
 } from "./type";
 
 export const apiGetExternalMembers = (search?: string) => {
@@ -23,3 +26,16 @@ export const apiCancelExternalInvite = (userId: number) =>
   request<void>(`/app/externals/${userId}/invite`, {
     method: "DELETE",
   });
+
+/** 받은 초대 목록 조회 */
+export const apiGetReceivedInvites = () =>
+  request<ReceivedInvitesPayload>("/app/externals/invites/received", {
+    method: "GET",
+  });
+
+/** 받은 초대 수락/거절 */
+export const apiRespondInvite = (inviteId: string, result: InviteResultType) =>
+  request<RespondInvitePayload>(
+    `/app/externals/invites/${inviteId}/received/${result}`,
+    { method: "PUT" },
+  );
