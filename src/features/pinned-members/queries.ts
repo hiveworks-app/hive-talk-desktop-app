@@ -88,3 +88,37 @@ export function useTogglePinnedMember() {
 
   return { toggle, isPending: replaceMutation.isPending || deleteMutation.isPending };
 }
+
+/**
+ * 데스크톱 전용 — 관심멤버 드래그 순서변경.
+ * orderedUserIds(새 순서)로 캐시를 즉시 재정렬(낙관적)한 뒤 PUT(전체 교체).
+ * 실패 시 이전 순서로 rollback. PUT 성공 시 useReplacePinnedMembers가 invalidate → 정합.
+ */
+export function useReorderPinnedMembers() {
+  const queryClient = useQueryClient();
+  const replaceMutation = useReplacePinnedMembers();
+  const showSnackbar = useUIStore(s => s.showSnackbar);
+
+  const reorder = useCallback(
+    async (orderedUserIds: string[]) => {
+      const previous = queryClient.getQueryData<MemberItem[]>(PINNED_MEMBERS_KEY);
+      if (previous) {
+        const map = new Map(previous.map(m => [String(m.userId), m]));
+        const reordered = orderedUserIds
+          .map(id => map.get(id))
+          .filter((m): m is MemberItem => m !== undefined);
+        queryClient.setQueryData(PINNED_MEMBERS_KEY, reordered);
+      }
+
+      try {
+        await replaceMutation.mutateAsync(orderedUserIds.map(Number));
+      } catch {
+        if (previous) queryClient.setQueryData(PINNED_MEMBERS_KEY, previous);
+        showSnackbar({ message: '관심 멤버 순서 변경에 실패했습니다.', state: 'error' });
+      }
+    },
+    [queryClient, replaceMutation, showSnackbar],
+  );
+
+  return { reorder, isPending: replaceMutation.isPending };
+}
