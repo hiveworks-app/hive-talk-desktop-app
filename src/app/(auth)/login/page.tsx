@@ -110,25 +110,16 @@ export default function LoginPage() {
             <span className="text-sub text-text-secondary">자동로그인</span>
           </button>
 
-          <div className="space-y-2.5">
-            <Button
-              variant={isFormFilled ? "primary" : "dark"}
-              size="lg"
-              onClick={onLogin}
-              disabled={!isFormFilled || isProcessing}
-              fullWidth
-            >
-              {isProcessing ? <Spinner /> : "로그인"}
-            </Button>
-            <Button
-              variant="primary-light"
-              size="lg"
-              onClick={() => { window.location.href = "/signup"; }}
-              fullWidth
-            >
-              회원가입
-            </Button>
-          </div>
+          {/* PC앱은 회원가입 미지원 — 가입은 모바일 앱에서만 진행 (로그인 버튼 단독) */}
+          <Button
+            variant={isFormFilled ? "primary" : "dark"}
+            size="lg"
+            onClick={onLogin}
+            disabled={!isFormFilled || isProcessing}
+            fullWidth
+          >
+            {isProcessing ? <Spinner /> : "로그인"}
+          </Button>
         </div>
 
         <Link href="/find-account" className="mt-5 text-sub text-text-secondary underline">
