@@ -18,8 +18,8 @@
 
   /* States (RN light.states.* 동일) */
   --color-state-primary: #007AFF;
-  --color-state-primary-pressed: #0059B8;
-  --color-state-primary-disabled: #E5E8EB;
+  --color-state-primary-pressed: #1263BA;
+  --color-state-primary-disabled: #A7CBFA;
   --color-state-primary-highlighted: #E6F3FF;
   --color-state-error: #F04452;
   --color-state-error-pressed: #BB222E;
@@ -27,10 +27,10 @@
   --color-state-success: #03C75A;
 
   /* Text (RN light.text.* 동일) */
-  --color-text-primary: #1A1F27;
+  --color-text-primary: #191F28;
   --color-text-secondary: #6B7684;
   --color-text-tertiary: #8B95A1;
-  --color-text-placeholder: #ADB5BD;
+  --color-text-placeholder: #8B95A1;
   --color-text-disabled: #D2D5D9;
   --color-text-in-bubble: #1A1F27;
   --color-text-hashtag: #007AFF;
@@ -135,7 +135,7 @@
   --color-blue-100: #E6F3FF;
   --color-blue-300: #66B3FF;
   --color-blue-500: #007AFF;
-  --color-blue-700: #0059B8;
+  --color-blue-700: #1263BA;
   --color-blue-900: #004DA6;
 
   /* Brand Shorthand */
@@ -153,8 +153,8 @@
   --color-navy-900: #202A43;
 
   /* Gray Scale (RN gray - cool-toned) */
-  --color-gray-50: #FAFBFC;
-  --color-gray-100: #F8F9FA;
+  --color-gray-50: #F8F9FA;
+  --color-gray-100: #F3F5F8;
   --color-gray-150: #EFF1F3;
   --color-gray-200: #E5E8EB;
   --color-gray-250: #DCDFE2;
@@ -166,9 +166,9 @@
   --color-gray-650: #5D6876;
   --color-gray-700: #4E5968;
   --color-gray-750: #3D4652;
-  --color-gray-800: #2B323D;
+  --color-gray-800: #3B4552;
   --color-gray-850: #232932;
-  --color-gray-900: #1A1F27;
+  --color-gray-900: #191F28;
 
   /* Semantic Colors */
   --color-background: var(--color-background);
