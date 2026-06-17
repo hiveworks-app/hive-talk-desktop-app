@@ -1,11 +1,17 @@
 import { request } from "@/shared/api";
 import type {
   ExternalMembersGetPayload,
+  InviteExternalByEmailPayload,
+  InviteExternalByEmailRequest,
+  InviteExternalByPhonePayload,
+  InviteExternalByPhoneRequest,
   InviteExternalUserRequest,
   InviteExternalUserResponse,
   InviteResultType,
   ReceivedInvitesPayload,
   RespondInvitePayload,
+  SearchExternalByEmailPayload,
+  SearchExternalByPhonePayload,
   SentInvitesPayload,
 } from "./type";
 
@@ -46,6 +52,34 @@ export const apiRespondInvite = (inviteId: string, result: InviteResultType) =>
     `/app/externals/invites/${inviteId}/received/${result}`,
     { method: "PUT" },
   );
+
+/** 이메일로 외부 사람 검색 */
+export const apiSearchExternalByEmail = (email: string) =>
+  request<SearchExternalByEmailPayload>(
+    `/app/externals/search/email?email=${encodeURIComponent(email)}`,
+    { method: "GET" },
+  );
+
+/** 연락처(전화번호)로 외부 사람 검색 */
+export const apiSearchExternalByPhone = (phoneFull: string) =>
+  request<SearchExternalByPhonePayload>(
+    `/app/externals/search/phone?phoneFull=${encodeURIComponent(phoneFull)}`,
+    { method: "GET" },
+  );
+
+/** 이메일로 외부 사람 초대 */
+export const apiInviteExternalByEmail = (data: InviteExternalByEmailRequest) =>
+  request<InviteExternalByEmailPayload>("/app/externals/invites/email", {
+    method: "POST",
+    body: data,
+  });
+
+/** 연락처(전화번호)로 외부 사람 초대 */
+export const apiInviteExternalByPhone = (data: InviteExternalByPhoneRequest) =>
+  request<InviteExternalByPhonePayload>("/app/externals/invites/phone", {
+    method: "POST",
+    body: data,
+  });
 
 /** 외부친구(협력멤버) 삭제 — contactId === userId */
 export const apiDeleteExternalContact = (contactId: number) =>
