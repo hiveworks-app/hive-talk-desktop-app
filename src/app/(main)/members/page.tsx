@@ -8,6 +8,7 @@ import IconEnvelope from '@assets/icons/envelope.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
+import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
 import { PinnedMembersList } from './_components/PinnedMembersList';
@@ -20,7 +21,7 @@ export default function MembersPage() {
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
-    isSearching, searchResultCount,
+    isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
   } = useMembersPage();
 
   return (
@@ -29,14 +30,17 @@ export default function MembersPage() {
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-heading-lg font-semibold text-text-primary">멤버목록</h2>
           <div className="electron-no-drag flex items-center gap-1">
-            <button onClick={toggleSearch} className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
+            <button onClick={toggleSearch} aria-label="멤버 검색" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
               <IconSearchDefault width={20} height={20} />
             </button>
-            <button className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
-              <IconAddMemberDefault width={20} height={20} />
-            </button>
-            {/* TODO: 초대(편지봉투) 동작 연결 필요 — 모바일의 초대 진입점 대응 */}
-            <button className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
+            {/* 초대하기(사람+)는 사내멤버 전용 — 게스트에게는 노출하지 않는다 (RN MembersScreen 패리티) */}
+            {isOrgMember && (
+              <button onClick={() => setIsInviteOpen(true)} aria-label="멤버 초대" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
+                <IconAddMemberDefault width={20} height={20} />
+              </button>
+            )}
+            {/* TODO: 편지봉투(초대현황) 동작 연결 필요 — 모바일 /invite-status 대응 */}
+            <button aria-label="초대 현황" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
               <IconEnvelope width={20} height={20} />
             </button>
           </div>
@@ -113,6 +117,7 @@ export default function MembersPage() {
 
       <UserProfileDialog isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} member={selectedMember} />
       <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
+      <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
     </main>
   );
 }

@@ -48,6 +48,8 @@ export function useMembersPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
+  // 멤버 초대 모달(이메일/연락처 검색 초대) 노출 여부 — 초대하기(사람+) 버튼이 연다.
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   useEffect(() => {
     if (isSearchVisible) requestAnimationFrame(() => searchInputRef.current?.focus());
@@ -119,6 +121,6 @@ export function useMembersPage() {
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
-    isSearching, searchResultCount,
+    isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
   };
 }
