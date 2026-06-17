@@ -1,17 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { useGetExternalMembers, useReceivedInvites, useRespondInvite } from '@/features/external-member/queries';
+import {
+  useGetExternalMembers,
+  useReceivedInvites,
+  useSentInvites,
+  useRespondInvite,
+} from '@/features/external-member/queries';
+import { cn } from '@/shared/lib/cn';
 import { InviteForm } from './_components/InviteForm';
 import { ExternalMemberRow } from './_components/ExternalMemberRow';
 import { ReceivedInviteRow } from './_components/ReceivedInviteRow';
+import { SentInviteRow } from './_components/SentInviteRow';
+
+type InviteTab = 'received' | 'sent';
 
 export default function ExternalMembersPage() {
   const [search, setSearch] = useState('');
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteTab, setInviteTab] = useState<InviteTab>('received');
   const { data: members = [], isLoading } = useGetExternalMembers(search || undefined);
   const { data: receivedInvites = [] } = useReceivedInvites();
+  const { data: sentInvites = [] } = useSentInvites();
   const { mutate: respondInvite, isPending: isResponding } = useRespondInvite();
+
+  const hasInvites = receivedInvites.length > 0 || sentInvites.length > 0;
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-background">
@@ -41,22 +54,65 @@ export default function ExternalMembersPage() {
       )}
 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
-        {receivedInvites.length > 0 && (
-          <section className="border-b border-divider py-2">
-            <h3 className="px-4 py-2 text-sub-sm font-semibold uppercase text-text-tertiary">
-              받은 초대 ({receivedInvites.length})
-            </h3>
-            {receivedInvites.map(invite => (
-              <ReceivedInviteRow
-                key={invite.inviteId}
-                invite={invite}
-                disabled={isResponding}
-                onAccept={() => respondInvite({ inviteId: invite.inviteId, result: 'ACCEPT' })}
-                onReject={() => respondInvite({ inviteId: invite.inviteId, result: 'REJECTED' })}
-              />
-            ))}
+        {hasInvites && (
+          <section className="border-b border-divider">
+            <div className="flex">
+              <button
+                onClick={() => setInviteTab('received')}
+                className={cn(
+                  'flex-1 border-b-2 px-4 py-2.5 text-sub font-medium transition-colors',
+                  inviteTab === 'received'
+                    ? 'border-primary text-text-primary'
+                    : 'border-transparent text-text-tertiary hover:text-text-secondary',
+                )}
+              >
+                받은 초대 ({receivedInvites.length})
+              </button>
+              <button
+                onClick={() => setInviteTab('sent')}
+                className={cn(
+                  'flex-1 border-b-2 px-4 py-2.5 text-sub font-medium transition-colors',
+                  inviteTab === 'sent'
+                    ? 'border-primary text-text-primary'
+                    : 'border-transparent text-text-tertiary hover:text-text-secondary',
+                )}
+              >
+                보낸 초대 ({sentInvites.length})
+              </button>
+            </div>
+
+            {inviteTab === 'received' ? (
+              receivedInvites.length > 0 ? (
+                <div className="py-2">
+                  {receivedInvites.map(invite => (
+                    <ReceivedInviteRow
+                      key={invite.inviteId}
+                      invite={invite}
+                      disabled={isResponding}
+                      onAccept={() => respondInvite({ inviteId: invite.inviteId, result: 'ACCEPT' })}
+                      onReject={() => respondInvite({ inviteId: invite.inviteId, result: 'REJECTED' })}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-6">
+                  <span className="text-sub-sm text-text-tertiary">받은 초대가 없습니다</span>
+                </div>
+              )
+            ) : sentInvites.length > 0 ? (
+              <div className="py-2">
+                {sentInvites.map(invite => (
+                  <SentInviteRow key={invite.inviteId} invite={invite} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-6">
+                <span className="text-sub-sm text-text-tertiary">보낸 초대가 없습니다</span>
+              </div>
+            )}
           </section>
         )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <span className="text-sub text-text-tertiary">로딩 중...</span>

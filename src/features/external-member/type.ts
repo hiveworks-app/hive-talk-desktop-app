@@ -32,6 +32,35 @@ export interface RespondInvitePayload {
   result: string;
 }
 
+/** 보낸 초대 API 원본 아이템 */
+export interface SentInviteRawItem {
+  inviteId: string;
+  result: string;
+  receivedAt: string;
+  userModel: {
+    userId: string;
+    name: string;
+    email?: string;
+    companyName?: string;
+    profileUrl?: string;
+    profilePresignedUrl?: string;
+  };
+}
+
+export interface SentInvitesPayload {
+  items: SentInviteRawItem[];
+}
+
+/** 보낸 초대 정규화 아이템 (UI용) */
+export interface SentInviteItem {
+  inviteId: string;
+  userId: string;
+  name: string;
+  profileUrl?: string;
+  sentAt: string;
+  status: string;
+}
+
 /** 받은 초대 API 원본 아이템 */
 export interface ReceivedInviteRawItem {
   inviteId: string;
