@@ -2,6 +2,7 @@ import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket
 
 export const SIGNUP_TERMS_KEY = ['signupTerms'];
 export const MEMBERS_KEY = ['members'];
+export const PINNED_MEMBERS_KEY = ['pinnedMembers'];
 export const TAG_CATEGORY_KEY = ['tagCategoryList'];
 export const TAG_LIST_KEY = ['tagList'];
 export const PRESIGNED_URL = (key: string) => ['presignedImage', key];
