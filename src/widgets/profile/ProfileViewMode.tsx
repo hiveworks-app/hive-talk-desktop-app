@@ -29,6 +29,7 @@ export function ProfileViewMode({ user, onEdit }: ProfileViewModeProps) {
       </div>
 
       <div className="space-y-3 border-t border-divider pt-4">
+        <InfoRow label="회사" value={user.companyName} />
         <InfoRow label="부서" value={user.department} />
         <InfoRow label="직책" value={user.job} />
         <InfoRow label="전화번호" value={phone} />

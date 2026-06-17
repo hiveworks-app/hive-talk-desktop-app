@@ -19,7 +19,9 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
   const { showSnackbar, showLoadingOverlay, hideLoadingOverlay } = useUIStore();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const isGuest = user.role === 'GUEST';
   const [name, setName] = useState(user.name);
+  const [companyName, setCompanyName] = useState(user.companyName ?? '');
   const [department, setDepartment] = useState(user.department ?? '');
   const [job, setJob] = useState(user.job ?? '');
   const [phoneHead, setPhoneHead] = useState(user.phoneHead ?? '');
@@ -81,6 +83,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
 
     try {
       await updateProfile({
+        ...(isGuest && { companyName: companyName.trim() || null }),
         name: name.trim(),
         department: department.trim() || null,
         job: job.trim() || null,
@@ -142,6 +145,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
       {/* 입력 필드 */}
       <div className="space-y-3">
         <EditField label="이름" value={name} onChange={setName} required />
+        {isGuest && <EditField label="회사명" value={companyName} onChange={setCompanyName} />}
         <EditField label="부서" value={department} onChange={setDepartment} />
         <EditField label="직책" value={job} onChange={setJob} />
         <div>

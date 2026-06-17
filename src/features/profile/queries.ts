@@ -25,6 +25,7 @@ export const useMyProfileUpdate = () => {
 
       const user = {
         ...myInfo,
+        ...(params.companyName !== undefined && { companyName: params.companyName }),
         name: params.name,
         department: toStringSafe(params.department),
         job: toStringSafe(params.job),

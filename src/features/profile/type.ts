@@ -1,4 +1,5 @@
 export interface MyProfileUpdateRequestProps {
+  companyName?: string | null; // 협력멤버(GUEST)만 수정 가능
   name: string;
   department?: string | null;
   job?: string | null;
