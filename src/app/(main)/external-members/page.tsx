@@ -8,7 +8,7 @@ import {
   useRespondInvite,
 } from '@/features/external-member/queries';
 import { cn } from '@/shared/lib/cn';
-import { InviteForm } from './_components/InviteForm';
+import { ExternalInviteDialog } from './_components/ExternalInviteDialog';
 import { ExternalMemberRow } from './_components/ExternalMemberRow';
 import { ReceivedInviteRow } from './_components/ReceivedInviteRow';
 import { SentInviteRow } from './_components/SentInviteRow';
@@ -17,7 +17,7 @@ type InviteTab = 'received' | 'sent';
 
 export default function ExternalMembersPage() {
   const [search, setSearch] = useState('');
-  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteTab, setInviteTab] = useState<InviteTab>('received');
   const { data: members = [], isLoading } = useGetExternalMembers(search || undefined);
   const { data: receivedInvites = [] } = useReceivedInvites();
@@ -32,10 +32,10 @@ export default function ExternalMembersPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-heading-md font-bold text-text-primary">외부 멤버</h2>
           <button
-            onClick={() => setShowInviteForm(prev => !prev)}
+            onClick={() => setIsInviteOpen(true)}
             className="rounded-lg bg-primary px-3 py-1.5 text-sub-sm font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
           >
-            {showInviteForm ? '닫기' : '초대하기'}
+            초대하기
           </button>
         </div>
         <div className="mt-2">
@@ -48,10 +48,6 @@ export default function ExternalMembersPage() {
           />
         </div>
       </header>
-
-      {showInviteForm && (
-        <InviteForm onDone={() => setShowInviteForm(false)} />
-      )}
 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
         {hasInvites && (
@@ -127,6 +123,8 @@ export default function ExternalMembersPage() {
           ))
         )}
       </div>
+
+      <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
     </main>
   );
 }
