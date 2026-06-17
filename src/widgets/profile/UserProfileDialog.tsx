@@ -145,7 +145,7 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-outline py-2.5 text-sub font-semibold text-text-secondary transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
               {isPinned ? (
-                <IconStarFilled width={18} height={18} className="text-yellow" />
+                <IconStarFilled width={18} height={18} className="text-yellow-300" />
               ) : (
                 <IconStarEmpty width={18} height={18} />
               )}

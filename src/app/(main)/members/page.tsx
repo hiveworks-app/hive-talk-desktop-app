@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
-import { IconClose } from '@/shared/ui/icons';
 import IconSearchDefault from '@assets/icons/search-default.svg';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconAddMemberDefault from '@assets/icons/static/add-member-default.svg';
 import IconEnvelope from '@assets/icons/envelope.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
@@ -20,6 +20,7 @@ export default function MembersPage() {
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
+    isSearching, searchResultCount,
   } = useMembersPage();
 
   return (
@@ -44,7 +45,7 @@ export default function MembersPage() {
 
       <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', isSearchVisible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
         <div className="overflow-hidden">
-          <div className="border-b border-divider bg-background px-4 pb-3 pt-1">
+          <div className="bg-gray-100 px-4 py-3">
             <div className="flex items-center gap-2">
               <input
                 ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -53,7 +54,7 @@ export default function MembersPage() {
                 className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
               />
               <button onClick={clearSearch} className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100">
-                <IconClose size={16} />
+                <IconCloseStroke width={20} height={20} />
               </button>
             </div>
           </div>
@@ -81,7 +82,7 @@ export default function MembersPage() {
               {pinnedDisplay.length > 0 && (
                 <div className="border-b border-divider pb-3.5">
                   <div className="flex items-end gap-1 px-4 pt-1">
-                    <IconStarFilled width={20} height={20} className="text-yellow" />
+                    <IconStarFilled width={20} height={20} className="text-yellow-300" />
                     <span className="text-sub-sm text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
                   </div>
                   <PinnedMembersList
@@ -92,7 +93,9 @@ export default function MembersPage() {
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-sub-sm text-text-secondary">{memberSectionLabel} ({displayMembers.length})</span>
+                <span className="text-sub-sm text-text-secondary">
+                  {isSearching ? `검색결과 (${searchResultCount})` : `${memberSectionLabel} (${displayMembers.length})`}
+                </span>
               </div>
               <div className="flex flex-col">
                 {displayMembers.map(item => (

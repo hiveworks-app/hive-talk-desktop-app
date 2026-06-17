@@ -141,7 +141,8 @@
   /* Brand Shorthand */
   --color-green: #03C75A;
   --color-red: #F04452;
-  --color-yellow: #FFD900;
+  --color-yellow: #FFD900; /* = Yellow 500 (RN brand.primary.500) */
+  --color-yellow-300: #FFED66; /* RN brand.primary.300 — 관심멤버 별 등 라이트 옐로 */
 
   /* Navy */
   --color-navy-400: #C8CFDC;

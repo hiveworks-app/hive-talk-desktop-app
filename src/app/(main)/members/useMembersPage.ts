@@ -83,9 +83,17 @@ export function useMembersPage() {
 
   const hasContent = pinnedDisplay.length > 0 || displayMembers.length > 0;
 
+  // 검색어가 입력된 상태인지 (공백만 입력한 경우는 검색으로 보지 않음)
+  const isSearching = search.trim().length > 0;
+
   // 활성 칩별 섹션 헤더 라벨 (협력 칩 → '협력멤버', 사내 칩 → '사내멤버')
   const memberSectionLabel =
     activeChip === 'company' ? '사내멤버' : activeChip === 'external' ? '협력멤버' : '전체멤버';
+
+  // 검색 중 헤더에 표시할 "검색결과 (N)"의 N — 본문 멤버 리스트 개수.
+  // 관심멤버 섹션은 자체적으로 '관심멤버 (N)' 카운트를 따로 가지므로,
+  // 본문 헤더 숫자는 화면 본문 행 수와 1:1로 맞춘다. (모바일 패리티: 검색결과 카운트)
+  const searchResultCount = displayMembers.length;
 
   const handleReorderPinned = useCallback(
     (orderedIds: string[]) => {
@@ -111,5 +119,6 @@ export function useMembersPage() {
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
+    isSearching, searchResultCount,
   };
 }
