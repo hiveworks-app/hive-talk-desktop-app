@@ -9,6 +9,7 @@ import IconStarFilled from '@assets/icons/star-filled.svg';
 import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
 import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDialog';
+import { InviteStatusDialog } from '@/widgets/invite-status/InviteStatusDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
 import { PinnedMembersList } from './_components/PinnedMembersList';
@@ -22,6 +23,7 @@ export default function MembersPage() {
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
     isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
+    isStatusOpen, setIsStatusOpen, receivedInviteCount,
   } = useMembersPage();
 
   return (
@@ -39,9 +41,12 @@ export default function MembersPage() {
                 <IconAddMemberDefault width={20} height={20} />
               </button>
             )}
-            {/* TODO: 편지봉투(초대현황) 동작 연결 필요 — 모바일 /invite-status 대응 */}
-            <button aria-label="초대 현황" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
+            {/* 편지봉투 = 초대현황(받은/보낸). 받은 초대가 있으면 빨간 dot 표시 (RN 패리티) */}
+            <button onClick={() => setIsStatusOpen(true)} aria-label="초대 현황" className="relative flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
               <IconEnvelope width={20} height={20} />
+              {receivedInviteCount > 0 && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-state-error" />
+              )}
             </button>
           </div>
         </div>
@@ -118,6 +123,7 @@ export default function MembersPage() {
       <UserProfileDialog isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} member={selectedMember} />
       <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
       <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
+      <InviteStatusDialog open={isStatusOpen} onClose={() => setIsStatusOpen(false)} />
     </main>
   );
 }
