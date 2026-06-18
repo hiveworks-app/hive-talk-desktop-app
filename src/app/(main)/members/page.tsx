@@ -12,7 +12,6 @@ import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDi
 import { InviteStatusDialog } from '@/widgets/invite-status/InviteStatusDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
-import { PinnedMembersList } from './_components/PinnedMembersList';
 import { Chip } from './_components/Chip';
 import { useMembersPage } from './useMembersPage';
 
@@ -21,7 +20,7 @@ export default function MembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
+    pinnedDisplay, hasContent, memberSectionLabel,
     isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
     isStatusOpen, setIsStatusOpen, receivedInviteCount,
   } = useMembersPage();
@@ -94,11 +93,12 @@ export default function MembersPage() {
                     <IconStarFilled width={20} height={20} className="text-yellow-300" />
                     <span className="text-sub-sm text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
                   </div>
-                  <PinnedMembersList
-                    items={pinnedDisplay}
-                    onClickMember={handleMemberPress}
-                    onReorder={handleReorderPinned}
-                  />
+                  {/* 관심멤버는 표시 전용 — 등록/해제·순서변경은 모바일 전담 (데스크톱 view-only) */}
+                  <div className="mt-1 flex flex-col">
+                    {pinnedDisplay.map(item => (
+                      <MemberListItem key={item.id} member={item} onClick={() => handleMemberPress(item.id)} />
+                    ))}
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">

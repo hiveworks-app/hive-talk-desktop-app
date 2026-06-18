@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGetMembers } from '@/features/members/queries';
-import {
-  useGetPinnedMembers,
-  useReorderPinnedMembers,
-} from '@/features/pinned-members/queries';
+import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { useReceivedInvites } from '@/features/external-member/queries';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
@@ -66,7 +63,6 @@ export function useMembersPage() {
   // (/app/externals 는 초대 관리 전용이라 멤버목록 소스로 쓰지 않는다)
   const { data: members = [], isLoading } = useGetMembers();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
-  const { reorder: reorderPinned } = useReorderPinnedMembers();
 
   // 외부유저는 칩이 없으므로 항상 'all'(서버가 협력멤버만 응답) — RN과 동일
   const effectiveChip: MemberChipType = isOrgMember ? activeChip : 'all';
@@ -104,13 +100,6 @@ export function useMembersPage() {
   // 본문 헤더 숫자는 화면 본문 행 수와 1:1로 맞춘다. (모바일 패리티: 검색결과 카운트)
   const searchResultCount = displayMembers.length;
 
-  const handleReorderPinned = useCallback(
-    (orderedIds: string[]) => {
-      reorderPinned(orderedIds.map(id => id.replace(/^(company|external)-/, '')));
-    },
-    [reorderPinned],
-  );
-
   const handleMemberPress = useCallback(
     (id: string) => {
       const userId = id.replace(/^(company|external)-/, '');
@@ -127,7 +116,7 @@ export function useMembersPage() {
     isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
     activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
+    pinnedDisplay, hasContent, memberSectionLabel,
     isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
     isStatusOpen, setIsStatusOpen, receivedInviteCount,
   };
