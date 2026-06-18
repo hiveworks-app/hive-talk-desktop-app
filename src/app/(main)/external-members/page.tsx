@@ -8,7 +8,7 @@ import {
   useRespondInvite,
 } from '@/features/external-member/queries';
 import { cn } from '@/shared/lib/cn';
-import { ExternalInviteDialog } from './_components/ExternalInviteDialog';
+import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDialog';
 import { ExternalMemberRow } from './_components/ExternalMemberRow';
 import { ReceivedInviteRow } from './_components/ReceivedInviteRow';
 import { SentInviteRow } from './_components/SentInviteRow';
