@@ -14,6 +14,7 @@ import {
 } from "@/shared/config/queryKeys";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/Badge";
+import { Checkbox } from "@/shared/ui/Checkbox";
 import { ProfileCircle } from "@/shared/ui/ProfileCircle";
 import {
   WS_CHANNEL_TYPE,
@@ -26,9 +27,19 @@ import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
 interface ChatRoomItemProps {
   room: GetChatRoomListItemType;
   channelType: WebSocketChannelTypes;
+  /** 채팅방 관리(복수 선택 나가기) 모드 — true면 클릭 시 이동 대신 선택 토글 */
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
+export function ChatRoomItem({
+  room,
+  channelType,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}: ChatRoomItemProps) {
   const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
@@ -51,6 +62,10 @@ export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
   const isActive = params?.roomId === roomModel.roomId;
 
   const handleClick = async () => {
+    if (selectionMode) {
+      onToggleSelect?.();
+      return;
+    }
     if (isActive) return;
 
     const lastMessageQueryKey =
@@ -103,9 +118,13 @@ export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
       onClick={handleClick}
       className={cn(
         "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-150",
-        isActive && "bg-gray-150",
+        !selectionMode && isActive && "bg-gray-150",
+        selectionMode && selected && "bg-gray-100",
       )}
     >
+      {/* 선택 모드 체크박스 */}
+      {selectionMode && <Checkbox checked={selected} size="lg" className="shrink-0" />}
+
       {/* 아바타 */}
       <ProfileCircle name={displayName} size="md" storageKey={profileStorageKey} />
 
