@@ -11,6 +11,7 @@ import type { WebSocketChannelTypes } from "@/shared/types/websocket";
 import { Chip } from "@/shared/ui/Chip";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
+import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import { ChatRoomItem } from "./ChatRoomItem";
 
 const CHIPS = [
@@ -71,20 +72,11 @@ export function ChatRoomListSidebar() {
         <div className="electron-no-drag flex items-center gap-2">
           <button
             onClick={() => setShowCreateRoom(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface-pressed"
-            title="새 채팅방"
+            title="새 채팅"
+            aria-label="새 채팅"
+            className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <IconCreateChatFilled width={20} height={20} />
           </button>
         </div>
       </div>
