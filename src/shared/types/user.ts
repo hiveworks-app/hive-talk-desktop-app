@@ -1,9 +1,28 @@
+/**
+ * 🏷️ 사용자 유형 (B2B)
+ * - ORG_MEMBER: 조직에 소속된 유저 (companyId 존재)
+ * - EXTERNAL_USER: 조직 미소속 외부 유저 (companyId === null)
+ */
 export const USER_TYPE = {
   ORG_MEMBER: 'ORG_MEMBER',
   EXTERNAL_USER: 'EXTERNAL_USER',
 } as const;
 
 export type UserType = (typeof USER_TYPE)[keyof typeof USER_TYPE];
+
+/**
+ * 🔑 서버 역할 (3계층)
+ * - GUEST: 회사 미소속 유저 (companyId === null)
+ * - MEMBER: 회사 소속 유저
+ * - ADMIN: 회사 소속 + 해당 회사 관리자
+ */
+export const USER_ROLE = {
+  GUEST: 'GUEST',
+  MEMBER: 'MEMBER',
+  ADMIN: 'ADMIN',
+} as const;
+
+export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 
 export interface OrganizationInfo {
   organizationId: string;

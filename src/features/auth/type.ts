@@ -1,4 +1,5 @@
 import { ApiResponse } from "@/shared/api";
+import type { UserRole } from "@/shared/types/user";
 
 export type DeviceTypes = "DESKTOP";
 
@@ -15,7 +16,7 @@ export interface LoginRequestProps extends CommonAuthRequestProps {
 
 export interface LoginResponseProps {
   id: string;
-  companyId: string;
+  companyId: string | null; // 소속 회사 인덱스 (GUEST는 null)
   email: string;
   name: string;
   department: string | null;
@@ -26,7 +27,7 @@ export interface LoginResponseProps {
   lastLoginAt: Date;
   profileUrl: string | null;
   companyName: string | null; // 협력멤버(GUEST)의 소속 회사명
-  role: string;
+  role: UserRole; // 권한 (GUEST | MEMBER | ADMIN)
   accessToken: string;
   refreshToken: string;
 }
