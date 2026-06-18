@@ -7,6 +7,7 @@ import {
 } from "@/features/chat-room-list/queries";
 import { cn } from "@/shared/lib/cn";
 import { WS_CHANNEL_TYPE } from "@/shared/types/websocket";
+import { EmptyState } from "@/shared/ui/EmptyState";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 import { ChatRoomItem } from "./ChatRoomItem";
 
@@ -77,9 +78,7 @@ export function ChatRoomListSidebar() {
             <p className="text-sub text-text-tertiary">로딩 중...</p>
           </div>
         ) : rooms.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-sub text-text-tertiary">채팅방이 없습니다</p>
-          </div>
+          <EmptyState message="아직 채팅방이 없어요." className="py-10" />
         ) : (
           rooms.map((room) => (
             <ChatRoomItem
