@@ -11,9 +11,6 @@ import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
-import { usePinnedMemberIds, useTogglePinnedMember } from '@/features/pinned-members/queries';
-import IconStarFilled from '@assets/icons/star-filled.svg';
-import IconStarEmpty from '@assets/icons/star-empty.svg';
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -26,13 +23,10 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
   const router = useAppRouter();
   const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
-  const pinnedIds = usePinnedMemberIds();
-  const { toggle: togglePin, isPending: isTogglingPin } = useTogglePinnedMember();
 
   if (!isOpen || !member) return null;
 
   const isMe = member.userId === myUserId;
-  const isPinned = pinnedIds.has(String(member.userId));
 
   const phone =
     member.phoneHead && member.phoneMid && member.phoneTail
@@ -134,22 +128,6 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
               className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
             >
               1:1 채팅 시작
-            </button>
-          )}
-
-          {/* 관심멤버 등록/해제 (멤버 행의 별 토글을 이곳으로 이전) */}
-          {!isMe && (
-            <button
-              onClick={() => togglePin(member)}
-              disabled={isTogglingPin}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-outline py-2.5 text-sub font-semibold text-text-secondary transition-colors hover:bg-gray-50 disabled:opacity-50"
-            >
-              {isPinned ? (
-                <IconStarFilled width={18} height={18} className="text-yellow-300" />
-              ) : (
-                <IconStarEmpty width={18} height={18} />
-              )}
-              {isPinned ? '관심멤버 해제' : '관심멤버 등록'}
             </button>
           )}
         </div>

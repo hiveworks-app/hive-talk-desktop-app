@@ -2,7 +2,6 @@
 
 import { useMyProfileHook } from '@/features/profile/useMyProfileHook';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
-import IconSettingsFilled from '@assets/icons/settings-filled.svg';
 import IconArrowRightDefault from '@assets/icons/arrow-right-default.svg';
 
 interface MyProfileHeaderProps {
@@ -31,14 +30,6 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
             </div>
           )}
         </div>
-      </button>
-
-      {/* 우측: 설정 아이콘 */}
-      <button
-        onClick={onOpenProfile}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-gray-300 text-gray-500 transition-colors hover:bg-gray-400"
-      >
-        <IconSettingsFilled width={22} height={22} />
       </button>
     </div>
   );
