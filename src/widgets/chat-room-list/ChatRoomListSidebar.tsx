@@ -243,7 +243,7 @@ export function ChatRoomListSidebar() {
         </div>
       </div>
 
-      {/* 검색바 (멤버목록과 동일한 인라인 토글) */}
+      {/* 검색바 (인라인 토글). 사내채팅은 흰 배경이라 영역도 흰색(멤버찾기는 회색 상단이라 회색) */}
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
@@ -251,7 +251,7 @@ export function ChatRoomListSidebar() {
         )}
       >
         <div className="overflow-hidden">
-          <div className="border-b border-divider bg-gray-100 px-4 py-2.5">
+          <div className="border-b border-divider bg-surface px-4 py-2.5">
             <div className="flex items-center gap-2">
               <input
                 ref={searchInputRef}
