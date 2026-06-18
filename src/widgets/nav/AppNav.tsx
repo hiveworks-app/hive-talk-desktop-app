@@ -10,6 +10,8 @@ import {
 } from "@/features/chat-room-list/queries";
 import { cn } from "@/shared/lib/cn";
 import { useUIStore } from "@/store/uiStore";
+import { useAuthStore } from "@/store/auth/authStore";
+import { USER_TYPE } from "@/shared/types/user";
 import { toSafeNumber } from "@/shared/utils/utils";
 import IconBottomMemberDefault from "@assets/icons/bottom-member-default.svg";
 import IconBottomChatDefault from "@assets/icons/bottom-chat-default.svg";
@@ -46,6 +48,8 @@ const NAV_ITEMS = [
     label: "사내채팅",
     Icon: IconBottomChatDefault,
     badgeKey: "company" as const,
+    // 사내채팅(DM/GM)은 소속 유저만 — GUEST는 노출하지 않는다 (RN ExtendedBottomNavigation 패리티)
+    orgOnly: true,
   },
   {
     href: "/external-chat",
@@ -64,6 +68,8 @@ const NAV_ITEMS = [
 export function AppNav() {
   const pathname = usePathname();
   const showSnackbar = useUIStore(s => s.showSnackbar);
+  const isOrgMember = useAuthStore(s => s.user?.userType) === USER_TYPE.ORG_MEMBER;
+  const navItems = NAV_ITEMS.filter(item => !item.orgOnly || isOrgMember);
   const { companyChatBadge, externalChatBadge, totalUnread } =
     useTotalUnreadCount();
 
@@ -83,7 +89,7 @@ export function AppNav() {
     <nav className="electron-drag flex h-full w-[78px] shrink-0 flex-col items-center border-r border-divider bg-surface pt-16 pb-4">
       {/* 네비게이션 아이템 */}
       <div className="flex flex-1 flex-col items-center gap-5">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const badgeCount = getBadgeCount(item.badgeKey);
 

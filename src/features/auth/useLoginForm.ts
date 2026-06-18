@@ -20,7 +20,7 @@ import {
 } from '@/shared/config/queryKeys';
 import type { MemberItem } from '@/shared/types/user';
 import { USER_TYPE } from '@/shared/types/user';
-import type { UserType } from '@/shared/types/user';
+import { deriveUserType } from '@/shared/utils/permissions';
 import { getBrowserDeviceId } from '@/shared/utils/deviceId';
 import { useAuthStore } from '@/store/auth/authStore';
 
@@ -85,11 +85,13 @@ export function useLoginForm() {
       await del('hiveworks-query-cache');
 
       const { accessToken, refreshToken, ...rest } = res.payload;
+      // userType은 서버 값이 아니라 companyId 기반으로 파생한다 (GUEST=null → EXTERNAL_USER). RN 패리티.
+      const userType = deriveUserType(rest.companyId);
       setAuth({
         accessToken,
         refreshToken,
         deviceInfo: { deviceId, deviceType: params.deviceType },
-        user: { ...rest, userType: USER_TYPE.ORG_MEMBER as UserType },
+        user: { ...rest, userType },
       });
 
       await Promise.allSettled([
@@ -113,7 +115,8 @@ export function useLoginForm() {
         );
       }
 
-      window.location.href = '/members';
+      // GUEST(소속 없음)는 협력채팅으로, 소속 유저는 멤버목록으로 진입 (RN 패리티)
+      window.location.href = userType === USER_TYPE.ORG_MEMBER ? '/members' : '/external-chat';
     } catch {
       setIsProcessing(false);
       setLoginError('하이브톡계정 또는 비밀번호를 다시 입력해주세요.');
