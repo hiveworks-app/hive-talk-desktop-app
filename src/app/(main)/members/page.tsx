@@ -12,7 +12,7 @@ import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDi
 import { InviteStatusDialog } from '@/widgets/invite-status/InviteStatusDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
-import { Chip } from './_components/Chip';
+import { Chip } from '@/shared/ui/Chip';
 import { useMembersPage } from './useMembersPage';
 
 export default function MembersPage() {
