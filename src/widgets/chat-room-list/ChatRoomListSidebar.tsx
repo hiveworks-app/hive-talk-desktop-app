@@ -5,6 +5,7 @@ import {
   useGetDMRoomList,
   useGetGMRoomList,
 } from "@/features/chat-room-list/queries";
+import { useGetPinnedMembers } from "@/features/pinned-members/queries";
 import type { GetChatRoomListItemType } from "@/features/chat-room-list/type";
 import { cn } from "@/shared/lib/cn";
 import { WS_CHANNEL_TYPE } from "@/shared/types/websocket";
@@ -12,11 +13,13 @@ import type { WebSocketChannelTypes } from "@/shared/types/websocket";
 import { filterByhangeulSearch } from "@/shared/utils/hangeulSearch";
 import { Chip } from "@/shared/ui/Chip";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { useUIStore } from "@/store/uiStore";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import IconSearchDefault from "@assets/icons/search-default.svg";
 import IconCloseStroke from "@assets/icons/close-stroke.svg";
 import { ChatRoomItem } from "./ChatRoomItem";
+import { ChatSettingsMenu, type ChatSortType } from "./ChatSettingsMenu";
 
 const CHIPS = [
   { key: "all", label: "전체" },
@@ -49,19 +52,51 @@ const roomSearchText = (room: GetChatRoomListItemType) => {
     .join(" ");
 };
 
+const NO_PIN_RANK = Number.POSITIVE_INFINITY;
+
+/**
+ * 방의 "관심멤버 rank"(작을수록 위) — 멤버목록 등록 순서 기준.
+ * DM=상대방 rank, GM=참여자 중 최소 rank, 관심멤버 없으면 Infinity. (RN sortRooms 패리티, 정책 chat.md:38)
+ */
+const roomFavoriteRank = (
+  { room, channelType }: TaggedRoom,
+  rankMap: Map<string, number>,
+): number => {
+  if (channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE) {
+    const userId = room.roomModel.participantDetail?.userId;
+    return userId ? rankMap.get(userId) ?? NO_PIN_RANK : NO_PIN_RANK;
+  }
+  let min = NO_PIN_RANK;
+  for (const p of room.roomModel.participants ?? []) {
+    const rank = rankMap.get(p.userId);
+    if (rank !== undefined && rank < min) min = rank;
+  }
+  return min;
+};
+
 export function ChatRoomListSidebar() {
   const [activeChip, setActiveChip] = useState<ChatChip>("all");
+  const [sortType, setSortType] = useState<ChatSortType>("latest");
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { data: dmRooms = [], isLoading: dmLoading } = useGetDMRoomList();
   const { data: gmRooms = [], isLoading: gmLoading } = useGetGMRoomList();
+  const { data: pinnedMembers = [] } = useGetPinnedMembers();
+  const showSnackbar = useUIStore((s) => s.showSnackbar);
 
   // 검색창 열릴 때 자동 포커스
   useEffect(() => {
     if (isSearchOpen) requestAnimationFrame(() => searchInputRef.current?.focus());
   }, [isSearchOpen]);
+
+  // 관심멤버 userId → 등록 순서 rank (관심멤버 순 정렬용)
+  const pinnedRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    pinnedMembers.forEach((m, i) => map.set(String(m.userId), i));
+    return map;
+  }, [pinnedMembers]);
 
   // 각 방에 채널 타입을 태깅 — '전체'에서 DM/GM이 섞여도 클릭 라우팅/렌더가 정확하도록.
   const visibleRooms = useMemo<TaggedRoom[]>(() => {
@@ -74,17 +109,21 @@ export function ChatRoomListSidebar() {
       channelType: WS_CHANNEL_TYPE.GROUP_MESSAGE,
     }));
     const base =
-      activeChip === "dm"
-        ? dmTagged
-        : activeChip === "gm"
-          ? gmTagged
-          : // 전체: DM+GM 합쳐 최신 메시지순 정렬
-            [...dmTagged, ...gmTagged].sort(
-              (a, b) => lastActivityMs(b.room) - lastActivityMs(a.room),
-            );
+      activeChip === "dm" ? dmTagged : activeChip === "gm" ? gmTagged : [...dmTagged, ...gmTagged];
+
+    // 정렬: 관심멤버 순이면 rank 우선(동률은 최신순), 아니면 최신메시지 순
+    const sorted = [...base].sort((a, b) => {
+      if (sortType === "favorite") {
+        const ra = roomFavoriteRank(a, pinnedRankMap);
+        const rb = roomFavoriteRank(b, pinnedRankMap);
+        if (ra !== rb) return ra - rb;
+      }
+      return lastActivityMs(b.room) - lastActivityMs(a.room);
+    });
+
     // 채팅방명/상대방 이름 부분일치(한글 초성 포함) — 멤버목록 검색과 동일
-    return filterByhangeulSearch(base, search, ({ room }) => roomSearchText(room));
-  }, [dmRooms, gmRooms, activeChip, search]);
+    return filterByhangeulSearch(sorted, search, ({ room }) => roomSearchText(room));
+  }, [dmRooms, gmRooms, activeChip, sortType, pinnedRankMap, search]);
 
   const isLoading =
     activeChip === "dm"
@@ -109,6 +148,11 @@ export function ChatRoomListSidebar() {
     setIsSearchOpen(false);
   };
 
+  // TODO(다음 PR): 채팅방 관리(복수 선택 나가기) 모드 진입 (정책 chat.md:52)
+  const handleManageRooms = () => {
+    showSnackbar({ message: "채팅방 관리는 곧 제공돼요." });
+  };
+
   return (
     <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
       {/* 헤더 (드래그 가능, 버튼만 no-drag) */}
@@ -131,6 +175,11 @@ export function ChatRoomListSidebar() {
           >
             <IconCreateChatFilled width={20} height={20} />
           </button>
+          <ChatSettingsMenu
+            sortType={sortType}
+            onSortChange={setSortType}
+            onManageRooms={handleManageRooms}
+          />
         </div>
       </div>
 
