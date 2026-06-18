@@ -1,6 +1,5 @@
 'use client';
 
-import { cn } from '@/shared/lib/cn';
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import type { MemberItem } from '@/shared/types/user';
@@ -18,10 +17,7 @@ export function SelectMemberRow({ member, selected, onToggle }: SelectMemberRowP
   return (
     <button
       onClick={onToggle}
-      className={cn(
-        'flex w-full items-center gap-3 px-4 py-[7px] text-left transition-colors',
-        selected ? 'bg-gray-100' : 'hover:bg-gray-50',
-      )}
+      className="flex w-full items-center gap-3 px-4 py-[7px] text-left transition-colors hover:bg-gray-50"
     >
       <Checkbox checked={selected} size="lg" className="shrink-0" />
       <ProfileCircle name={member.name} size="sm" storageKey={member.profileUrl} className="h-10 w-10 shrink-0" />
