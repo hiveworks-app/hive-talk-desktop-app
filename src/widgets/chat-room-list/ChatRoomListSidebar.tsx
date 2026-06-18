@@ -26,7 +26,7 @@ export function ChatRoomListSidebar() {
     <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
       {/* 헤더 (드래그 가능, 버튼만 no-drag) */}
       <div className="electron-drag flex items-center justify-between border-b border-divider px-4 pt-4 pb-3">
-        <h2 className="text-heading-md font-bold text-text-primary">채팅</h2>
+        <h2 className="text-heading-lg font-semibold text-text-primary">사내채팅</h2>
         <div className="electron-no-drag flex items-center gap-2">
           <button
             onClick={() => setShowCreateRoom(true)}
