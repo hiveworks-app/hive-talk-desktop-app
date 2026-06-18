@@ -9,9 +9,9 @@ import {
 } from '@/features/external-member/queries';
 import { cn } from '@/shared/lib/cn';
 import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDialog';
+import { ReceivedInviteRow } from '@/widgets/invite-status/ReceivedInviteRow';
+import { SentInviteRow } from '@/widgets/invite-status/SentInviteRow';
 import { ExternalMemberRow } from './_components/ExternalMemberRow';
-import { ReceivedInviteRow } from './_components/ReceivedInviteRow';
-import { SentInviteRow } from './_components/SentInviteRow';
 
 type InviteTab = 'received' | 'sent';
 

@@ -6,6 +6,7 @@ import {
   useGetPinnedMembers,
   useReorderPinnedMembers,
 } from '@/features/pinned-members/queries';
+import { useReceivedInvites } from '@/features/external-member/queries';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -50,6 +51,12 @@ export function useMembersPage() {
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
   // 멤버 초대 모달(이메일/연락처 검색 초대) 노출 여부 — 초대하기(사람+) 버튼이 연다.
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // 초대현황 모달(받은/보낸 초대) 노출 여부 — 편지봉투 버튼이 연다.
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+
+  // 편지봉투 빨간 dot 배지용 — 받은(대기 중) 초대 개수 (RN externalReceivedCount 패리티)
+  const { data: receivedInvites = [] } = useReceivedInvites();
+  const receivedInviteCount = receivedInvites.length;
 
   useEffect(() => {
     if (isSearchVisible) requestAnimationFrame(() => searchInputRef.current?.focus());
@@ -122,5 +129,6 @@ export function useMembersPage() {
     isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
     pinnedDisplay, handleReorderPinned, hasContent, memberSectionLabel,
     isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
+    isStatusOpen, setIsStatusOpen, receivedInviteCount,
   };
 }
