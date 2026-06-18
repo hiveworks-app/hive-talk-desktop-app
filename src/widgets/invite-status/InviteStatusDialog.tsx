@@ -75,7 +75,7 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
           <div className="scrollbar-thin flex-1 overflow-y-auto py-2">
             {tab === 'received' ? (
               isReceivedLoading ? (
-                <Empty>로딩 중...</Empty>
+                <Loading />
               ) : receivedInvites.length > 0 ? (
                 receivedInvites.map(invite => (
                   <ReceivedInviteRow
@@ -87,14 +87,14 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
                   />
                 ))
               ) : (
-                <Empty>받은 초대가 없습니다</Empty>
+                <InviteEmpty text="받은 초대가 없어요." />
               )
             ) : isSentLoading ? (
-              <Empty>로딩 중...</Empty>
+              <Loading />
             ) : sentInvites.length > 0 ? (
               sentInvites.map(invite => <SentInviteRow key={invite.inviteId} invite={invite} />)
             ) : (
-              <Empty>보낸 초대가 없습니다</Empty>
+              <InviteEmpty text="보낸 초대가 없어요." />
             )}
           </div>
         </Dialog.Content>
@@ -103,10 +103,20 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
   );
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
+function Loading() {
   return (
     <div className="flex items-center justify-center py-10">
-      <span className="text-sub-sm text-text-tertiary">{children}</span>
+      <span className="text-sub-sm text-text-tertiary">로딩 중...</span>
+    </div>
+  );
+}
+
+/** 빈 상태 — Sad 꿀벌 일러스트 + 안내문구 (Figma node 880-7858) */
+function InviteEmpty({ text }: { text: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4">
+      <img src="/hivetalk-sad.png" alt="" className="h-[130px] w-[130px] object-contain" />
+      <span className="text-sub font-medium text-text-secondary">{text}</span>
     </div>
   );
 }
