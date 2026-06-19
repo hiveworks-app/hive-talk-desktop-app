@@ -116,10 +116,10 @@ export function useRoomLifecycle(deps: RoomLifecycleDeps) {
     send(builders.buildViewInMessageRoom({ channelIdOverride: currentRoomId }));
     viewStateRef.current = 'in';
 
-    participantsManager.ensureParticipants(currentRoomId, channelType).then(participants => {
-      if (!isMountedRef.current) return;
-      if (participants.length > 0) recalculateAllMessagesNotReadCount(participants);
-    }).catch(err => { console.warn('[WS] 재연결 참여자 목록 조회 실패:', err); });
+    // 참여자는 재연결로 바뀌지 않으므로 재조회하지 않음 (RN useChatRoomController 재연결 effect 패리티).
+    // 입장 시(effect#1) 조회 + WS 초대/퇴장 이벤트(handleParticipantChange)로 갱신됨.
+    // 과거엔 여기서 ensureParticipants를 호출해, 멤버 아닌 방(나감/강퇴/폭파)일 때
+    // 서버가 "해당 그룹 채팅에 멤버가 아닙니다"로 거부 → 불필요한 재연결마다 경고가 떴음.
 
     if (needsFetchAfterReconnectRef.current) {
       needsFetchAfterReconnectRef.current = false;
