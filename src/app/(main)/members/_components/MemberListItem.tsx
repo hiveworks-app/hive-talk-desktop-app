@@ -33,7 +33,7 @@ export function MemberListItem({ member, onClick }: MemberListItemProps) {
           {member.name}
         </span>
         {member.isExternal && (
-          <IconExternalSymbol width={18} height={10} className="shrink-0 text-text-tertiary" />
+          <IconExternalSymbol width={18} height={10} className="shrink-0 text-gray-400" />
         )}
       </span>
       {/* 부서·직급: 남은 공간을 채워 우측 정렬, 길면 말줄임 (Figma 패리티) */}

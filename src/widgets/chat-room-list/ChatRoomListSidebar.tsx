@@ -1,32 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetDMRoomList,
   useGetGMRoomList,
 } from "@/features/chat-room-list/queries";
 import { useGetPinnedMembers } from "@/features/pinned-members/queries";
 import type { GetChatRoomListItemType } from "@/features/chat-room-list/type";
-import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from "@/shared/config/queryKeys";
-import { useAppRouter } from "@/shared/hooks/useAppRouter";
 import { cn } from "@/shared/lib/cn";
 import { WS_CHANNEL_TYPE } from "@/shared/types/websocket";
 import type { WebSocketChannelTypes } from "@/shared/types/websocket";
-import { isOffline } from "@/shared/utils/offlineGuard";
 import { filterByhangeulSearch } from "@/shared/utils/hangeulSearch";
-import { useAppWebSocket } from "@/shared/websocket/WebSocketContext";
-import { useWebSocketMessageBuilder } from "@/shared/websocket/useWebSocketMessageBuilder";
 import { Chip } from "@/shared/ui/Chip";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { useUIStore } from "@/store/uiStore";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import IconSearchDefault from "@assets/icons/search-default.svg";
 import IconCloseStroke from "@assets/icons/close-stroke.svg";
 import { ChatRoomItem } from "./ChatRoomItem";
 import { ChatSettingsMenu, type ChatSortType } from "./ChatSettingsMenu";
+import { CompanyChatManageDialog } from "./CompanyChatManageDialog";
 
 const CHIPS = [
   { key: "all", label: "전체" },
@@ -85,22 +78,13 @@ export function ChatRoomListSidebar() {
   const [activeChip, setActiveChip] = useState<ChatChip>("all");
   const [sortType, setSortType] = useState<ChatSortType>("latest");
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [showManageDialog, setShowManageDialog] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [isManageMode, setIsManageMode] = useState(false);
-  const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { data: dmRooms = [], isLoading: dmLoading } = useGetDMRoomList();
   const { data: gmRooms = [], isLoading: gmLoading } = useGetGMRoomList();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
-  const showSnackbar = useUIStore((s) => s.showSnackbar);
-  const router = useAppRouter();
-  const params = useParams();
-  const queryClient = useQueryClient();
-  const { send } = useAppWebSocket();
-  // 나가기 메시지는 채널타입이 빌더에 고정 → DM/GM 각각의 빌더가 필요 (혼재 일괄 나가기)
-  const dmBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.DIRECT_MESSAGE, channelId: "" });
-  const gmBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.GROUP_MESSAGE, channelId: "" });
 
   // 검색창 열릴 때 자동 포커스
   useEffect(() => {
@@ -164,55 +148,6 @@ export function ChatRoomListSidebar() {
     setIsSearchOpen(false);
   };
 
-  // ── 채팅방 관리(복수 선택 나가기) ── (정책 chat.md:52)
-  const enterManageMode = () => {
-    setSearch("");
-    setIsSearchOpen(false);
-    setSelectedRoomIds(new Set());
-    setIsManageMode(true);
-  };
-  const exitManageMode = () => {
-    setIsManageMode(false);
-    setSelectedRoomIds(new Set());
-  };
-  const toggleRoomSelect = (roomId: string) => {
-    setSelectedRoomIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(roomId)) next.delete(roomId);
-      else next.add(roomId);
-      return next;
-    });
-  };
-  const handleBulkLeave = () => {
-    const ids = [...selectedRoomIds];
-    if (ids.length === 0 || isOffline()) return;
-    if (!window.confirm(`${ids.length}개의 채팅방을 나가겠어요?`)) return;
-
-    // 방마다 채널타입에 맞는 빌더로 EXIT 전송
-    const channelOf = (id: string) =>
-      dmRooms.some((r) => r.roomModel.roomId === id)
-        ? WS_CHANNEL_TYPE.DIRECT_MESSAGE
-        : WS_CHANNEL_TYPE.GROUP_MESSAGE;
-    ids.forEach((roomId) => {
-      const builder = channelOf(roomId) === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? dmBuilder : gmBuilder;
-      send(builder.buildExitMessageRoom({ channelIdOverride: roomId }));
-    });
-
-    // 내가 나갈 땐 WS가 목록을 갱신하지 않으므로 캐시에서 낙관적 제거
-    const sel = new Set(ids);
-    const removeLeft = (prev?: GetChatRoomListItemType[]) =>
-      prev?.filter((r) => !sel.has(r.roomModel.roomId)) ?? [];
-    queryClient.setQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY, removeLeft);
-    queryClient.setQueryData<GetChatRoomListItemType[]>(GM_ROOM_LIST_KEY, removeLeft);
-
-    // 현재 열려있는 방을 나갔으면 채팅 목록으로 이동
-    const openRoomId = typeof params?.roomId === "string" ? params.roomId : undefined;
-    if (openRoomId && sel.has(openRoomId)) router.push("/chat");
-
-    showSnackbar({ message: `${ids.length}개 채팅방을 나갔어요.`, state: "success" });
-    exitManageMode();
-  };
-
   return (
     <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
       {/* 헤더 (드래그 가능, 버튼만 no-drag) */}
@@ -238,12 +173,12 @@ export function ChatRoomListSidebar() {
           <ChatSettingsMenu
             sortType={sortType}
             onSortChange={setSortType}
-            onManageRooms={enterManageMode}
+            onManageRooms={() => setShowManageDialog(true)}
           />
         </div>
       </div>
 
-      {/* 검색바 (인라인 토글). 사내채팅은 흰 배경이라 영역도 흰색(멤버찾기는 회색 상단이라 회색) */}
+      {/* 검색바 (인라인 토글). 사내채팅은 흰 배경이라 영역도 흰색 */}
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
@@ -274,31 +209,23 @@ export function ChatRoomListSidebar() {
         </div>
       </div>
 
-      {/* 관리 모드: 취소 + 선택 개수 / 일반: 필터 칩 */}
-      {isManageMode ? (
-        <div className="flex items-center justify-between border-b border-divider px-4 py-2.5">
-          <button onClick={exitManageMode} className="text-sub font-medium text-text-secondary hover:text-text-primary">
-            취소
-          </button>
-          <span className="text-sub-sm text-text-tertiary">{selectedRoomIds.size}개 선택</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-2">
-          {CHIPS.map((chip) => (
-            <Chip
-              key={chip.key}
-              label={chip.label}
-              active={activeChip === chip.key}
-              onClick={() => setActiveChip(chip.key)}
-            />
-          ))}
-        </div>
-      )}
+      {/* 필터 칩 */}
+      <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-2">
+        {CHIPS.map((chip) => (
+          <Chip
+            key={chip.key}
+            label={chip.label}
+            active={activeChip === chip.key}
+            onClick={() => setActiveChip(chip.key)}
+          />
+        ))}
+      </div>
 
       <CreateRoomDialog
         isOpen={showCreateRoom}
         onClose={() => setShowCreateRoom(false)}
       />
+      <CompanyChatManageDialog open={showManageDialog} onClose={() => setShowManageDialog(false)} />
 
       {/* 목록 */}
       <div className="scrollbar-thin flex-1 overflow-y-auto">
@@ -317,26 +244,10 @@ export function ChatRoomListSidebar() {
               key={room.roomModel.roomId}
               room={room}
               channelType={channelType}
-              selectionMode={isManageMode}
-              selected={selectedRoomIds.has(room.roomModel.roomId)}
-              onToggleSelect={() => toggleRoomSelect(room.roomModel.roomId)}
             />
           ))
         )}
       </div>
-
-      {/* 관리 모드 하단 액션: 선택한 방 일괄 나가기 */}
-      {isManageMode && (
-        <div className="border-t border-divider p-3">
-          <button
-            onClick={handleBulkLeave}
-            disabled={selectedRoomIds.size === 0}
-            className="w-full rounded-lg bg-state-error py-2.5 text-sub font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
-            나가기{selectedRoomIds.size > 0 ? ` (${selectedRoomIds.size})` : ""}
-          </button>
-        </div>
-      )}
     </aside>
   );
 }
