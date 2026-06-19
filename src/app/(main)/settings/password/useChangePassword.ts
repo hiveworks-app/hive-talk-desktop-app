@@ -54,13 +54,13 @@ export function useChangePassword() {
     try {
       await apiChangePassword({ password, passwordConfirm });
       showSnackbar({ message: '비밀번호가 변경되었습니다.', state: 'success' });
-      router.push('/settings');
+      router.push('/settings/account');
     } catch (err) {
       showSnackbar({ message: getErrorMessage(err, '비밀번호 변경에 실패했습니다.'), state: 'error' });
     } finally { setIsLoading(false); }
   };
 
-  const goBack = () => router.push('/settings');
+  const goBack = () => router.push('/settings/account');
   const stepNum = step === 'EMAIL' ? 1 : step === 'CODE' ? 2 : 3;
 
   return {

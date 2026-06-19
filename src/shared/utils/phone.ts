@@ -1,3 +1,18 @@
+/**
+ * 전화번호 파츠 → 가운데 자리 마스킹 형식 (예: 010-****-1234).
+ * head/tail이 모두 없으면 빈 문자열을 반환한다.
+ */
+export const formatMaskedPhone = (
+  head?: string | null,
+  mid?: string | null,
+  tail?: string | null,
+) => {
+  const h = head?.trim() ?? '';
+  const t = tail?.trim() ?? '';
+  if (!h && !t) return '';
+  return `${h || '***'}-****-${t || '****'}`;
+};
+
 /** 전화번호 단일 문자열 → API 분리 형식 (phoneHead, phoneMid, phoneTail) */
 export const parsePhoneParts = (phone: string) => {
   const digits = phone.replace(/\D/g, '');

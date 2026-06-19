@@ -9,6 +9,7 @@ import {
   useToggleInvitePush,
 } from '@/features/notification-settings/queries';
 import { useUIStore } from '@/store';
+import { SettingsOverlay } from '../_components/SettingsOverlay';
 
 export default function NotificationSettingsPage() {
   const router = useAppRouter();
@@ -24,9 +25,13 @@ export default function NotificationSettingsPage() {
   const onError = () => showSnackbar({ message: '알림 설정 변경에 실패했습니다.', state: 'error' });
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden bg-background">
+    <SettingsOverlay bg="bg-background">
       <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
-        <button onClick={() => router.push('/settings')} className="text-text-tertiary hover:text-text-secondary">
+        <button
+          onClick={() => router.push('/settings')}
+          className="electron-no-drag text-text-tertiary hover:text-text-secondary"
+          aria-label="뒤로가기"
+        >
           <IconChevronLeft size={20} />
         </button>
         <h2 className="text-heading-md font-bold text-text-primary">알림 설정</h2>
@@ -52,7 +57,7 @@ export default function NotificationSettingsPage() {
           />
         </section>
       </div>
-    </main>
+    </SettingsOverlay>
   );
 }
 

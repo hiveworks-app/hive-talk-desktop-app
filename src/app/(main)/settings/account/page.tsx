@@ -1,0 +1,155 @@
+'use client';
+
+import { useState } from 'react';
+import IconCardAccount from '@assets/icons/setting-card-account.svg';
+import IconCardProfile from '@assets/icons/setting-card-profile.svg';
+import IconPhoneVerified from '@assets/icons/phone-verified.svg';
+import { useGetCredentialInfo } from '@/features/profile/queries';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { IconChevronLeft, IconChevronRight } from '@/shared/ui/icons';
+import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { formatMaskedPhone } from '@/shared/utils/phone';
+import { useAuthStore } from '@/store/auth/authStore';
+import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
+import { SettingsOverlay } from '../_components/SettingsOverlay';
+
+export default function AccountInfoPage() {
+  const router = useAppRouter();
+  const user = useAuthStore(s => s.user);
+  const [showProfile, setShowProfile] = useState(false);
+
+  // 휴대폰 인증 여부 — 로딩 중에는 깜빡임 방지를 위해 기본 인증 처리.
+  const { data: credential } = useGetCredentialInfo();
+  const isPhoneVerified = credential ? Boolean(credential.phoneVerifiedAt) : true;
+
+  const maskedPhone = formatMaskedPhone(user?.phoneHead, user?.phoneMid, user?.phoneTail);
+  const company = user?.organization?.organizationName ?? user?.companyName ?? '';
+  const department = user?.organization?.departmentName ?? user?.department ?? '';
+  const job = user?.job ?? '';
+
+  return (
+    <SettingsOverlay bg="bg-gray-50">
+      {/* TopBar — 뒤로가기 + 가운데 정렬 타이틀 */}
+      <header className="flex h-[52px] shrink-0 items-center gap-3.5 px-4">
+        <button
+          onClick={() => router.push('/settings')}
+          className="electron-no-drag shrink-0 text-text-primary"
+          aria-label="뒤로가기"
+        >
+          <IconChevronLeft size={24} />
+        </button>
+        <h2 className="flex-1 text-center text-heading-md font-medium text-text-primary">
+          하이브톡 계정정보
+        </h2>
+        <span className="w-6 shrink-0" aria-hidden />
+      </header>
+
+      <div className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-5 pb-8">
+        <div className="mx-auto flex max-w-[560px] flex-col gap-3.5">
+          {/* 계정 정보 */}
+          <section className="overflow-hidden rounded-xl border border-outline bg-surface">
+            <CardHeader icon={<IconCardAccount className="h-5 w-5" />} title="계정 정보" />
+            <InfoRow
+              label="이메일"
+              value={user?.email || '-'}
+              onClick={() => router.push('/settings/email')}
+            />
+            <InfoRow
+              label="비밀번호"
+              value="비공개"
+              onClick={() => router.push('/settings/password')}
+            />
+            <InfoRow
+              label="휴대폰 번호"
+              value={maskedPhone || '미등록'}
+              verified={!!maskedPhone && isPhoneVerified}
+            />
+          </section>
+
+          {/* 프로필 정보 */}
+          <section className="overflow-hidden rounded-xl border border-outline bg-surface">
+            <CardHeader
+              icon={<IconCardProfile className="h-5 w-5" />}
+              title="프로필 정보"
+              onClick={() => setShowProfile(true)}
+            />
+            <div className="flex items-center px-4 py-3.5">
+              <span className="flex-1 text-body font-medium text-gray-800">프로필 사진</span>
+              <ProfileCircle name={user?.name ?? ''} size="md" storageKey={user?.profileUrl} />
+            </div>
+            <InfoRow label="이름" value={user?.name || '-'} />
+            <InfoRow label="회사" value={company || '-'} />
+            <InfoRow label="부서" value={department || '-'} />
+            <InfoRow label="직급" value={job || '-'} />
+          </section>
+        </div>
+      </div>
+
+      <MyProfileDialog isOpen={showProfile} onClose={() => setShowProfile(false)} />
+    </SettingsOverlay>
+  );
+}
+
+function CardHeader({
+  icon,
+  title,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <>
+      <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>
+      <span className="flex-1 text-label font-semibold text-text-primary">{title}</span>
+      <IconChevronRight size={16} className="shrink-0 text-text-tertiary" />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex w-full items-center gap-2.5 border-b border-outline px-4 py-3 text-left transition-colors hover:bg-surface-pressed"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="flex w-full items-center gap-2.5 border-b border-outline px-4 py-3">{inner}</div>;
+}
+
+function InfoRow({
+  label,
+  value,
+  onClick,
+  verified,
+}: {
+  label: string;
+  value: string;
+  onClick?: () => void;
+  verified?: boolean;
+}) {
+  const inner = (
+    <>
+      <span className="flex-1 shrink-0 text-body font-medium text-gray-800">{label}</span>
+      <span className="flex min-w-0 items-center gap-1 text-body text-text-secondary">
+        <span className="truncate">{value}</span>
+        {verified && <IconPhoneVerified className="h-[18px] w-[18px] shrink-0" />}
+      </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex w-full items-center px-4 py-3.5 text-left transition-colors hover:bg-surface-pressed"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="flex w-full items-center px-4 py-3.5">{inner}</div>;
+}

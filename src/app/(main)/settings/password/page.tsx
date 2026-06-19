@@ -1,6 +1,7 @@
 'use client';
 
 import { IconChevronLeft } from '@/shared/ui/icons';
+import { SettingsOverlay } from '../_components/SettingsOverlay';
 import { useChangePassword } from './useChangePassword';
 
 export default function ChangePasswordPage() {
@@ -10,9 +11,13 @@ export default function ChangePasswordPage() {
   } = useChangePassword();
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden bg-background">
+    <SettingsOverlay bg="bg-background">
       <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
-        <button onClick={goBack} className="text-text-tertiary hover:text-text-secondary">
+        <button
+          onClick={goBack}
+          className="electron-no-drag text-text-tertiary hover:text-text-secondary"
+          aria-label="뒤로가기"
+        >
           <IconChevronLeft size={20} />
         </button>
         <h2 className="text-heading-md font-bold text-text-primary">비밀번호 변경</h2>
@@ -81,6 +86,6 @@ export default function ChangePasswordPage() {
           )}
         </div>
       </div>
-    </main>
+    </SettingsOverlay>
   );
 }

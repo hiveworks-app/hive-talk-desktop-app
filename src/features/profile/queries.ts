@@ -1,12 +1,35 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
-import { apiUpdateMyProfile, apiUpdateMyProfileImage } from '@/features/profile/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  apiGetCredentialInfo,
+  apiUpdateMyProfile,
+  apiUpdateMyProfileImage,
+} from '@/features/profile/api';
 import { MyProfileImageUpdateResponsePayload } from '@/features/profile/type';
 import { getErrorMessage, uploadToPresignedUrl } from '@/shared/api';
+import { CREDENTIAL_INFO_KEY } from '@/shared/config/queryKeys';
 import { toStringSafe } from '@/shared/utils/utils';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
+
+/**
+ * 내 credential(이메일/비밀번호/휴대폰) 인증·변경 시점 조회.
+ *
+ * - 계정정보 화면 진입 시 호출.
+ * - 이메일/비밀번호 변경 mutation 성공 후 invalidateQueries(CREDENTIAL_INFO_KEY)로 동기화한다.
+ */
+export const useGetCredentialInfo = () => {
+  const accessToken = useAuthStore(s => s.accessToken);
+  return useQuery({
+    queryKey: CREDENTIAL_INFO_KEY,
+    queryFn: async () => {
+      const res = await apiGetCredentialInfo();
+      return res.payload;
+    },
+    enabled: !!accessToken,
+  });
+};
 
 export const useMyProfileUpdate = () => {
   const setAuth = useAuthStore(s => s.setAuth);

@@ -16,6 +16,20 @@ export function formatKoreanTime(isoString: string) {
 }
 
 /**
+ * 마지막 동기화 시각 표기 — "M월 D일 오전/오후 H:MM"
+ */
+export function formatSyncedAt(input: Date | number | string) {
+  const date = new Date(input);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const period = hours < 12 ? '오전' : '오후';
+  const h = hours % 12 || 12;
+  return `${month}월 ${day}일 ${period} ${h}:${minutes}`;
+}
+
+/**
  * 채팅용 한국식 날짜/시간 포맷
  * - 오늘 → "오전/오후 HH:MM"
  * - 올해 과거 날짜 → "MM-DD"

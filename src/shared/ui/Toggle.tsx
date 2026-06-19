@@ -20,7 +20,8 @@ export function Toggle({ checked, onChange, disabled = false, ariaLabel }: Toggl
       onClick={() => onChange(!checked)}
       className={cn(
         'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
-        checked ? 'bg-primary' : 'bg-gray-300',
+        // 활성(on) 배경 = Yellow 500 (#FFD900, --color-yellow / RN brand.primary.500)
+        checked ? 'bg-yellow' : 'bg-gray-300',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       )}
     >
