@@ -29,8 +29,10 @@ export function useChatRoomWsFetchHandlers({
 
   const handleFetchBeforeHistory = useCallback(
     (payload: WebSocketPublishItem[], roomId: string) => {
-      const reverse = [...payload].reverse();
-      const filtered = reverse.filter(item => item.message.roomId === roomId);
+      // ⚠️ 서버가 빈 히스토리를 null로 내려줄 수 있음 → arraySpread null 크래시 방어 (RN useChatRoomController 패리티)
+      const reverse = [...(payload ?? [])].reverse();
+      // defensive: 서버가 비정상 envelope(message 누락)을 보낼 가능성 차단
+      const filtered = reverse.filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
 
       if (isInitialFetchRef.current) {
@@ -58,7 +60,8 @@ export function useChatRoomWsFetchHandlers({
 
   const handleFetchAfterHistory = useCallback(
     (payload: WebSocketPublishItem[], roomId: string) => {
-      const filtered = payload.filter(item => item.message.roomId === roomId);
+      // 빈 히스토리 null 방어 + 비정상 envelope(message 누락) 방어 (RN 패리티)
+      const filtered = (payload ?? []).filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
 
       setMessages(prev => {
