@@ -1,16 +1,27 @@
 'use client';
 
+import { useState } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
-import { ProfileCircle } from '@/shared/ui/ProfileCircle';
-import { MemberItem } from '@/shared/types/user';
+import { useDeleteExternalContact } from '@/features/external-member/queries';
+import { useTogglePinnedMember } from '@/features/pinned-members/useTogglePinnedMember';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { ProfileDialogShell } from './ProfileDialogShell';
+import { ProfileInfoSection } from './ProfileInfoSection';
+import { MemberItem, USER_ROLE } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import IconChat from '@assets/icons/chat-filled.svg';
+import IconMenu from '@assets/icons/topbar-menu.svg';
+import IconDelete from '@assets/icons/delete-filled.svg';
+import IconStarFilled from '@assets/icons/star-filled.svg';
+import IconStarEmpty from '@assets/icons/star-empty.svg';
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -18,20 +29,35 @@ interface UserProfileDialogProps {
   member: MemberItem | null;
 }
 
+/**
+ * 타사용자 프로필 모달 (사내멤버 / 협력멤버 공통).
+ * member.isExternal 로 분기:
+ * - 사내멤버: 헤더 우측 ☆ 관심멤버 토글
+ * - 협력멤버: 회사명 라인 + ∞ 배지 + 케밥(관심멤버 지정/해제 · 멤버 삭제)
+ * 관심멤버 "토글"은 지원하되, 목록 순서변경·일괄 편집은 모바일 전담(데스크톱 미지원).
+ */
 export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialogProps) {
   useDimmed(isOpen);
   const router = useAppRouter();
   const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
+  const viewerRole = useAuthStore(s => s.user?.role);
+  const { mutate: deleteContact } = useDeleteExternalContact();
+  const togglePin = useTogglePinnedMember();
+  const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   if (!isOpen || !member) return null;
 
   const isMe = member.userId === myUserId;
-
-  const phone =
-    member.phoneHead && member.phoneMid && member.phoneTail
-      ? `${member.phoneHead}-${member.phoneMid}-${member.phoneTail}`
-      : null;
+  const isExternal = member.isExternal === true;
+  const isViewerGuest = viewerRole === USER_ROLE.GUEST;
+  const isPinned = togglePin.isPinned(member.userId);
+  // 사내멤버 헤더 별 토글 노출 조건 (모바일 패리티): 본인·협력멤버 제외, 게스트 뷰어 제외
+  const showStar = !isMe && !isExternal && !isViewerGuest;
+  // 협력멤버는 회사명+부서+직책, 사내멤버는 부서+직책 (falsy는 InfoSection이 제외)
+  const lines = isExternal
+    ? [member.companyName, member.department, member.job]
+    : [member.department, member.job];
 
   const navigateToRoom = (
     roomId: string,
@@ -77,70 +103,120 @@ export function UserProfileDialog({ isOpen, onClose, member }: UserProfileDialog
     navigateToRoom('', null, [member.userId]);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-[360px] rounded-xl bg-background shadow-2xl">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-divider px-5 py-4">
-          <h2 className="text-heading-sm font-bold text-text-primary">프로필</h2>
-          <button onClick={onClose} className="text-text-tertiary hover:text-text-secondary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+  // 협력멤버 삭제 — 확인 다이얼로그에서 '삭제' 시 실행. 데스크톱 API(useDeleteExternalContact) 사용.
+  const handleDeleteConfirm = () => {
+    deleteContact(String(member.userId));
+    setDeleteConfirmOpen(false);
+    onClose();
+  };
+
+  // 협력멤버 케밥(관심멤버 토글 + 멤버 삭제) / 사내멤버 헤더 별 토글
+  let headerRight: React.ReactNode = null;
+  if (isExternal && !isMe) {
+    headerRight = (
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            aria-label="멤버 메뉴"
+            className="flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed data-[state=open]:bg-surface-pressed"
+          >
+            <IconMenu width={20} height={20} />
           </button>
-        </div>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={6}
+            className="z-[60] w-[166px] overflow-hidden rounded-xl bg-white py-1 shadow-[0px_2px_22px_rgba(0,0,0,0.12)] focus:outline-none"
+          >
+            <DropdownMenu.Item
+              onSelect={() => togglePin.toggle(member.userId)}
+              className="flex cursor-pointer items-center gap-1.5 px-3 py-2.5 text-sub text-text-primary outline-none data-[highlighted]:bg-gray-100"
+            >
+              {isPinned ? (
+                <IconStarFilled width={20} height={20} className="text-yellow" />
+              ) : (
+                <IconStarEmpty width={20} height={20} className="text-text-secondary" />
+              )}
+              {isPinned ? '관심멤버 해제' : '관심멤버 지정'}
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator className="my-1 h-px bg-divider" />
+            <DropdownMenu.Item
+              // 메뉴가 닫히며 트리거로 포커스를 되돌린 뒤 다이얼로그를 열어 포커스 트랩 충돌 방지
+              onSelect={() => setTimeout(() => setDeleteConfirmOpen(true), 0)}
+              className="flex cursor-pointer items-center gap-1.5 px-3 py-2.5 text-sub text-state-error outline-none data-[highlighted]:bg-gray-100"
+            >
+              <IconDelete width={20} height={20} />
+              멤버 삭제
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    );
+  } else if (showStar) {
+    headerRight = (
+      <button
+        type="button"
+        onClick={() => togglePin.toggle(member.userId)}
+        disabled={togglePin.isPending || togglePin.isLoading}
+        aria-label={isPinned ? '관심멤버 해제' : '관심멤버 지정'}
+        aria-pressed={isPinned}
+        className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-surface-pressed disabled:opacity-50"
+      >
+        {isPinned ? (
+          <IconStarFilled width={22} height={21} className="text-yellow" />
+        ) : (
+          <IconStarEmpty width={22} height={21} className="text-text-primary" />
+        )}
+      </button>
+    );
+  }
 
-        <div className="p-5">
-          {/* 아바타 + 이름 */}
-          <div className="flex flex-col items-center gap-3 pb-5">
-            <ProfileCircle
-              name={member.name}
-              storageKey={member.profileUrl || member.thumbnailProfileUrl}
-              className="h-20 w-20"
-            />
-            <div className="text-center">
-              <div className="text-heading-md font-bold text-text-primary">{member.name}</div>
-              <div className="text-sub text-text-secondary">{member.email}</div>
-            </div>
-          </div>
+  return (
+    <>
+      <ProfileDialogShell title="멤버 프로필" onClose={onClose} headerRight={headerRight}>
+        <div className="flex flex-col px-4 pb-6 pt-7">
+          <ProfileInfoSection
+            name={member.name}
+            email={member.email}
+            storageKey={member.profileUrl || member.thumbnailProfileUrl}
+            lines={lines}
+            isExternal={isExternal}
+          />
 
-          {/* 정보 */}
-          <div className="space-y-3 border-t border-divider pt-4">
-            {member.department && (
-              <InfoRow label="부서" value={member.department} />
-            )}
-            {member.job && (
-              <InfoRow label="직책" value={member.job} />
-            )}
-            {phone && (
-              <InfoRow label="전화번호" value={phone} />
-            )}
-            {member.companyName && (
-              <InfoRow label="회사" value={member.companyName} />
-            )}
-          </div>
-
-          {/* 1:1 채팅 버튼 */}
+          {/* 1:1 채팅 (본인 제외) */}
           {!isMe && (
             <button
               onClick={handleStartDM}
-              className="mt-5 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
+              className="mt-[30px] flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-primary bg-surface text-[16px] font-medium text-primary transition-colors hover:bg-state-primary-highlighted"
             >
-              1:1 채팅 시작
+              <IconChat width={20} height={20} />
+              1:1 채팅
             </button>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
+      </ProfileDialogShell>
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sub text-text-tertiary">{label}</span>
-      <span className="text-sub text-text-primary">{value}</span>
-    </div>
+      {/* 협력멤버 삭제 확인 (Figma node 858:8767 패리티) */}
+      {isExternal && (
+        <ConfirmDialog
+          open={isDeleteConfirmOpen}
+          title="멤버목록에서 삭제할까요?"
+          description={
+            <>
+              삭제하면 상대방의 멤버 목록에서도 삭제돼요.
+              <br />
+              채팅 기록은 유지돼요.
+            </>
+          }
+          confirmLabel="삭제"
+          cancelLabel="취소"
+          destructive
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirmOpen(false)}
+        />
+      )}
+    </>
   );
 }
