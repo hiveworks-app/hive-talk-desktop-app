@@ -23,7 +23,7 @@ interface MessageBubbleProps {
   index: number;
   isFocused: boolean;
   onOpenMedia: (items: MediaViewerItem[], startIndex: number) => void;
-  onSetNotice?: (text: string) => void;
+  onSetNotice?: (message: ChatMessageUI) => void;
   onDeleteMessage?: (messageId: string) => void;
   onEditTag?: (message: ChatMessageUI) => void;
   onRetryMessage?: (messageId: string) => void;
@@ -42,6 +42,13 @@ export function MessageBubble({
   const isMediaType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
   const isTextMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !isDeleted;
   const firstUrl = isTextMessage ? extractFirstUrl(message.text) : null;
+  // 공지 등록 가능: 텍스트 + 단일이미지/미디어/파일 (전송완료된 것만, 묶음 사진 제외 — RN 패리티)
+  const canSetNotice = !message.isLocal && !isDeleted && (
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT ||
+    (message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE && (message.files?.length ?? 0) === 1) ||
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA ||
+    message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE
+  );
   const isFailed = message.isLocal && message.localStatus === 'failed';
   const hasContextMenu = !isDeleted && !isSystem && !isFailed;
   const hasTags = !isDeleted && (message.tags?.length ?? 0) > 0;
@@ -141,9 +148,10 @@ export function MessageBubble({
       <MessageContextMenu
         enabled={hasContextMenu}
         isTextMessage={isTextMessage}
+        canSetNotice={canSetNotice}
         isMe={isMe}
         onCopy={isTextMessage ? handleCopy : undefined}
-        onSetNotice={onSetNotice ? () => onSetNotice(message.text) : undefined}
+        onSetNotice={onSetNotice ? () => onSetNotice(message) : undefined}
         onEditTag={() => onEditTag?.(message)}
         onDelete={onDeleteMessage ? () => onDeleteMessage(message.id) : undefined}
         onReport={!isMe && onReportMessage ? () => onReportMessage(message.id) : undefined}
