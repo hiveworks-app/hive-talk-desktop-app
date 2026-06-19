@@ -11,7 +11,9 @@ import { isOffline } from '@/shared/utils/offlineGuard';
 export function useAppRouter() {
   const router = useRouter();
 
+  // React Compiler 미사용(빌드 미포함) — 수동 메모는 router/콜백 참조 안정성 위해 의도된 것
   const push = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (...args: Parameters<typeof router.push>) => {
       if (isOffline('오프라인 상태에서는 이동할 수 없습니다.')) return;
       router.push(...args);
@@ -19,7 +21,9 @@ export function useAppRouter() {
     [router],
   );
 
+  // React Compiler 미사용(빌드 미포함) — 수동 메모는 router/콜백 참조 안정성 위해 의도된 것
   const replace = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (...args: Parameters<typeof router.replace>) => {
       if (isOffline('오프라인 상태에서는 이동할 수 없습니다.')) return;
       router.replace(...args);
