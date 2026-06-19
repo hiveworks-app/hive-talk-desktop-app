@@ -9,11 +9,12 @@ import {
 } from './api';
 import type { NoticeDisplayRequest, NoticeModel, NoticeRequest } from './type';
 
-/** 공지사항 조회 (DM/GM만 지원) */
+/** 공지사항 조회 (DM/GM/EM 지원 — RN 패리티) */
 export const useNoticeQuery = (roomId: string, channelType: WebSocketChannelTypes) => {
   const isSupported =
     channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE ||
-    channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE;
+    channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE ||
+    channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE;
 
   return useQuery<NoticeModel | null>({
     queryKey: ROOM_NOTICE_KEY(roomId, channelType),

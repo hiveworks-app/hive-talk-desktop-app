@@ -1,7 +1,8 @@
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { upsertChatRoomListWithMessage } from '@/features/chat-room-list/updater';
 import { apiGetStorage } from '@/features/storage/api';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import type {
   WebSocketEnvelope,
   WebSocketChannelTypes,
@@ -70,6 +71,23 @@ export function handlePublish(
     }
   } else {
     console.warn('[WS] ⚠️ PUB: targetQueryKey가 null — channelType:', currentChannelType, 'socketResponseType:', envelope.socketResponseType);
+  }
+
+  // 방 제목 변경 브로드캐스트 → 룸리스트 title + (현재 진입 중인 방이면) chatRoomInfo 즉시 갱신 (RN 패리티)
+  if (pubPayload.message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE) {
+    const newTitle = (pubPayload.message.payload as { content?: string } | null)?.content;
+    if (newTitle && targetQueryKey) {
+      queryClient.setQueryData<GetChatRoomListItemType[]>(targetQueryKey, prev =>
+        prev?.map(room =>
+          room.roomModel.roomId === roomId
+            ? { ...room, roomModel: { ...room.roomModel, title: newTitle } }
+            : room,
+        ) ?? [],
+      );
+      if (useChatRoomInfo.getState().roomId === roomId) {
+        useChatRoomInfo.getState().setChatRoomInfo({ roomName: newTitle });
+      }
+    }
   }
 
   // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 창에 포커스가 없을 때)

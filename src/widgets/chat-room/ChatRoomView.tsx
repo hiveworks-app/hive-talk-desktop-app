@@ -9,8 +9,9 @@ import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
 import { cn } from '@/shared/lib/cn';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
+import { ChatMessageUI, WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
+import { extractFileName } from '@/shared/utils/fileUtils';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUIStore } from '@/store/uiStore';
@@ -72,9 +73,38 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
 
   const { mutate: createNotice } = useCreateNoticeMutation(effectiveRoomId, channelType);
   const showSnackbar = useUIStore(s => s.showSnackbar);
-  const handleSetNotice = useCallback((text: string) => {
+  const handleSetNotice = useCallback((message: ChatMessageUI) => {
     if (!window.confirm('이 메시지를 공지로 등록하시겠습니까?')) return;
-    createNotice({ title: text, content: text }, {
+    // 메시지 유형별 title(타입 마커)/content 결정 — RN ChatRoomScreen 패리티
+    const file = message.files?.[0];
+    const { title, content } = (() => {
+      switch (message.messageContentType) {
+        case WS_MESSAGE_CONTENT_TYPE.IMAGE:
+          return { title: WS_MESSAGE_CONTENT_TYPE.IMAGE, content: file?.path ?? '' };
+        case WS_MESSAGE_CONTENT_TYPE.MEDIA:
+          return {
+            title: WS_MESSAGE_CONTENT_TYPE.MEDIA,
+            content: JSON.stringify({
+              videoPath: file?.path ?? '',
+              thumbnailPath: file?.meta?.thumbnail ?? '',
+            }),
+          };
+        case WS_MESSAGE_CONTENT_TYPE.FILE:
+          return {
+            title: WS_MESSAGE_CONTENT_TYPE.FILE,
+            content: JSON.stringify({
+              filePath: file?.path ?? '',
+              fileName: extractFileName(file?.path ?? ''),
+              fileSize: file?.meta?.size ?? 0,
+              mimeType: file?.meta?.type ?? '',
+            }),
+          };
+        default:
+          // TEXT: 고정 title('공지사항') — 본문이 'IMAGE' 등이어도 타입 오분류 방지
+          return { title: '공지사항', content: message.text };
+      }
+    })();
+    createNotice({ title, content }, {
       onSuccess: () => showSnackbar({ message: '공지가 등록되었습니다.' }),
       onError: () => showSnackbar({ message: '공지 등록에 실패했습니다.', state: 'error' }),
     });

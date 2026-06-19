@@ -16,6 +16,8 @@ interface MessageContextMenuProps {
   enabled: boolean;
   children: React.ReactNode;
   isTextMessage: boolean;
+  /** 공지 등록 가능 여부 (텍스트 + 단일이미지/미디어/파일) */
+  canSetNotice: boolean;
   isMe: boolean;
   onCopy?: () => void;
   onSetNotice?: () => void;
@@ -28,6 +30,7 @@ export function MessageContextMenu({
   enabled,
   children,
   isTextMessage,
+  canSetNotice,
   isMe,
   onCopy,
   onSetNotice,
@@ -38,12 +41,12 @@ export function MessageContextMenu({
   const items = useMemo<ContextMenuItem[]>(() => {
     const list: ContextMenuItem[] = [];
     if (isTextMessage && onCopy) list.push({ label: '복사', icon: <IconContentCopy />, onSelect: onCopy });
-    if (isTextMessage && onSetNotice) list.push({ label: '공지 등록', icon: <IconCampaign />, onSelect: onSetNotice });
+    if (canSetNotice && onSetNotice) list.push({ label: '공지 등록', icon: <IconCampaign />, onSelect: onSetNotice });
     list.push({ label: '태그 수정', icon: <IconNewLabel />, onSelect: onEditTag });
     if (isMe && onDelete) list.push({ label: '삭제', icon: <IconDelete />, state: 'error', onSelect: onDelete });
     if (!isMe && onReport) list.push({ label: '신고', icon: <IconReport />, onSelect: onReport });
     return list;
-  }, [isTextMessage, isMe, onCopy, onSetNotice, onEditTag, onDelete, onReport]);
+  }, [isTextMessage, canSetNotice, isMe, onCopy, onSetNotice, onEditTag, onDelete, onReport]);
 
   if (!enabled) return <>{children}</>;
 

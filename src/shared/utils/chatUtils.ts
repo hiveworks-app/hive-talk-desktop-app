@@ -35,6 +35,10 @@ export function getLastMessagePreview(lastMessage?: WebSocketPublishItem | null)
       return sender?.name + '님이 방을 나갔습니다.';
     }
 
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE: {
+      return `${sender?.name ?? '사용자'}님이 방 제목을 변경했어요.`;
+    }
+
     default:
       return '';
   }

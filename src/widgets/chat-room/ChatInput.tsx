@@ -4,6 +4,10 @@ import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { IconDescription, IconImage, IconNewLabel } from '@/shared/ui/icons';
+import { useUIStore } from '@/store/uiStore';
+
+/** 메시지 최대 입력 길이 (RN 패리티) */
+const MAX_MESSAGE_LENGTH = 10000;
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -15,8 +19,23 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
   const [text, setText] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showSnackbar = useUIStore(s => s.showSnackbar);
 
   const canSend = text.trim().length > 0;
+
+  // 10,000자 초과 시 잘라내고 안내 (네이티브 maxLength 대신 명시적 피드백 — RN 패리티)
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      if (value.length > MAX_MESSAGE_LENGTH) {
+        setText(value.slice(0, MAX_MESSAGE_LENGTH));
+        showSnackbar({ message: '메시지는 최대 10,000자까지 입력할 수 있어요.', state: 'error' });
+        return;
+      }
+      setText(value);
+    },
+    [showSnackbar],
+  );
 
   const handleSubmit = () => {
     if (!canSend) return;
@@ -76,7 +95,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
       {/* textarea */}
       <textarea
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         placeholder="메시지를 입력하세요."

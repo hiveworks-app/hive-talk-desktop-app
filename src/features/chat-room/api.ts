@@ -31,6 +31,10 @@ export const apiGMFileUpload = (data: ChatFileUploadRequestProps) =>
     body: data,
   });
 
+/** GM 채팅방 제목 변경 (1~50자) */
+export const apiUpdateGMRoomTitle = (roomId: string, title: string) =>
+  request<void>(`/app/gm/rooms/${roomId}/title`, { method: 'PUT', body: { title } });
+
 /* ==================== EM ==================== */
 
 export const apiGetEMLastMessage = (roomId: string) =>
@@ -43,3 +47,7 @@ export const apiEMFileUpload = (data: ChatFileUploadRequestProps) =>
     method: 'POST',
     body: data,
   });
+
+/** EM(협력) 채팅방 제목 변경 (1~50자) */
+export const apiUpdateEMRoomTitle = (roomId: string, title: string) =>
+  request<void>(`/app/em/rooms/${roomId}/title`, { method: 'PUT', body: { title } });

@@ -18,7 +18,7 @@ export interface NoticeRequest {
   content: string;
 }
 
-/** 표시 상태 변경 요청 */
+/** 표시 상태 변경 요청 (DISMISSED = 다시 안보기, EM 제외) */
 export interface NoticeDisplayRequest {
-  displayStatus: 'VISIBLE' | 'FOLDED';
+  displayStatus: 'VISIBLE' | 'FOLDED' | 'DISMISSED';
 }
