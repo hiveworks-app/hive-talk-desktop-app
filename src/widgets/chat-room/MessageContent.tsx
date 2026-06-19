@@ -34,6 +34,7 @@ export function MessageContent({ message, onOpenMedia }: MessageContentProps) {
       src: file.meta?.thumbnailPresignedUrl || file.presignedUrl || file.path,
       storageKey: file.meta?.thumbnail || file.path,
       isVideo: file.meta?.type?.startsWith('video/'),
+      duration: file.meta?.duration,
     }));
     const viewerItems: MediaViewerItem[] = files.map((file, idx) => ({
       id: file.path || `${message.id}-${idx}`,

@@ -6,10 +6,13 @@ import { getSidePanelBeforeAttachmentQuery } from '@/features/chat-room-side-pan
 import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
 import { cn } from '@/shared/lib/cn';
 import { Checkbox } from '@/shared/ui/Checkbox';
-import { IconDownload, IconSearch } from '@/shared/ui/icons';
+import { IconDownload, IconPlay, IconSearch } from '@/shared/ui/icons';
+import { MediaViewer } from '@/shared/ui/MediaViewer';
 import { Spinner } from '@/shared/ui/Spinner';
 import type { MediaListType } from '@/shared/types/media';
-import type { WebSocketChannelTypes } from '@/shared/types/websocket';
+import { WS_MESSAGE_CONTENT_TYPE, type WebSocketChannelTypes } from '@/shared/types/websocket';
+import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
+import { useSidePanelMediaViewer } from './useSidePanelMediaViewer';
 
 interface MediaTabProps {
   roomId: string;
@@ -36,6 +39,8 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
         return name.includes(q) || (m.author ?? '').toLowerCase().includes(q);
       })
     : allMedia;
+
+  const viewer = useSidePanelMediaViewer(filtered);
 
   const allSelected = filtered.length > 0 && filtered.every(m => selected.has(m.id));
   const toggle = (id: string) =>
@@ -100,9 +105,10 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
           <div className="py-8 text-center text-sub-sm text-text-tertiary">검색 결과가 없습니다</div>
         ) : (
           <div className="grid grid-cols-3 gap-1">
-            {filtered.map(media => {
+            {filtered.map((media, mediaIndex) => {
               const fileName = fileNameOf(media);
               const isChecked = selected.has(media.id);
+              const isVideo = media.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA;
               const thumb = (
                 <img
                   src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
@@ -123,9 +129,9 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
                     </button>
                   ) : (
                     <>
-                      <a href={media.presignedUrl || media.path} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
+                      <button type="button" onClick={() => viewer.open(mediaIndex)} className="block h-full w-full">
                         {thumb}
-                      </a>
+                      </button>
                       <button
                         type="button"
                         onClick={() => download(media.id, media.presignedUrl ?? media.path, fileName)}
@@ -136,6 +142,18 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
                         <IconDownload size={14} />
                       </button>
                     </>
+                  )}
+                  {isVideo && (
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white">
+                        <IconPlay size={14} />
+                      </span>
+                    </span>
+                  )}
+                  {isVideo && formatMediaDuration(media.duration) && (
+                    <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+                      {formatMediaDuration(media.duration)}
+                    </span>
                   )}
                 </div>
               );
@@ -167,6 +185,14 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
           </button>
         </div>
       )}
+
+      <MediaViewer
+        visible={viewer.visible}
+        items={viewer.items}
+        currentIndex={viewer.index}
+        onIndexChange={viewer.setIndex}
+        onClose={viewer.close}
+      />
     </div>
   );
 }

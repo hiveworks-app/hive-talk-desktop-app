@@ -11,4 +11,5 @@ export interface MediaListType {
   path: string;
   author: string;
   fileSize?: number;
+  duration?: number;
 }
