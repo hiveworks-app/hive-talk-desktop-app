@@ -152,15 +152,16 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     if (isSub(data)) return;
 
     if (isDeleteMessage(data)) { deleteMessageById(data.response.payload.message.id); return; }
-    if (isReadMessage(data)) { handleReadMessage(data.response.payload.items, roomId); return; }
+    if (isReadMessage(data)) { handleReadMessage(data.response.payload?.items ?? [], roomId); return; }
     if (isPublish(data)) {
       const p = data.response.payload;
-      if (p.message.roomId === roomId) handlePublishMessage(p, roomId);
+      // RN useChatRoomController 패리티: 비정상 envelope(message 누락) 방어
+      if (p?.message?.roomId === roomId) handlePublishMessage(p, roomId);
       return;
     }
     if (isExitMessageRoomBroadcast(data)) {
       const loginUserId = String(useAuthStore.getState().user?.id ?? '');
-      if (String(data.response.payload.userId) === loginUserId) handleExitMessageRoom(roomId);
+      if (String(data.response.payload?.userId) === loginUserId) handleExitMessageRoom(roomId);
     }
     if (isAddTagBroadcast(data)) {
       const p = data.response.payload;
