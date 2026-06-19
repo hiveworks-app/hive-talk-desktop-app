@@ -1,6 +1,7 @@
 'use client';
 
-import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { ProfileInfoSection } from './ProfileInfoSection';
+import IconPencil from '@assets/icons/pencil.svg';
 import type { AuthSaveUserInfoTypes } from '@/store/auth/authStore';
 
 interface ProfileViewModeProps {
@@ -9,49 +10,28 @@ interface ProfileViewModeProps {
 }
 
 export function ProfileViewMode({ user, onEdit }: ProfileViewModeProps) {
-  const phone =
-    user.phoneHead && user.phoneMid && user.phoneTail
-      ? `${user.phoneHead}-${user.phoneMid}-${user.phoneTail}`
-      : null;
+  const isGuest = user.role === 'GUEST';
+  // 게스트(협력멤버)는 입력해둔 회사명을 함께 노출하고, 사내 멤버는 부서·직책만 노출한다.
+  const lines = isGuest
+    ? [user.companyName, user.department, user.job]
+    : [user.department, user.job];
 
   return (
-    <div className="p-5">
-      <div className="flex flex-col items-center gap-3 pb-5">
-        <ProfileCircle
-          name={user.name}
-          storageKey={user.profileUrl}
-          className="h-20 w-20"
-        />
-        <div className="text-center">
-          <div className="text-heading-md font-bold text-text-primary">{user.name}</div>
-          <div className="text-sub text-text-secondary">{user.email}</div>
-        </div>
-      </div>
-
-      <div className="space-y-3 border-t border-divider pt-4">
-        <InfoRow label="회사" value={user.companyName} />
-        <InfoRow label="부서" value={user.department} />
-        <InfoRow label="직책" value={user.job} />
-        <InfoRow label="전화번호" value={phone} />
-        <InfoRow label="조직" value={user.organization?.organizationName} />
-      </div>
-
+    <div className="flex flex-col px-4 pb-6 pt-7">
+      <ProfileInfoSection
+        name={user.name}
+        email={user.email}
+        storageKey={user.profileUrl}
+        lines={lines}
+        showMeBadge
+      />
       <button
         onClick={onEdit}
-        className="mt-5 w-full rounded-lg border border-primary py-2.5 text-sub font-semibold text-primary transition-colors hover:bg-state-primary-highlighted"
+        className="mt-[30px] flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-outline bg-surface text-[16px] font-medium text-text-primary transition-colors hover:bg-surface-pressed"
       >
+        <IconPencil width={18} height={18} />
         프로필 수정
       </button>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sub text-text-tertiary">{label}</span>
-      <span className="text-sub text-text-primary">{value}</span>
     </div>
   );
 }
