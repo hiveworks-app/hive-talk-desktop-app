@@ -1,5 +1,6 @@
 import { request } from '@/shared/api';
 import {
+  CredentialInfoResponsePayload,
   MyProfileImageUpdateRequestProps,
   MyProfileImageUpdateResponsePayload,
   MyProfileUpdateRequestProps,
@@ -17,3 +18,7 @@ export const apiUpdateMyProfileImage = (data: MyProfileImageUpdateRequestProps) 
     method: 'POST',
     body: data,
   });
+
+/** 내 credential 인증/변경 시점 조회 (이메일/비밀번호/휴대폰) */
+export const apiGetCredentialInfo = () =>
+  request<CredentialInfoResponsePayload>('/app/profiles/credential-info', { method: 'GET' });

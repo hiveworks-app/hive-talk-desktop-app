@@ -6,6 +6,7 @@ import { isWithdrawPasswordMismatch, useWithdrawAccount } from '@/features/withd
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { IconChevronLeft } from '@/shared/ui/icons';
 import { useAuthStore } from '@/store/auth/authStore';
+import { SettingsOverlay } from '../_components/SettingsOverlay';
 
 const WITHDRAWAL_NOTICES = [
   '내 프로필, 멤버 목록 전체(관심멤버 포함), 대화 내용(사진·동영상·파일 등), 구독(결제) 등 사용자가 설정한 모든 정보가 사라지고 복구가 불가능합니다.',
@@ -29,7 +30,7 @@ export default function WithdrawalPage() {
       setStep('intro');
       return;
     }
-    router.push('/settings');
+    router.push('/settings/personal-security');
   };
 
   const handleSubmit = () => {
@@ -53,10 +54,14 @@ export default function WithdrawalPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden bg-background">
+    <SettingsOverlay bg="bg-background">
       <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
         {step !== 'complete' && (
-          <button onClick={goBack} className="text-text-tertiary hover:text-text-secondary" aria-label="뒤로가기">
+          <button
+            onClick={goBack}
+            className="electron-no-drag text-text-tertiary hover:text-text-secondary"
+            aria-label="뒤로가기"
+          >
             <IconChevronLeft size={20} />
           </button>
         )}
@@ -160,6 +165,6 @@ export default function WithdrawalPage() {
           )}
         </div>
       </div>
-    </main>
+    </SettingsOverlay>
   );
 }

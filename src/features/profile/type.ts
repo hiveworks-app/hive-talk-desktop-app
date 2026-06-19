@@ -20,3 +20,15 @@ export interface MyProfileImageUpdateResponsePayload {
   putPresignedUrl: string;
   fileKey: string;
 }
+
+/**
+ * 내 credential 인증/변경 시점 조회 응답.
+ *
+ * 각 필드는 인증 이력이 없으면 null. 비밀번호는 "변경 시점"이지만
+ * 본인 인증을 통과한 시점이므로 UI상 "인증"으로 라벨링한다. (RN 패리티)
+ */
+export interface CredentialInfoResponsePayload {
+  emailVerifiedAt: string | null;
+  passwordChangedAt: string | null;
+  phoneVerifiedAt: string | null;
+}

@@ -21,6 +21,8 @@ export const RECEIVED_INVITES_KEY = ['receivedInvites'];
 export const SENT_INVITES_KEY = ['sentInvites'];
 export const REPORT_CATEGORIES_KEY = ['reportCategories'];
 export const PUSH_SETTINGS_KEY = ['pushSettings'];
+export const CREDENTIAL_INFO_KEY = ['credentialInfo'];
+export const ME_TERMS_KEY = ['meTerms'];
 
 export const ROOM_BEFORE_ATTACHMENT_KEY = (
   roomId: string,
