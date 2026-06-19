@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
+import { useChangeRoomTitle } from '@/features/chat-room/useChangeRoomTitle';
 import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -12,7 +13,9 @@ import { IconChevronLeft, IconChevronRight, IconClose, IconImage, IconDescriptio
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { isOffline } from '@/shared/utils/offlineGuard';
+import { canEditRoomTitle, canInviteInExternalRoom } from '@/shared/utils/permissions';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUIStore } from '@/store/uiStore';
 import { MediaTab } from './MediaTab';
 import { FilesTab } from './FilesTab';
@@ -41,10 +44,26 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
 
+  const roomName = useChatRoomInfo(s => s.roomName);
+  const userRole = useAuthStore(s => s.user?.role);
+  const { mutate: changeRoomTitle, isPending: isTitleSaving } = useChangeRoomTitle();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+
+  // 권한 (RN 패리티): 제목 수정 = DM 제외 + GUEST 제외 / EM 초대 = GUEST 제외 (DM·GM은 항상 초대 가능)
+  const canEditTitle =
+    channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE && !!userRole && canEditRoomTitle(userRole);
+  const canInvite =
+    channelType !== WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ||
+    (!!userRole && canInviteInExternalRoom(userRole));
+
   // 패널 닫힐 때 메인 뷰로 복귀 (open 상태에 내부 view 동기화 — 의도된 effect)
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isOpen) setView('main');
+    if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView('main');
+      setIsEditingTitle(false);
+    }
   }, [isOpen]);
 
   const { data: participants = [] } = useQuery({
@@ -86,6 +105,41 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
 
   const handleBack = () => setView('main');
 
+  const handleTitleEditStart = () => {
+    setTitleDraft(roomName ?? '');
+    setIsEditingTitle(true);
+  };
+
+  /**
+   * 제목 검증 규칙 — 유효하면 정규화된 제목, 아니면 null.
+   * 정책: 공백 제외 1~50자 (chat.md 새 채팅방 이름 규칙과 동일). 양끝 공백 trim.
+   */
+  const validateRoomTitle = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0 || trimmed.length > 50) return null;
+    return trimmed;
+  };
+
+  const handleTitleSubmit = () => {
+    const valid = validateRoomTitle(titleDraft);
+    if (!valid) {
+      showSnackbar({ message: '채팅방 이름은 1~50자로 입력해주세요.', state: 'error' });
+      return;
+    }
+    if (valid === roomName) {
+      setIsEditingTitle(false);
+      return;
+    }
+    if (isOffline()) return;
+    changeRoomTitle(valid, {
+      onSuccess: () => {
+        showSnackbar({ message: '채팅방 이름이 변경되었습니다.', state: 'success' });
+        setIsEditingTitle(false);
+      },
+      onError: () => showSnackbar({ message: '채팅방 이름 변경에 실패했습니다.', state: 'error' }),
+    });
+  };
+
   const panelContent = (
     <div className="flex h-full w-[300px] flex-col rounded-l-2xl border-l border-divider bg-background md:w-[320px]">
       {/* 헤더 */}
@@ -115,6 +169,57 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
         {view === 'main' ? (
           <div className="flex flex-col">
+            {/* 채팅방 이름 (GM/EM 전용 — DM은 제목=상대방 이름이라 수정 불가) */}
+            {channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE && (
+              <div className="border-b border-divider px-4 py-3">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={titleDraft}
+                      onChange={e => setTitleDraft(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleTitleSubmit();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      maxLength={50}
+                      placeholder="채팅방 이름"
+                      className="min-w-0 flex-1 rounded-md border border-divider bg-gray-50 px-2.5 py-1.5 text-sub text-text-primary outline-none focus:border-primary"
+                    />
+                    <button
+                      onClick={handleTitleSubmit}
+                      disabled={isTitleSaving}
+                      className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-sub-sm font-medium text-on-primary disabled:opacity-50"
+                    >
+                      확인
+                    </button>
+                    <button
+                      onClick={() => setIsEditingTitle(false)}
+                      className="shrink-0 rounded-md px-2 py-1.5 text-sub-sm text-text-tertiary hover:bg-gray-100"
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sub-sm text-text-tertiary">채팅방 이름</p>
+                      <p className="truncate text-sub font-medium text-text-primary">{roomName || '채팅방'}</p>
+                    </div>
+                    {canEditTitle && (
+                      <button
+                        onClick={handleTitleEditStart}
+                        className="shrink-0 rounded-md px-2 py-1 text-sub-sm font-medium text-primary hover:bg-gray-100"
+                        aria-label="채팅방 이름 수정"
+                      >
+                        수정
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 사진/동영상 섹션 */}
             <button
               onClick={() => setView('media')}
@@ -162,15 +267,17 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               <span className="text-sub font-bold text-text-primary">대화상대</span>
             </div>
 
-            {/* 대화상대 초대 */}
-            <div className="px-4 py-1.5">
-              <button onClick={() => setIsInviteOpen(true)} className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
-                  <IconAdd size={18} className="text-primary" />
-                </div>
-                <span className="text-sub font-medium text-primary">대화상대 초대</span>
-              </button>
-            </div>
+            {/* 대화상대 초대 (EM은 GUEST 불가 — RN 패리티) */}
+            {canInvite && (
+              <div className="px-4 py-1.5">
+                <button onClick={() => setIsInviteOpen(true)} className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
+                    <IconAdd size={18} className="text-primary" />
+                  </div>
+                  <span className="text-sub font-medium text-primary">대화상대 초대</span>
+                </button>
+              </div>
+            )}
 
             {/* 참여자 목록 */}
             {sortedParticipants.map(p => {

@@ -46,6 +46,7 @@ export const WS_MESSAGE_CONTENT_TYPE = {
   FILE: 'FILE',
   SUBMIT_INVITE: 'SUBMIT_INVITE',
   SUBMIT_EXIT: 'SUBMIT_EXIT',
+  SUBMIT_ROOM_TITLE_UPDATE: 'SUBMIT_ROOM_TITLE_UPDATE', // 방 제목 변경 시스템 안내 (payload.content = 새 제목)
   SYSTEM_REPORTED: 'SYSTEM_REPORTED', // 신고 확정 시 메시지를 대체하는 시스템 안내
 } as const;
 

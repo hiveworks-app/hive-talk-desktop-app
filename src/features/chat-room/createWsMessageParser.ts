@@ -81,6 +81,10 @@ export function createWsMessageParser(params: {
     if (messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE) {
       const userList = (payload as WebSocketSubmitInvitePayload)?.userList ?? [];
       noticeMessage = userList.map(user => user.name).join(', ') + '님을 초대했습니다.';
+    } else if (messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT) {
+      noticeMessage = `${sender?.name ?? '사용자'}님이 채팅방을 나갔어요.`;
+    } else if (messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE) {
+      noticeMessage = `${sender?.name ?? '사용자'}님이 방 제목을 변경했어요.`;
     }
 
     const text =

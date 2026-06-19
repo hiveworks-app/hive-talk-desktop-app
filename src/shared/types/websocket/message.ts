@@ -98,11 +98,23 @@ export interface WebSocketSubmitExitMessage extends WebSocketMessageBase {
   payload: WebSocketSubmitExitPayload;
 }
 
+/** 방 제목 변경 브로드캐스트 — payload.content가 변경된 새 제목 (RN 패리티) */
+export interface WebSocketSubmitRoomTitleUpdatePayload {
+  fileId: string | null;
+  content: string;
+}
+
+export interface WebSocketSubmitRoomTitleUpdateMessage extends WebSocketMessageBase {
+  messageContentType: typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE;
+  payload: WebSocketSubmitRoomTitleUpdatePayload;
+}
+
 export type WebSocketReceiveMessageProps =
   | WebSocketTextMessage
   | WebSocketMediaFileMessage
   | WebSocketSubmitInviteMessage
-  | WebSocketSubmitExitMessage;
+  | WebSocketSubmitExitMessage
+  | WebSocketSubmitRoomTitleUpdateMessage;
 
 export type WebSocketReceiveSenderProps = MemberItem;
 export type WebSocketReceiveTagProps = TagListType;
