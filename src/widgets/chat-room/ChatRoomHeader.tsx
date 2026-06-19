@@ -26,15 +26,15 @@ export function ChatRoomHeader({
   return (
     <header className="electron-drag border-b border-divider">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="electron-no-drag flex items-center gap-2">
+        <div className="electron-no-drag flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={onBack}
-            className="flex h-8 w-8 items-center justify-center rounded text-text-secondary transition-colors hover:bg-gray-100 md:hidden"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-secondary transition-colors hover:bg-gray-100 md:hidden"
           >
             <IconChevronLeft />
           </button>
-          <div className="flex flex-col">
-            <h2 className="text-heading-sm font-bold leading-tight text-text-primary">{roomName || '채팅방'}</h2>
+          <div className="flex min-w-0 flex-col">
+            <h2 className="truncate text-heading-sm font-bold leading-tight text-text-primary">{roomName || '채팅방'}</h2>
             {totalUserCount > 0 && (
               <span className="flex items-center gap-0.5 text-sub-sm text-text-tertiary">
                 <IconPerson size={12} />
@@ -43,7 +43,7 @@ export function ChatRoomHeader({
             )}
           </div>
         </div>
-        <div className="electron-no-drag flex items-center gap-1">
+        <div className="electron-no-drag flex shrink-0 items-center gap-1">
           <button
             onClick={() => {
               if (search.isSearchMode) {
