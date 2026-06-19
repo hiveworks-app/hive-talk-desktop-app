@@ -24,6 +24,7 @@ export function useMediaViewer(messages: ChatMessageUI[]) {
           url: file.presignedUrl || file.path,
           storageKey: file.path,
           author: msg.name,
+          poster: file.meta?.thumbnailPresignedUrl,
         });
       }
     }

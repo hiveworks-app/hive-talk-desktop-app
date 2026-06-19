@@ -26,6 +26,7 @@ export const convertedMediaList = (cachedAttachments: WebSocketPublishItem[]): M
       path: media.path,
       author: sender?.name || '작성자',
       fileSize: media.meta.size,
+      duration: media.meta.duration,
     }));
   });
 };

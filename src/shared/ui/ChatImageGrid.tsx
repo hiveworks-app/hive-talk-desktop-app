@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { cn } from '@/shared/lib/cn';
 import { IconPlay } from '@/shared/ui/icons';
+import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
 
 const GAP_PX = 0;
 
@@ -56,6 +57,7 @@ interface ImageSource {
   src: string;
   storageKey?: string;
   isVideo?: boolean;
+  duration?: number;
 }
 
 interface ChatImageGridProps {
@@ -109,6 +111,7 @@ export function ChatImageGrid({
               </div>
             </div>
           )}
+          {src.isVideo && <DurationBadge seconds={src.duration} />}
         </div>
       </button>
     );
@@ -162,6 +165,7 @@ export function ChatImageGrid({
                         </div>
                       </div>
                     )}
+                    {item.isVideo && <DurationBadge seconds={item.duration} />}
                   </div>
                 </button>
               );
@@ -170,6 +174,18 @@ export function ChatImageGrid({
         );
       })}
     </div>
+  );
+}
+
+/* ─── DurationBadge: 동영상 길이(M:SS) 우하단 배지 ─── */
+
+function DurationBadge({ seconds }: { seconds?: number }) {
+  const label = formatMediaDuration(seconds);
+  if (!label) return null;
+  return (
+    <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+      {label}
+    </span>
   );
 }
 

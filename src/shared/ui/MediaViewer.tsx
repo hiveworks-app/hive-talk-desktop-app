@@ -9,6 +9,8 @@ export interface MediaViewerItem {
   url: string;
   storageKey?: string;
   author?: string;
+  /** 비디오 로드 전 보여줄 정지 이미지(썸네일). presigned 만료 허용. */
+  poster?: string;
 }
 
 interface MediaViewerProps {
@@ -39,7 +41,10 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose }: Med
   if (!item) return null;
 
   return (
-    <div className="electron-fixed-safe-top fixed inset-0 z-50 flex flex-col bg-black/95">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+      {/* macOS 신호등(좌상단 창 버튼)·Windows 타이틀바 영역 확보용 드래그 바 (CreateRoomDialog와 동일) */}
+      <div className="electron-drag h-8 w-full shrink-0" />
+
       {/* Header */}
       <div className="relative flex items-center justify-between px-4 py-3">
         <button onClick={onClose} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white">
@@ -102,16 +107,25 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose }: Med
               />
             </>
           ) : (
-            <video
-              key={displayUrl}
-              ref={videoRef}
-              src={displayUrl}
-              controls
-              autoPlay
-              className="max-h-full max-w-full"
-              onClick={e => e.stopPropagation()}
-              onError={handleMediaError}
-            />
+            <>
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+                </div>
+              )}
+              <video
+                key={displayUrl}
+                ref={videoRef}
+                src={displayUrl}
+                poster={item.poster}
+                controls
+                autoPlay
+                className="max-h-full max-w-full"
+                onClick={e => e.stopPropagation()}
+                onLoadedData={() => setIsLoading(false)}
+                onError={handleMediaError}
+              />
+            </>
           )}
         </div>
 

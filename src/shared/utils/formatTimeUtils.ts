@@ -81,3 +81,16 @@ export function formatChatDateLabel(isoString: string) {
 
   return `${isoDate.getFullYear()}년 ${month}월 ${date}일 ${getDayOfTheWeek(day)}요일`;
 }
+
+/**
+ * 동영상 길이(초)를 M:SS 로 포맷.
+ * - 0/음수/undefined/비유한 → 빈 문자열(배지 미표시)
+ * - 예: 75 → "1:15", 8 → "0:08"
+ */
+export function formatMediaDuration(seconds?: number) {
+  if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return '';
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}

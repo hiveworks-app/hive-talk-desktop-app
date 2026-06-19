@@ -7,6 +7,7 @@ import type { WebSocketMessageType } from './constants';
 interface BaseMetaProps {
   type: string;
   size: number;
+  duration?: number;
 }
 
 export interface ReceiveFileItem {
