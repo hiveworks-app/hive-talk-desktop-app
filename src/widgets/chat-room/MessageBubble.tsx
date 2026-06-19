@@ -4,9 +4,11 @@ import { useCallback } from 'react';
 import { IS_DELETE_MESSAGE_COMMENTS } from '@/shared/config/constants';
 import { cn } from '@/shared/lib/cn';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
+import { LinkPreviewCard } from '@/shared/ui/LinkPreviewCard';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { ChatMessageUI, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { TagChip } from '@/shared/ui/TagChip';
+import { extractFirstUrl } from '@/shared/utils/linkPreview';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { DateSeparator } from './DateSeparator';
@@ -39,6 +41,7 @@ export function MessageBubble({
   const isDeleted = message.isDeleted;
   const isMediaType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
   const isTextMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !isDeleted;
+  const firstUrl = isTextMessage ? extractFirstUrl(message.text) : null;
   const isFailed = message.isLocal && message.localStatus === 'failed';
   const hasContextMenu = !isDeleted && !isSystem && !isFailed;
   const hasTags = !isDeleted && (message.tags?.length ?? 0) > 0;
@@ -127,6 +130,7 @@ export function MessageBubble({
             </div>
           )}
         </div>
+        {firstUrl && <LinkPreviewCard url={firstUrl} className="mt-1" />}
       </div>
     </div>
   );
