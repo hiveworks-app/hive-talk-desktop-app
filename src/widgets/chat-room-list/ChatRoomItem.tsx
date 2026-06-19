@@ -14,7 +14,6 @@ import {
 } from "@/shared/config/queryKeys";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/Badge";
-import { Checkbox } from "@/shared/ui/Checkbox";
 import { ProfileCircle } from "@/shared/ui/ProfileCircle";
 import {
   WS_CHANNEL_TYPE,
@@ -27,19 +26,9 @@ import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
 interface ChatRoomItemProps {
   room: GetChatRoomListItemType;
   channelType: WebSocketChannelTypes;
-  /** 채팅방 관리(복수 선택 나가기) 모드 — true면 클릭 시 이동 대신 선택 토글 */
-  selectionMode?: boolean;
-  selected?: boolean;
-  onToggleSelect?: () => void;
 }
 
-export function ChatRoomItem({
-  room,
-  channelType,
-  selectionMode = false,
-  selected = false,
-  onToggleSelect,
-}: ChatRoomItemProps) {
+export function ChatRoomItem({ room, channelType }: ChatRoomItemProps) {
   const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
@@ -62,10 +51,6 @@ export function ChatRoomItem({
   const isActive = params?.roomId === roomModel.roomId;
 
   const handleClick = async () => {
-    if (selectionMode) {
-      onToggleSelect?.();
-      return;
-    }
     if (isActive) return;
 
     const lastMessageQueryKey =
@@ -118,13 +103,9 @@ export function ChatRoomItem({
       onClick={handleClick}
       className={cn(
         "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-150",
-        !selectionMode && isActive && "bg-gray-150",
-        selectionMode && selected && "bg-gray-100",
+        isActive && "bg-gray-150",
       )}
     >
-      {/* 선택 모드 체크박스 */}
-      {selectionMode && <Checkbox checked={selected} size="lg" className="shrink-0" />}
-
       {/* 아바타 */}
       <ProfileCircle name={displayName} size="md" storageKey={profileStorageKey} />
 
@@ -138,11 +119,15 @@ export function ChatRoomItem({
             {time}
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="truncate text-sub-sm text-text-secondary">
+        <div className="flex items-start gap-2">
+          {/* 미리보기: 최대 2줄 ···. 우측 최대 뱃지 폭(min-w-[36px]) 고정 거터로
+              뱃지 유무와 무관하게 텍스트 우측 경계를 일정하게 유지 (정책 chat.md:10) */}
+          <span className="line-clamp-2 min-w-0 flex-1 text-sub-sm text-text-secondary">
             {preview}
           </span>
-          <Badge count={notReadCount} className="ml-2 shrink-0" />
+          <div className="flex min-w-[36px] shrink-0 justify-end pt-0.5">
+            <Badge count={notReadCount} />
+          </div>
         </div>
       </div>
     </button>
