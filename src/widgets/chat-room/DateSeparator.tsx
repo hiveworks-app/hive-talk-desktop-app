@@ -1,11 +1,9 @@
+import { NoticePill } from './NoticePill';
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
 export function DateSeparator({ dateStr }: { dateStr: string }) {
   const date = new Date(dateStr);
-  const formatted = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-  return (
-    <div className="my-4 flex items-center gap-2">
-      <div className="flex-1 border-t border-divider" />
-      <span className="text-sub-sm text-text-tertiary">{formatted}</span>
-      <div className="flex-1 border-t border-divider" />
-    </div>
-  );
+  const formatted = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAYS[date.getDay()]}요일`;
+  return <NoticePill className="my-4">{formatted}</NoticePill>;
 }

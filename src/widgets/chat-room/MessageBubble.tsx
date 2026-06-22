@@ -15,6 +15,7 @@ import { DateSeparator } from './DateSeparator';
 import { FailedMessageActions } from './FailedMessageActions';
 import { MessageContent } from './MessageContent';
 import { MessageContextMenu } from './MessageContextMenu';
+import { NoticePill } from './NoticePill';
 
 interface MessageBubbleProps {
   message: ChatMessageUI;
@@ -66,15 +67,15 @@ export function MessageBubble({
     showSnackbar({ message: '복사되었습니다.' });
   }, [message.text, showSnackbar]);
 
-  const bubbleStyle = cn('rounded-xl px-3 py-2 text-sub', isMe ? 'bg-primary text-on-primary' : 'bg-gray-100 text-text-primary');
+  // 채팅 말풍선: 내 말풍선=노랑(#FFED66)+진한 글씨, 상대=흰색+진한 글씨. (Figma 1077-15393, chat-bg 위 배치)
+  // 글씨는 테마 무관 항상 진한색(gray-900) — 흰/노란 말풍선 가독성 유지.
+  const bubbleStyle = cn('rounded-xl px-3 py-2 text-sub', isMe ? 'bg-yellow-300 text-gray-900' : 'bg-white text-gray-900');
 
   if (isSystem) {
     return (
       <>
         {showDateSeparator && <DateSeparator dateStr={message.createdAt} />}
-        <div data-msg-index={index} className="my-2 flex justify-center">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-sub-sm text-text-tertiary">{message.text}</span>
-        </div>
+        <NoticePill data-msg-index={index} className="my-2">{message.text}</NoticePill>
       </>
     );
   }
