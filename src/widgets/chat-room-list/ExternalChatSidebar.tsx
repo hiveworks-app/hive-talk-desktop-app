@@ -186,6 +186,7 @@ export function ExternalChatSidebar() {
           </div>
         ) : visibleRooms.length === 0 ? (
           <EmptyState
+            variant={isSearching ? 'search' : 'sad'}
             message={isSearching ? '검색 결과가 없어요.' : '아직 협력채팅방이 없어요.'}
             className="py-10"
           />
