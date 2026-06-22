@@ -1,11 +1,11 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   isFileNotice,
   isImageNotice,
   isMediaNotice,
-  parseFileNoticeContent,
   parseMediaNoticeContent,
 } from '@/features/chat-room/notice/noticeUtils';
 import {
@@ -14,21 +14,17 @@ import {
   useUpdateNoticeDisplayMutation,
 } from '@/features/chat-room/notice/queries';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
+import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import { cn } from '@/shared/lib/cn';
+import type { ParticipantItemsType } from '@/shared/types/chatRoom';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
-import { IconDescription, IconPlay } from '@/shared/ui/icons';
-import { formatBytes } from '@/shared/utils/fileUtils';
+import { IconCampaign, IconPlay } from '@/shared/ui/icons';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { NoticeDetailDialog } from './NoticeDetailDialog';
 
-/* ── Material Design "campaign" 아이콘 (filled) ── */
-const CampaignIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1l5 3V6L5 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z" />
-  </svg>
-);
-
-const ChevronIcon = ({ up }: { up?: boolean }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+const ChevronIcon = ({ up, className }: { up?: boolean; className?: string }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className}>
     {up ? (
       <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
     ) : (
@@ -42,36 +38,58 @@ interface NoticeBannerProps {
   channelType: WebSocketChannelTypes;
 }
 
+// 흰 카드 + section-shadow (Figma 1334-34203/42082). chat-bg 위에 떠 있어 색은 고정값 사용.
+const CARD = 'rounded-[10px] bg-white shadow-[0px_2px_9px_0px_rgba(0,0,0,0.07)]';
+const PILL_BTN =
+  'h-10 flex-1 rounded-md bg-blue-100 text-sub font-medium text-blue-500 transition-opacity hover:opacity-80';
+
 function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
   const { data: notice } = useNoticeQuery(roomId, channelType);
+  const queryClient = useQueryClient();
   const currentUserId = useAuthStore(s => s.user?.id);
   const showSnackbar = useUIStore(s => s.showSnackbar);
 
   const { mutate: deleteNotice } = useDeleteNoticeMutation(roomId, channelType);
   const { mutate: updateDisplay } = useUpdateNoticeDisplayMutation(roomId, channelType);
 
-  // 접기/펼치기: 로컬 상태로 즉시 반응 (다시 안보기[DISMISSED]만 서버 영속)
-  const [folded, setFolded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
-  // 콘텐츠 타입 판별 + content 파싱 (notice 없으면 비활성)
+  // 콘텐츠 타입 + 미디어 썸네일 presigned (hook은 무조건 호출, key null이면 disabled)
   const imageNotice = !!notice && isImageNotice(notice);
   const mediaNotice = !!notice && isMediaNotice(notice);
   const fileNotice = !!notice && isFileNotice(notice);
-  const isTextNotice = !!notice && !imageNotice && !mediaNotice && !fileNotice;
   const mediaParsed = mediaNotice && notice ? parseMediaNoticeContent(notice.content) : null;
-  const fileParsed = fileNotice && notice ? parseFileNoticeContent(notice.content) : null;
-
-  // presigned URL 해석 (hook은 무조건 호출, key null이면 disabled)
   const { data: imageUrl } = usePresignedUrl(imageNotice && notice ? notice.content : null);
   const { data: videoThumbUrl } = usePresignedUrl(mediaParsed?.thumbnailPath ?? null);
-  const { data: videoUrl } = usePresignedUrl(mediaParsed?.videoPath ?? null);
-  const { data: fileUrl } = usePresignedUrl(fileParsed?.filePath ?? null);
 
   const isOwner = !!notice && !!currentUserId && String(notice.userId) === String(currentUserId);
   const isEM = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE;
 
-  const handleFold = useCallback(() => setFolded(true), []);
-  const handleUnfold = useCallback(() => setFolded(false), []);
+  // 참여자 캐시에서 등록자 이름 조회 (추가 네트워크 요청 없음 — RN 패리티)
+  const creatorName = (() => {
+    if (!notice) return '';
+    const participants = queryClient.getQueryData<ParticipantItemsType[]>(
+      ROOM_PARTICIPANTS_KEY(roomId, channelType),
+    );
+    return participants?.find(p => String(p.userId) === String(notice.userId))?.name ?? '';
+  })();
+
+  const handleDismiss = useCallback(() => {
+    if (!notice) return;
+    // EM은 다시 안보기(DISMISSED) 미지원 → 접어두기(FOLDED)로 대체 (정책)
+    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: isEM ? 'FOLDED' : 'DISMISSED' } });
+  }, [notice, isEM, updateDisplay]);
+
+  const handleFold = useCallback(() => {
+    if (!notice) return;
+    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: 'FOLDED' } });
+  }, [notice, updateDisplay]);
+
+  const handleRestore = useCallback(() => {
+    if (!notice) return;
+    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: 'VISIBLE' } });
+  }, [notice, updateDisplay]);
 
   const handleDelete = useCallback(() => {
     if (!notice) return;
@@ -79,17 +97,14 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
     deleteNotice(
       { noticeId: notice.noticeId },
       {
-        onSuccess: () => showSnackbar({ message: '공지가 삭제되었습니다.' }),
+        onSuccess: () => {
+          setDetailOpen(false);
+          showSnackbar({ message: '공지가 삭제되었습니다.' });
+        },
         onError: () => showSnackbar({ message: '공지 삭제에 실패했습니다.', state: 'error' }),
       },
     );
   }, [notice, deleteNotice, showSnackbar]);
-
-  const handleDismiss = useCallback(() => {
-    if (!notice) return;
-    // EM은 다시 안보기 미지원 (정책). DM/GM만 호출.
-    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: 'DISMISSED' } });
-  }, [notice, updateDisplay]);
 
   if (!notice || notice.displayStatus === 'DISMISSED') return null;
 
@@ -101,112 +116,119 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
         ? '파일이 공지로 등록되었어요.'
         : notice.content;
 
-  // 접힌 상태: 한 줄 요약
-  if (folded) {
+  const detailDialog = detailOpen && (
+    <NoticeDetailDialog
+      notice={notice}
+      creatorName={creatorName}
+      isOwner={isOwner}
+      onDelete={handleDelete}
+      onClose={() => setDetailOpen(false)}
+    />
+  );
+
+  // ── FOLDED: 우측 작은 메가폰 아이콘만 (탭 시 복원) ──
+  if (notice.displayStatus === 'FOLDED') {
     return (
-      <div className="flex w-full items-center gap-1.5 border-b border-divider bg-[#E6F3FF] px-4 py-2.5">
-        <CampaignIcon size={16} className="shrink-0 text-[#007AFF]" />
-        <span className="text-sub-sm font-semibold text-[#007AFF]">공지</span>
-        <span className="flex-1 truncate text-sub-sm text-text-primary">{previewText}</span>
+      <div className="flex justify-end bg-chat-bg px-4 py-2">
         <button
-          onClick={handleUnfold}
-          className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-[#C8E3FF]"
+          onClick={handleRestore}
           aria-label="공지 펼치기"
+          className={cn('flex items-center justify-center p-2.5', CARD)}
         >
-          <ChevronIcon />
+          <IconCampaign size={24} className="text-blue-500" />
         </button>
+        {detailDialog}
       </div>
     );
   }
 
-  // 펼쳐진 상태
-  return (
-    <div className="border-b border-divider bg-[#E6F3FF] px-4 py-2.5">
-      <div className="flex items-center gap-1.5">
-        <CampaignIcon size={16} className="shrink-0 text-[#007AFF]" />
-        <span className="flex-1 text-sub-sm font-semibold text-[#007AFF]">공지</span>
-        {!isEM && (
+  // ── 접힘(collapsed): 메가폰 + 2줄 미리보기 + 펼침 ▾ ──
+  if (!isExpanded) {
+    return (
+      <div className="bg-chat-bg px-4 py-2">
+        <div className={cn('flex items-start gap-1 p-2.5', CARD)}>
           <button
-            onClick={handleDismiss}
-            className="rounded px-1.5 py-0.5 text-sub-sm text-text-secondary transition-colors hover:bg-[#C8E3FF]"
+            onClick={() => setDetailOpen(true)}
+            className="flex min-w-0 flex-1 items-start gap-1 text-left"
           >
-            다시 안보기
+            <IconCampaign size={24} className="shrink-0 text-blue-500" />
+            <span className="line-clamp-2 flex-1 text-sub font-medium text-gray-900">{previewText}</span>
           </button>
-        )}
-        <button
-          onClick={handleFold}
-          className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-[#C8E3FF]"
-          aria-label="공지 접기"
-        >
-          <ChevronIcon up />
-        </button>
-        {isOwner && (
           <button
-            onClick={handleDelete}
-            className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-[#C8E3FF]"
-            aria-label="공지 삭제"
+            onClick={() => setIsExpanded(true)}
+            aria-label="공지 펼치기"
+            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
+            <ChevronIcon />
           </button>
-        )}
+        </div>
+        {detailDialog}
       </div>
+    );
+  }
 
-      {/* 콘텐츠 타입별 본문 */}
-      {isTextNotice && (
-        <p className="mt-1 whitespace-pre-wrap break-words text-sub-sm text-text-primary">{notice.content}</p>
-      )}
-
-      {imageNotice && imageUrl && (
-        <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="mt-1.5 block">
-          <img
-            src={imageUrl}
-            alt="공지 이미지"
-            className="max-h-40 w-full rounded-lg object-cover"
-          />
-        </a>
-      )}
-
-      {mediaNotice && (
-        <a
-          href={videoUrl || undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative mt-1.5 block"
-        >
-          {videoThumbUrl && (
-            <img
-              src={videoThumbUrl}
-              alt="공지 동영상"
-              className="max-h-40 w-full rounded-lg object-cover"
-            />
-          )}
-          <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
-              <IconPlay size={20} className="text-white" />
+  // ── 펼침(expanded): + 작성자 + 접기 ▴ + [다시 안보기][접어두기] ──
+  return (
+    <div className="bg-chat-bg px-4 py-2">
+      <div className={cn('flex flex-col gap-1.5 p-2.5', CARD)}>
+        <div className="flex items-start gap-1.5">
+          <button
+            onClick={() => setDetailOpen(true)}
+            className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
+          >
+            <IconCampaign size={24} className="shrink-0 text-blue-500" />
+            <span className="min-w-0 flex-1">
+              <span className="line-clamp-2 text-sub font-medium text-gray-900">{previewText}</span>
+              {!imageNotice && !mediaNotice && !!creatorName && (
+                <span className="mt-1 block text-sub-sm text-gray-600">{creatorName}</span>
+              )}
             </span>
-          </span>
-        </a>
-      )}
+          </button>
+          <button
+            onClick={() => setIsExpanded(false)}
+            aria-label="공지 접기"
+            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70"
+          >
+            <ChevronIcon up />
+          </button>
+        </div>
 
-      {fileNotice && fileParsed && (
-        <a
-          href={fileUrl || undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          download={fileParsed.fileName || undefined}
-          className="mt-1.5 flex items-center gap-2 rounded-lg bg-white/60 px-3 py-2 transition-colors hover:bg-white"
-        >
-          <IconDescription size={20} className="shrink-0 text-[#007AFF]" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sub-sm font-medium text-text-primary">{fileParsed.fileName || '파일'}</p>
-            {fileParsed.fileSize > 0 && (
-              <p className="text-[11px] text-text-tertiary">{formatBytes(fileParsed.fileSize)}</p>
-            )}
-          </div>
-        </a>
-      )}
+        {/* 이미지/영상 공지: 썸네일 (탭 시 상세) */}
+        {imageNotice && imageUrl && (
+          <button onClick={() => setDetailOpen(true)} className="block w-full">
+            <img src={imageUrl} alt="공지 이미지" className="max-h-40 w-full rounded-lg object-cover" />
+            {!!creatorName && <span className="mt-1 block text-left text-sub-sm text-gray-600">{creatorName}</span>}
+          </button>
+        )}
+        {mediaNotice && (
+          <button onClick={() => setDetailOpen(true)} className="block w-full text-left">
+            <span className="relative block">
+              {videoThumbUrl && (
+                <img src={videoThumbUrl} alt="공지 동영상" className="max-h-40 w-full rounded-lg object-cover" />
+              )}
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
+                  <IconPlay size={20} className="text-white" />
+                </span>
+              </span>
+            </span>
+            {!!creatorName && <span className="mt-1 block text-sub-sm text-gray-600">{creatorName}</span>}
+          </button>
+        )}
+
+        {/* 액션 버튼 (EM은 다시 안보기 미제공) */}
+        <div className="flex gap-2">
+          {!isEM && (
+            <button onClick={handleDismiss} className={PILL_BTN}>
+              다시 안보기
+            </button>
+          )}
+          <button onClick={handleFold} className={PILL_BTN}>
+            접어두기
+          </button>
+        </div>
+      </div>
+      {detailDialog}
     </div>
   );
 }
