@@ -235,6 +235,7 @@ export function ChatRoomListSidebar() {
           </div>
         ) : visibleRooms.length === 0 ? (
           <EmptyState
+            variant={isSearching ? "search" : "sad"}
             message={isSearching ? "검색 결과가 없어요." : "아직 채팅방이 없어요."}
             className="py-10"
           />

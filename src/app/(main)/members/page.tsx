@@ -13,6 +13,7 @@ import { InviteStatusDialog } from '@/widgets/invite-status/InviteStatusDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
 import { Chip } from '@/shared/ui/Chip';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { useMembersPage } from './useMembersPage';
 
 export default function MembersPage() {
@@ -83,6 +84,13 @@ export default function MembersPage() {
         <div className="scrollbar-thin flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">로딩 중...</span></div>
+          ) : isSearching && !hasContent ? (
+            <div className="flex h-full flex-col">
+              <div className="flex items-center gap-1 px-4 py-3">
+                <span className="text-sub-sm text-text-secondary">검색결과 (0)</span>
+              </div>
+              <EmptyState variant="search" message="찾으시는 멤버가 없어요." className="flex-1 pb-[94px]" />
+            </div>
           ) : !hasContent ? (
             <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">아직 함께할 멤버가 없어요.</span></div>
           ) : (
