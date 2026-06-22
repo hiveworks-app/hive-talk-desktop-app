@@ -170,9 +170,14 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           isSidePanelOpen={isSidePanelOpen}
           onToggleSidePanel={() => setIsSidePanelOpen(prev => !prev)}
         />
-        {effectiveRoomId && <NoticeBanner roomId={effectiveRoomId} channelType={channelType} />}
 
         <div className="relative flex-1 overflow-hidden bg-chat-bg">
+          {/* 공지 배너 — 절대 위치 오버레이: 펼침/접힘이 메시지 레이아웃(스크롤·위치)에 영향 주지 않도록 띄운다 */}
+          {effectiveRoomId && (
+            <div className="absolute inset-x-0 top-0 z-20">
+              <NoticeBanner roomId={effectiveRoomId} channelType={channelType} />
+            </div>
+          )}
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
