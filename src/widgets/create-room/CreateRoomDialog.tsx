@@ -1,9 +1,10 @@
 'use client';
 
-import { cn } from '@/shared/lib/cn';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
 import { IconClose } from '@/shared/ui/icons';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
@@ -33,21 +34,11 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
 
         {r.step === 1 ? (
           <>
-            {/* 헤더: X / 대화상대 선택 / 확인 */}
+            {/* 헤더: 대화상대 선택(좌) / X(우) — 확인은 하단 버튼으로 */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
+              <h2 className="text-base font-bold text-gray-900">대화상대 선택</h2>
               <button onClick={r.close} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
                 <IconClose size={20} />
-              </button>
-              <h2 className="text-base font-bold text-gray-900">대화상대 선택</h2>
-              <button
-                onClick={r.handleStep1Confirm}
-                disabled={!r.canConfirmStep1}
-                className={cn(
-                  'text-sub font-semibold transition-colors',
-                  r.canConfirmStep1 ? 'text-gray-900 hover:opacity-80' : 'cursor-default text-text-tertiary',
-                )}
-              >
-                {r.count > 0 ? `${r.count} ` : ''}확인
               </button>
             </div>
 
@@ -116,10 +107,17 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                 </>
               )}
             </div>
+
+            {/* 하단 확인 버튼 */}
+            <div className="shrink-0 border-t border-gray-100 p-4">
+              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep1} onClick={r.handleStep1Confirm}>
+                {r.count > 0 ? `${r.count} ` : ''}확인
+              </Button>
+            </div>
           </>
         ) : (
           <>
-            {/* 헤더: ← / 채팅방 정보 설정 / 확인 */}
+            {/* 헤더: ←(좌) / 채팅방 정보 설정 / X(우) — 확인은 하단 버튼으로 */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
               <button onClick={r.goBack} aria-label="뒤로" className="text-gray-700 hover:text-gray-900">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -127,25 +125,17 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                 </svg>
               </button>
               <h2 className="text-base font-bold text-gray-900">채팅방 정보 설정</h2>
-              <button
-                onClick={r.handleStep2Confirm}
-                disabled={!r.canConfirmStep2}
-                className={cn(
-                  'text-sub font-semibold transition-colors',
-                  r.canConfirmStep2 ? 'text-gray-900 hover:opacity-80' : 'cursor-default text-text-tertiary',
-                )}
-              >
-                확인
+              <button onClick={r.close} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
+                <IconClose size={20} />
               </button>
             </div>
 
             <div className="flex flex-1 flex-col items-center gap-3.5 overflow-y-auto px-4 pt-5">
-              {/* 참여자 아바타 그리드 */}
-              <div className="flex max-w-[200px] flex-wrap justify-center gap-0.5">
-                {r.selectedMembers.map((m) => (
-                  <ProfileCircle key={m.userId} name={m.name} size="sm" storageKey={m.profileUrl} className="h-[46px] w-[46px]" />
-                ))}
-              </div>
+              {/* 참여자 아바타 — 최대 4명, 1~4명 조합 레이아웃 (RN GroupProfileAvatar 패리티) */}
+              <GroupProfileAvatar
+                size="lg"
+                users={r.selectedMembers.map((m) => ({ name: m.name, storageKey: m.profileUrl }))}
+              />
 
               {/* 채팅방 이름 (필수) */}
               <div className="flex w-full flex-col gap-1">
@@ -168,6 +158,13 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                   채팅시작 전, 설정한 채팅방 이름은 모든 대화상대에게 동일하게 적용돼요.
                 </p>
               </div>
+            </div>
+
+            {/* 하단 확인 버튼 */}
+            <div className="shrink-0 border-t border-gray-100 p-4">
+              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep2} onClick={r.handleStep2Confirm}>
+                확인
+              </Button>
             </div>
           </>
         )}

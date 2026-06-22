@@ -12,17 +12,24 @@ export interface GroupAvatarUser {
 interface GroupProfileAvatarProps {
   /** 표시할 참여자 (본인 제외, 최대 4명까지만 렌더). 빈 배열이면 단일 플레이스홀더. */
   users: GroupAvatarUser[];
-  /** 컨테이너 크기 클래스 (기본 48px). */
+  /** 컨테이너 크기 클래스 (기본 48px, size='list'에서만 적용). */
   className?: string;
+  /** 'list'(기본, 채팅목록 48px) | 'lg'(채팅방 생성·정보 설정 94px). RN GroupProfileAvatar 패리티. */
+  size?: 'list' | 'lg';
 }
 
 /**
  * 채팅방 그룹 프로필 — 참여자 수에 따라 1/2/3/4명 레이아웃 자동 적용.
  * RN ChatListProfileAvatar(list 사이즈)의 절대좌표 겹침 레이아웃을 웹으로 포팅. (정책 chat.md)
  */
-export function GroupProfileAvatar({ users, className }: GroupProfileAvatarProps) {
-  const container = cn('relative h-12 w-12 shrink-0', className);
+export function GroupProfileAvatar({ users, className, size = 'list' }: GroupProfileAvatarProps) {
   const display = users.slice(0, 4);
+
+  if (size === 'lg') {
+    return <LargeGroupAvatar display={display} />;
+  }
+
+  const container = cn('relative h-12 w-12 shrink-0', className);
 
   if (display.length <= 1) {
     return (
@@ -79,6 +86,78 @@ export function GroupProfileAvatar({ users, className }: GroupProfileAvatarProps
         <span className="h-[23px] w-[23px] overflow-hidden rounded-full">
           <AvatarImg user={display[3]} />
         </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 대형(94px) 그룹 아바타 — 채팅방 생성/정보 설정 화면용.
+ * RN GroupProfileAvatar(RoomInfoSetupForm)의 1~4명 레이아웃을 좌표 그대로 포팅.
+ * 1명: 단일 80px / 2명: 58px 대각선 겹침 / 3명: 삼각형 / 4명+: 46px 2x2 그리드.
+ */
+function LargeGroupAvatar({ display }: { display: GroupAvatarUser[] }) {
+  if (display.length <= 1) {
+    return (
+      <div className="relative flex h-[94px] w-[94px] items-center justify-center">
+        <span className="h-20 w-20 overflow-hidden rounded-full">
+          <AvatarImg user={display[0]} />
+        </span>
+      </div>
+    );
+  }
+
+  if (display.length === 2) {
+    return (
+      <div className="relative h-[94px] w-[94px]">
+        <span className="absolute left-0 top-0 h-[58px] w-[58px] overflow-hidden rounded-full">
+          <AvatarImg user={display[0]} />
+        </span>
+        <span className="absolute left-9 top-[35px] h-[58px] w-[58px] overflow-hidden rounded-full border-[3.5px] border-white">
+          <AvatarImg user={display[1]} />
+        </span>
+      </div>
+    );
+  }
+
+  if (display.length === 3) {
+    return (
+      <div className="flex h-[94px] w-[94px] flex-col items-center">
+        <span className="z-10 h-[54px] w-[54px] overflow-hidden rounded-full border-[3.4px] border-white">
+          <AvatarImg user={display[0]} />
+        </span>
+        <div className="-mt-3.5 flex flex-row">
+          <span className="h-[50px] w-[50px] overflow-hidden rounded-full">
+            <AvatarImg user={display[1]} />
+          </span>
+          <span className="-ml-2.5 h-[54px] w-[54px] overflow-hidden rounded-full border-[3.4px] border-white">
+            <AvatarImg user={display[2]} />
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 4명 이상: 2x2 그리드 (slice로 이미 4명까지만)
+  return (
+    <div className="w-[94px]">
+      <div className="flex flex-row gap-0.5">
+        <span className="h-[46px] w-[46px] overflow-hidden rounded-full">
+          <AvatarImg user={display[0]} />
+        </span>
+        <span className="h-[46px] w-[46px] overflow-hidden rounded-full">
+          <AvatarImg user={display[1]} />
+        </span>
+      </div>
+      <div className="mt-0.5 flex flex-row gap-0.5">
+        <span className="h-[46px] w-[46px] overflow-hidden rounded-full">
+          <AvatarImg user={display[2]} />
+        </span>
+        {display[3] && (
+          <span className="h-[46px] w-[46px] overflow-hidden rounded-full">
+            <AvatarImg user={display[3]} />
+          </span>
+        )}
       </div>
     </div>
   );
