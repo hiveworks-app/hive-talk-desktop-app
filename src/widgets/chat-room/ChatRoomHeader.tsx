@@ -24,19 +24,19 @@ export function ChatRoomHeader({
   onToggleSidePanel,
 }: ChatRoomHeaderProps) {
   return (
-    <header className="electron-drag border-b border-divider">
+    <header className="electron-drag bg-chat-bg">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="electron-no-drag flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={onBack}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-secondary transition-colors hover:bg-gray-100 md:hidden"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-colors hover:bg-black/5 md:hidden"
           >
             <IconChevronLeft />
           </button>
           <div className="flex min-w-0 flex-col">
-            <h2 className="truncate text-heading-sm font-bold leading-tight text-text-primary">{roomName || '채팅방'}</h2>
+            <h2 className="truncate text-heading-sm font-bold leading-tight text-gray-900">{roomName || '채팅방'}</h2>
             {totalUserCount > 0 && (
-              <span className="flex items-center gap-0.5 text-sub-sm text-text-tertiary">
+              <span className="flex items-center gap-0.5 text-sub-sm text-gray-600">
                 <IconPerson size={12} />
                 {totalUserCount}
               </span>
@@ -55,7 +55,7 @@ export function ChatRoomHeader({
             }}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded transition-colors',
-              search.isSearchMode ? 'bg-gray-200 text-text-primary' : 'text-text-tertiary hover:bg-gray-100',
+              search.isSearchMode ? 'bg-black/10 text-gray-900' : 'text-gray-900 hover:bg-black/5',
             )}
           >
             <IconSearch />
@@ -64,7 +64,7 @@ export function ChatRoomHeader({
             onClick={onToggleSidePanel}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded transition-colors',
-              isSidePanelOpen ? 'bg-gray-200 text-text-primary' : 'text-text-tertiary hover:bg-gray-100',
+              isSidePanelOpen ? 'bg-black/10 text-gray-900' : 'text-gray-900 hover:bg-black/5',
             )}
           >
             <IconSidePanel />

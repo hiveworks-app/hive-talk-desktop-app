@@ -172,7 +172,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
         />
         {effectiveRoomId && <NoticeBanner roomId={effectiveRoomId} channelType={channelType} />}
 
-        <div className="relative flex-1 overflow-hidden">
+        <div className="relative flex-1 overflow-hidden bg-chat-bg">
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
