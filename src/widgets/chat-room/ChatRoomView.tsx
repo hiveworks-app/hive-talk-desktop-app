@@ -22,6 +22,7 @@ import { MessageBubble } from './MessageBubble';
 import { ReportMessageDialog } from './ReportMessageDialog';
 import { MessageSkeleton } from './MessageSkeleton';
 import { NoticeBanner } from './NoticeBanner';
+import { StartConversationEmptyState } from './StartConversationEmptyState';
 import { SelectedTagOverlay } from './SelectedTagOverlay';
 import { TagSelectPanel } from './TagSelectPanel';
 import { useFileDragDrop } from './useFileDragDrop';
@@ -152,6 +153,10 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const lastMessageId = lastMessage?.message?.id || messages[messages.length - 1]?.id || '';
   const unreadBoundaryIndex = showUnreadSeparator && initialNotReadCount > 0
     ? Math.max(0, messages.length - initialNotReadCount) : -1;
+  // '대화 시작 전' 초기화면 노출 여부 — 노출 시 채팅 배경(chat-bg)을 가장자리까지 채우기 위해 패딩 제거
+  const showEmptyState =
+    !(isRoomTransitioning || (!isNewRoom && messages.length === 0 && lastMessage)) &&
+    (isNewRoom || messages.length === 0);
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -171,16 +176,13 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
-            className={cn('h-full px-4 py-2', isRoomTransitioning || messages.length === 0 ? 'overflow-hidden' : 'scrollbar-thin overflow-x-hidden overflow-y-auto')}
+            className={cn('h-full', !showEmptyState && 'px-4 py-2', isRoomTransitioning || messages.length === 0 ? 'overflow-hidden' : 'scrollbar-thin overflow-x-hidden overflow-y-auto')}
           >
             <div ref={messagesContentRef} className={cn((isNewRoom || (!isRoomTransitioning && messages.length === 0 && !lastMessage)) && 'h-full')}>
               {isRoomTransitioning || (!isNewRoom && messages.length === 0 && lastMessage) ? (
                 <MessageSkeleton />
               ) : (isNewRoom || messages.length === 0) ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3">
-                  <img src="/signup-complete.png" alt="꿀벌" className="h-[120px] w-[120px] object-contain" />
-                  <span className="text-sub text-text-tertiary">메시지를 입력하여 대화를 시작하세요.</span>
-                </div>
+                <StartConversationEmptyState />
               ) : (
                 <>
                   {isBeforeLoading && (
