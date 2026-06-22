@@ -15,6 +15,8 @@
   --color-disabled: #F8F9FA;
   --color-outline: #E5E8EB;
   --color-divider: #F8F9FA;
+  /* 채팅 영역 배경 — RN ChatRoomScreen bg-[#E7EDF3] 미러 (라이트/다크 공통) */
+  --color-chat-bg: #E7EDF3;
 
   /* States (RN light.states.* 동일) */
   --color-state-primary: #007AFF;
@@ -179,6 +181,7 @@
   --color-outline: var(--color-outline);
   --color-divider: var(--color-divider);
   --color-disabled: var(--color-disabled);
+  --color-chat-bg: var(--color-chat-bg);
 
   /* Text Colors */
   --color-text-primary: var(--color-text-primary);
