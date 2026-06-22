@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
 import {
   useReceivedInvites,
   useSentInvites,
   useRespondInvite,
 } from '@/features/external-member/queries';
 import { cn } from '@/shared/lib/cn';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { IconClose } from '@/shared/ui/icons';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { USER_TYPE } from '@/shared/types/user';
@@ -31,11 +31,13 @@ const tabClass = (active: boolean) =>
   );
 
 /**
- * 초대현황 모달 (멤버목록 편지봉투 진입점).
+ * 초대현황 화면 (멤버목록 편지봉투 진입점).
  * GUEST는 초대를 보낼 수 없어 '보낸 초대'가 없으므로 탭 없이 받은 초대만 표시한다.
- * (RN InviteStatusScreen 패리티 — 모바일 전체화면 → 데스크톱 중앙 모달)
+ * 채팅방 생성(CreateRoomDialog)과 동일한 전체화면(풀필) 패턴 — 딤+중앙 모달이 아닌 창 전체를 덮는다.
+ * (RN InviteStatusScreen 패리티 — 모바일 전체화면 그대로)
  */
 export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
+  useDimmed(open);
   const isOrgMember = useAuthStore(s => s.user?.userType) === USER_TYPE.ORG_MEMBER;
   const [activeTab, setActiveTab] = useState<StatusTab>('received');
 
@@ -46,61 +48,66 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
   // 소속 유저만 탭(받은/보낸) — GUEST는 받은 초대만
   const tab = isOrgMember ? activeTab : 'received';
 
+  if (!open) return null;
+
   return (
-    <Dialog.Root open={open} onOpenChange={next => { if (!next) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex h-[560px] max-h-[80vh] w-[420px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-xl focus:outline-none">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <Dialog.Title className="text-base font-bold text-gray-900">초대현황</Dialog.Title>
-            <button type="button" onClick={onClose} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
-              <IconClose size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+
+      <div className="relative z-10 flex h-full w-full flex-col bg-white">
+        {/* macOS 신호등(좌상단 창 버튼) 영역 확보용 드래그 바 */}
+        <div className="electron-drag h-8 w-full shrink-0" />
+
+        {/* 헤더: 초대현황(좌) / X(우) — 다른 모달과 닫기 버튼 위치 통일 */}
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
+          <h2 className="text-base font-bold text-gray-900">초대현황</h2>
+          <button type="button" onClick={onClose} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
+            <IconClose size={20} />
+          </button>
+        </div>
+
+        {isOrgMember ? (
+          <div className="flex border-b border-gray-100 px-4 pt-3">
+            <button onClick={() => setActiveTab('received')} className={tabClass(tab === 'received')}>
+              받은 초대 ({receivedInvites.length})
+            </button>
+            <button onClick={() => setActiveTab('sent')} className={tabClass(tab === 'sent')}>
+              보낸 초대 ({sentInvites.length})
             </button>
           </div>
-
-          {isOrgMember ? (
-            <div className="flex border-b border-gray-100 px-5 pt-3">
-              <button onClick={() => setActiveTab('received')} className={tabClass(tab === 'received')}>
-                받은 초대 ({receivedInvites.length})
-              </button>
-              <button onClick={() => setActiveTab('sent')} className={tabClass(tab === 'sent')}>
-                보낸 초대 ({sentInvites.length})
-              </button>
-            </div>
-          ) : (
-            <div className="px-5 pb-1 pt-3">
-              <span className="text-sub-sm text-text-secondary">받은 초대 ({receivedInvites.length})</span>
-            </div>
-          )}
-
-          <div className="scrollbar-thin flex-1 overflow-y-auto py-2">
-            {tab === 'received' ? (
-              isReceivedLoading ? (
-                <Loading />
-              ) : receivedInvites.length > 0 ? (
-                receivedInvites.map(invite => (
-                  <ReceivedInviteRow
-                    key={invite.inviteId}
-                    invite={invite}
-                    disabled={isResponding}
-                    onAccept={() => respondInvite({ inviteId: invite.inviteId, result: 'ACCEPT' })}
-                    onReject={() => respondInvite({ inviteId: invite.inviteId, result: 'REJECTED' })}
-                  />
-                ))
-              ) : (
-                <EmptyState message="받은 초대가 없어요." />
-              )
-            ) : isSentLoading ? (
-              <Loading />
-            ) : sentInvites.length > 0 ? (
-              sentInvites.map(invite => <SentInviteRow key={invite.inviteId} invite={invite} />)
-            ) : (
-              <EmptyState message="보낸 초대가 없어요." />
-            )}
+        ) : (
+          <div className="px-4 pb-1 pt-3">
+            <span className="text-sub-sm text-text-secondary">받은 초대 ({receivedInvites.length})</span>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        )}
+
+        <div className="scrollbar-thin flex-1 overflow-y-auto py-2">
+          {tab === 'received' ? (
+            isReceivedLoading ? (
+              <Loading />
+            ) : receivedInvites.length > 0 ? (
+              receivedInvites.map(invite => (
+                <ReceivedInviteRow
+                  key={invite.inviteId}
+                  invite={invite}
+                  disabled={isResponding}
+                  onAccept={() => respondInvite({ inviteId: invite.inviteId, result: 'ACCEPT' })}
+                  onReject={() => respondInvite({ inviteId: invite.inviteId, result: 'REJECTED' })}
+                />
+              ))
+            ) : (
+              <EmptyState message="받은 초대가 없어요." />
+            )
+          ) : isSentLoading ? (
+            <Loading />
+          ) : sentInvites.length > 0 ? (
+            sentInvites.map(invite => <SentInviteRow key={invite.inviteId} invite={invite} />)
+          ) : (
+            <EmptyState message="보낸 초대가 없어요." />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
