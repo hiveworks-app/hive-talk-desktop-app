@@ -20,7 +20,7 @@ export function LinkPreviewCard({ url, className }: LinkPreviewCardProps) {
   // 🦴 fetch 진행 중 — 실제 카드와 동일 구조의 skeleton으로 레이아웃 점프 방지
   if (isLoading) {
     return (
-      <div className={cn('w-[248px] overflow-hidden rounded-xl border border-divider bg-surface', className)}>
+      <div className={cn('w-[248px] max-w-full overflow-hidden rounded-xl border border-divider bg-surface', className)}>
         <div className="h-36 w-full bg-gray-100" />
         <div className="flex flex-col gap-1 p-2.5">
           <div className="h-3.5 w-full rounded bg-gray-100" />
@@ -42,7 +42,7 @@ export function LinkPreviewCard({ url, className }: LinkPreviewCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'block w-[248px] overflow-hidden rounded-xl border border-divider bg-surface transition-colors hover:bg-gray-50',
+        'block w-[248px] max-w-full overflow-hidden rounded-xl border border-divider bg-surface transition-colors hover:bg-gray-50',
         className,
       )}
     >
