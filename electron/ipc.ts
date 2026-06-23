@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, nativeImage, Tray } from 'electron';
 import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
-import { setEscSuppressed } from './window';
+import { setEscSuppressed, resizeWindowForChat } from './window';
 
 export function setupIpcHandlers(deps: {
   getMainWindow: () => BrowserWindow | null;
@@ -101,6 +101,11 @@ export function setupIpcHandlers(deps: {
 
   ipcMain.handle('set-suppress-esc', (_event, suppress: boolean) => {
     setEscSuppressed(suppress);
+  });
+
+  // 채팅방 진입/이탈에 따라 창 폭을 좁게↔넓게 조절 (목록·설정=좁게, 채팅방=넓게)
+  ipcMain.handle('set-chat-room-active', (_event, active: boolean) => {
+    resizeWindowForChat(deps.getMainWindow(), active);
   });
 
   ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {
