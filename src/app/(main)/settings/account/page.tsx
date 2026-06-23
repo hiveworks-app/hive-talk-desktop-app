@@ -45,17 +45,13 @@ export default function AccountInfoPage() {
         <div className="mx-auto flex max-w-[560px] flex-col gap-3.5">
           {/* 계정 정보 */}
           <section className="overflow-hidden rounded-xl border border-outline bg-surface">
-            <CardHeader icon={<IconCardAccount className="h-5 w-5" />} title="계정 정보" />
-            <InfoRow
-              label="이메일"
-              value={user?.email || '-'}
-              onClick={() => router.push('/settings/email')}
+            <CardHeader
+              icon={<IconCardAccount className="h-5 w-5" />}
+              title="계정 정보"
+              onClick={() => router.push('/settings/account/detail')}
             />
-            <InfoRow
-              label="비밀번호"
-              value="비공개"
-              onClick={() => router.push('/settings/password')}
-            />
+            <InfoRow label="이메일" value={user?.email || '-'} />
+            <InfoRow label="비밀번호" value="비공개" />
             <InfoRow
               label="휴대폰 번호"
               value={maskedPhone || '미등록'}

@@ -16,6 +16,17 @@ export function formatKoreanTime(isoString: string) {
 }
 
 /**
+ * 인증 시점 표기 — "YYYY.MM.DD"
+ */
+export function formatDotDate(input: Date | number | string) {
+  const date = new Date(input);
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}.${m}.${d}`;
+}
+
+/**
  * 마지막 동기화 시각 표기 — "M월 D일 오전/오후 H:MM"
  */
 export function formatSyncedAt(input: Date | number | string) {

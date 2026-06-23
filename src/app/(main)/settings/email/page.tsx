@@ -12,28 +12,27 @@ export default function ChangeEmailPage() {
     setCode,
     emailError,
     isLoading,
-    currentEmail,
-    stepNum,
     handleEmailChange,
     handleSendCode,
     handleVerifyAndChange,
-    stepBack,
+    goBack,
     close,
   } = useChangeEmail();
 
+  const canComplete = step === 'CODE' && code.length === 6 && !isLoading;
+
   return (
     <SettingsOverlay bg="bg-background">
+      {/* TopBar — ←(이전 단계/상세) / 중앙 타이틀 / X(전체설정으로) */}
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
-        {step === 'CODE' && (
-          <button
-            onClick={stepBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
-            aria-label="이전 단계"
-          >
-            <IconChevronLeft size={20} />
-          </button>
-        )}
-        <h2 className="text-heading-md font-bold text-text-primary">이메일 변경</h2>
+        <button
+          onClick={goBack}
+          className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          aria-label={step === 'CODE' ? '이전 단계' : '뒤로가기'}
+        >
+          <IconChevronLeft size={20} />
+        </button>
+        <h2 className="text-heading-md font-bold text-text-primary">이메일</h2>
         <button
           onClick={close}
           className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
@@ -43,36 +42,18 @@ export default function ChangeEmailPage() {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-[400px]">
-          <div className="mb-6">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sub font-medium text-text-primary">
-                {step === 'EMAIL' ? '새 이메일' : '코드 확인'}
-              </span>
-              <span className="text-sub-sm text-text-tertiary">{stepNum} / 2</span>
-            </div>
-            <div className="h-1 w-full rounded-full bg-gray-200">
-              <div
-                className="h-1 rounded-full bg-primary transition-all"
-                style={{ width: `${(stepNum / 2) * 100}%` }}
-              />
-            </div>
-          </div>
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="mx-auto flex max-w-[400px] flex-col gap-6">
+          <h1 className="text-heading-xl font-semibold text-text-primary">이메일 변경</h1>
 
-          {step === 'EMAIL' && (
-            <div className="space-y-4">
-              <p className="text-sub text-text-secondary">
-                변경할 새 이메일을 입력하면 해당 주소로 인증 코드를 보냅니다.
-              </p>
-              <div className="rounded-lg border border-divider bg-surface px-4 py-3">
-                <span className="text-sub-sm text-text-tertiary">현재 이메일</span>
-                <div className="mt-1 truncate text-sub font-medium text-text-primary">
-                  {currentEmail ?? '-'}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sub-sm font-medium text-text-secondary">새 이메일</label>
+          <div className="flex flex-col gap-4">
+            {/* 이메일 입력 + 인라인 인증요청 */}
+            <div>
+              <div
+                className={`flex h-14 items-center gap-2 rounded-[10px] border bg-surface px-4 ${
+                  emailError ? 'border-state-error' : 'border-outline'
+                }`}
+              >
                 <input
                   type="email"
                   value={email}
@@ -80,54 +61,51 @@ export default function ChangeEmailPage() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleSendCode();
                   }}
-                  placeholder="new@example.com"
+                  placeholder="변경할 이메일을 입력하세요"
                   autoComplete="email"
-                  className={`w-full rounded-lg border bg-surface px-3 py-2.5 text-sub text-text-primary outline-none focus:border-primary ${emailError ? 'border-red-400' : 'border-divider'}`}
+                  className="min-w-0 flex-1 bg-transparent text-body font-medium text-text-primary outline-none placeholder:font-normal placeholder:text-text-placeholder"
                 />
-                {emailError && <p className="mt-1 text-sub-sm text-red-500">{emailError}</p>}
+                <button
+                  onClick={handleSendCode}
+                  disabled={isLoading || email.trim().length === 0}
+                  className="shrink-0 rounded-md bg-gray-100 px-3.5 py-2.5 text-sub font-medium text-text-secondary transition-colors hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {step === 'EMAIL' ? '인증요청' : '재요청'}
+                </button>
               </div>
-              <button
-                onClick={handleSendCode}
-                disabled={isLoading || email.trim().length === 0}
-                className="w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled"
-              >
-                {isLoading ? '발송 중...' : '인증 코드 발송'}
-              </button>
+              {emailError && <p className="mt-1.5 text-sub-sm text-state-error">{emailError}</p>}
             </div>
-          )}
 
-          {step === 'CODE' && (
-            <div className="space-y-4">
-              <p className="text-sub text-text-secondary">
-                <span className="font-medium text-text-primary">{email}</span> 로 발송된 인증번호 6자리를 입력해 주세요.
-              </p>
-              <input
-                type="text"
-                value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleVerifyAndChange();
-                }}
-                placeholder="000000"
-                maxLength={6}
-                className="w-full rounded-lg border border-divider bg-surface px-4 py-3 text-center text-heading-lg tracking-[0.5em] text-text-primary outline-none focus:border-primary"
-              />
-              <button
-                onClick={handleVerifyAndChange}
-                disabled={isLoading || code.length < 6}
-                className="w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled"
-              >
-                {isLoading ? '변경 중...' : '이메일 변경'}
-              </button>
-              <button
-                onClick={handleSendCode}
-                disabled={isLoading}
-                className="w-full text-sub-sm text-text-tertiary hover:underline"
-              >
-                인증 코드 재발송
-              </button>
-            </div>
-          )}
+            {/* 인증번호 입력 (코드 발송 후 노출) */}
+            {step === 'CODE' && (
+              <div>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && canComplete) handleVerifyAndChange();
+                  }}
+                  placeholder="인증번호 6자리"
+                  maxLength={6}
+                  inputMode="numeric"
+                  autoFocus
+                  className="h-14 w-full rounded-[10px] border border-outline bg-surface px-4 text-body font-medium tracking-[0.2em] text-text-primary outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-text-placeholder focus:border-primary"
+                />
+                <p className="mt-1.5 text-sub-sm text-text-tertiary">
+                  <span className="font-medium text-text-secondary">{email}</span> 로 보낸 인증번호 6자리를 입력하세요.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleVerifyAndChange}
+            disabled={!canComplete}
+            className="h-14 w-full rounded-xl bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+          >
+            {isLoading ? '변경 중...' : '완료'}
+          </button>
         </div>
       </div>
     </SettingsOverlay>

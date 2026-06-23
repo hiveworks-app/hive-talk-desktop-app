@@ -80,7 +80,7 @@ export function useChangeEmail() {
       queryClient.invalidateQueries({ queryKey: CREDENTIAL_INFO_KEY });
 
       showSnackbar({ message: '이메일이 변경되었습니다.', state: 'success' });
-      router.push('/settings/account');
+      router.push('/settings/account/detail');
     } catch (err) {
       showSnackbar({
         message: getErrorMessage(err, '이메일 변경에 실패했습니다.'),
@@ -91,13 +91,17 @@ export function useChangeEmail() {
     }
   };
 
-  // ←(이전 단계): 코드입력 → 이메일입력. X(닫기): 계정정보로 나가기. 역할 분리.
-  const stepBack = () => {
-    setStep('EMAIL');
-    setCode('');
+  // ←: 코드입력 단계 → 이메일입력 단계로, 그 외엔 계정정보(상세)로. X(닫기): 전체설정으로.
+  const goBack = () => {
+    if (step === 'CODE') {
+      setStep('EMAIL');
+      setCode('');
+      return;
+    }
+    router.push('/settings/account/detail');
   };
 
-  const close = () => router.push('/settings/account');
+  const close = () => router.push('/settings');
 
   const stepNum = step === 'EMAIL' ? 1 : 2;
 
@@ -113,7 +117,7 @@ export function useChangeEmail() {
     handleEmailChange,
     handleSendCode,
     handleVerifyAndChange,
-    stepBack,
+    goBack,
     close,
   };
 }
