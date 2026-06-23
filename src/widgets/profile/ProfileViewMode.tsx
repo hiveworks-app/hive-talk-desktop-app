@@ -27,7 +27,7 @@ export function ProfileViewMode({ user, onEdit }: ProfileViewModeProps) {
       />
       <button
         onClick={onEdit}
-        className="mt-[30px] flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-outline bg-surface text-[16px] font-medium text-text-primary transition-colors hover:bg-surface-pressed"
+        className="mt-[30px] flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[16px] font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
       >
         <IconPencil width={18} height={18} />
         프로필 수정
