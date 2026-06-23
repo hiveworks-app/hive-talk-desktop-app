@@ -61,7 +61,15 @@ export function MessageBubble({
   const hasTags = !isDeleted && (message.tags?.length ?? 0) > 0;
 
   const showDateSeparator = !prevMessage || message.createdAt.slice(0, 10) !== prevMessage.createdAt.slice(0, 10);
-  const isSameSender = prevMessage && prevMessage.sender === message.sender && prevMessage.name === message.name && prevMessage.createdAt.slice(0, 16) === message.createdAt.slice(0, 16);
+  // 직전이 시스템 메시지(초대/퇴장/제목변경/신고)면 그룹핑하지 않는다.
+  // 시스템 메시지는 아바타가 없는 가운데 알림이라, 묶이면 다음 일반 메시지의 아바타·이름까지 사라져 "빈 프로필"처럼 보인다.
+  const isPrevSystem = !!prevMessage && (
+    prevMessage.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE ||
+    prevMessage.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT ||
+    prevMessage.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE ||
+    prevMessage.messageContentType === WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED
+  );
+  const isSameSender = !isPrevSystem && prevMessage && prevMessage.sender === message.sender && prevMessage.name === message.name && prevMessage.createdAt.slice(0, 16) === message.createdAt.slice(0, 16);
   const isNextSameGroup = nextMessage && nextMessage.sender === message.sender && nextMessage.name === message.name && nextMessage.createdAt.slice(0, 16) === message.createdAt.slice(0, 16) && nextMessage.messageContentType !== WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE && nextMessage.messageContentType !== WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT && nextMessage.messageContentType !== WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE;
   const showTime = !isNextSameGroup;
 
