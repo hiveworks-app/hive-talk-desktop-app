@@ -109,9 +109,9 @@ export function ExternalChatSidebar() {
   };
 
   return (
-    <aside className="flex h-full w-full flex-col border-r border-divider bg-surface">
-      {/* 헤더 (드래그 가능, 버튼만 no-drag) */}
-      <div className="electron-drag flex items-center justify-between border-b border-divider px-4 pt-4 pb-3">
+    <aside className="flex h-full w-full flex-col border-r border-divider bg-gray-50">
+      {/* 헤더 (드래그 가능, 버튼만 no-drag) — 회색(gray-50) 상단 영역 (Figma #f8f9fa) */}
+      <div className="electron-drag flex items-center justify-between px-4 pt-4 pb-3">
         <h2 className="text-heading-lg font-semibold text-text-primary">협력채팅</h2>
         <div className="electron-no-drag flex items-center gap-1">
           <button
@@ -148,7 +148,7 @@ export function ExternalChatSidebar() {
         )}
       >
         <div className="overflow-hidden">
-          <div className="border-b border-divider bg-surface px-4 py-2.5">
+          <div className="px-4 pb-2.5">
             <div className="flex items-center gap-2">
               <input
                 ref={searchInputRef}
@@ -159,7 +159,7 @@ export function ExternalChatSidebar() {
                   if (e.key === 'Escape') closeSearch();
                 }}
                 placeholder="채팅방명 또는 참여자 이름 검색"
-                className="min-w-0 flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                className="min-w-0 flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
               />
               <button
                 onClick={closeSearch}
@@ -173,34 +173,37 @@ export function ExternalChatSidebar() {
         </div>
       </div>
 
+      {/* 콘텐츠 패널: 회색 상단과 분리된 둥근 흰 영역 (멤버목록 패턴) */}
+      <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
+        {/* 목록 */}
+        <div className="scrollbar-thin flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-sub text-text-tertiary">로딩 중...</p>
+            </div>
+          ) : visibleRooms.length === 0 ? (
+            <EmptyState
+              variant={isSearching ? 'search' : 'sad'}
+              message={isSearching ? '검색 결과가 없어요.' : '아직 협력채팅방이 없어요.'}
+              className="py-10"
+            />
+          ) : (
+            visibleRooms.map(room => (
+              <EMRoomItem
+                key={room.roomModel.roomId}
+                room={room}
+                myUserId={myUserId}
+                pinnedRankMap={pinnedRankMap}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
       {canCreate && (
         <CreateExternalRoomDialog isOpen={showCreateRoom} onClose={() => setShowCreateRoom(false)} />
       )}
       <ChatRoomManageDialog open={showManageDialog} onClose={() => setShowManageDialog(false)} />
-
-      {/* 목록 */}
-      <div className="scrollbar-thin flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-sub text-text-tertiary">로딩 중...</p>
-          </div>
-        ) : visibleRooms.length === 0 ? (
-          <EmptyState
-            variant={isSearching ? 'search' : 'sad'}
-            message={isSearching ? '검색 결과가 없어요.' : '아직 협력채팅방이 없어요.'}
-            className="py-10"
-          />
-        ) : (
-          visibleRooms.map(room => (
-            <EMRoomItem
-              key={room.roomModel.roomId}
-              room={room}
-              myUserId={myUserId}
-              pinnedRankMap={pinnedRankMap}
-            />
-          ))
-        )}
-      </div>
     </aside>
   );
 }

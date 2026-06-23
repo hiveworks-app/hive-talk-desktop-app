@@ -17,7 +17,7 @@ export function Chip({ label, active, onClick }: ChipProps) {
         'rounded-full px-3 py-[7px] text-body font-medium transition-colors',
         active
           ? 'bg-primary text-on-primary'
-          : 'bg-gray-100 text-text-secondary hover:bg-gray-200',
+          : 'bg-gray-50 text-text-secondary hover:bg-gray-200',
       )}
     >
       {label}
