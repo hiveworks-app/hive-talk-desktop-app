@@ -108,8 +108,8 @@ export function MessageBubble({
         className={cn(
           'flex min-w-0 flex-col',
           isMe ? 'items-end' : 'items-start',
-          // 반응형 폭: 텍스트/파일은 채팅영역의 72%(최대 560px), 이미지는 그리드+시간 공간 확보용 고정폭
-          isImageType ? 'max-w-[304px]' : 'max-w-[min(72%,560px)]',
+          // 반응형 폭: 텍스트/파일은 채팅영역의 80%(최대 640px), 이미지는 그리드+시간 공간 확보용 고정폭
+          isImageType ? 'max-w-[304px]' : 'max-w-[min(80%,640px)]',
         )}
       >
         {!isMe && !isSameSender && (
