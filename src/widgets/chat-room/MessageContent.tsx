@@ -4,6 +4,7 @@ import { ChatImageGrid } from '@/shared/ui/ChatImageGrid';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
 import { UploadDimOverlay } from '@/shared/ui/UploadDimOverlay';
 import { ChatMessageUI, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
+import { ChatFileCard } from './ChatFileCard';
 
 interface MessageContentProps {
   message: ChatMessageUI;
@@ -56,19 +57,7 @@ export function MessageContent({ message, onOpenMedia }: MessageContentProps) {
     return (
       <div className="flex flex-col gap-1">
         {message.files?.map((file, idx) => (
-          <a
-            key={idx}
-            href={file.presignedUrl || file.path}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sub underline"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            {file.path.split('/').pop() || '파일'}
-          </a>
+          <ChatFileCard key={file.path || idx} file={file} />
         ))}
       </div>
     );
