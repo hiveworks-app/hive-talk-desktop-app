@@ -91,14 +91,13 @@ export function useChangeEmail() {
     }
   };
 
-  const goBack = () => {
-    if (step === 'CODE') {
-      setStep('EMAIL');
-      setCode('');
-      return;
-    }
-    router.push('/settings/account');
+  // ←(이전 단계): 코드입력 → 이메일입력. X(닫기): 계정정보로 나가기. 역할 분리.
+  const stepBack = () => {
+    setStep('EMAIL');
+    setCode('');
   };
+
+  const close = () => router.push('/settings/account');
 
   const stepNum = step === 'EMAIL' ? 1 : 2;
 
@@ -114,6 +113,7 @@ export function useChangeEmail() {
     handleEmailChange,
     handleSendCode,
     handleVerifyAndChange,
-    goBack,
+    stepBack,
+    close,
   };
 }

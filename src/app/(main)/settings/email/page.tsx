@@ -1,6 +1,6 @@
 'use client';
 
-import { IconChevronLeft } from '@/shared/ui/icons';
+import { IconChevronLeft, IconClose } from '@/shared/ui/icons';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
 import { useChangeEmail } from './useChangeEmail';
 
@@ -17,20 +17,30 @@ export default function ChangeEmailPage() {
     handleEmailChange,
     handleSendCode,
     handleVerifyAndChange,
-    goBack,
+    stepBack,
+    close,
   } = useChangeEmail();
 
   return (
     <SettingsOverlay bg="bg-background">
-      <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
-        <button
-          onClick={goBack}
-          className="electron-no-drag text-text-tertiary hover:text-text-secondary"
-          aria-label="뒤로가기"
-        >
-          <IconChevronLeft size={20} />
-        </button>
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+        {step === 'CODE' && (
+          <button
+            onClick={stepBack}
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            aria-label="이전 단계"
+          >
+            <IconChevronLeft size={20} />
+          </button>
+        )}
         <h2 className="text-heading-md font-bold text-text-primary">이메일 변경</h2>
+        <button
+          onClick={close}
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          aria-label="닫기"
+        >
+          <IconClose size={20} />
+        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto p-6">
