@@ -111,7 +111,7 @@ export function ExternalChatSidebar() {
   return (
     <aside className="flex h-full w-full flex-col border-r border-divider bg-gray-50">
       {/* 헤더 (드래그 가능, 버튼만 no-drag) — 회색(gray-50) 상단 영역 (Figma #f8f9fa) */}
-      <div className="electron-drag flex items-center justify-between px-4 pt-4 pb-3">
+      <div className="electron-drag flex h-14 shrink-0 items-center justify-between px-4">
         <h2 className="text-heading-lg font-semibold text-text-primary">협력채팅</h2>
         <div className="electron-no-drag flex items-center gap-1">
           <button
