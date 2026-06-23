@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { IconDownload } from '@assets/icons';
 import { IS_DELETE_MESSAGE_COMMENTS } from '@/shared/config/constants';
 import { cn } from '@/shared/lib/cn';
 import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
@@ -41,6 +42,11 @@ export function MessageBubble({
   const isSystem = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED;
   const isDeleted = message.isDeleted;
   const isMediaType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
+  // 이미지/미디어는 그리드 폭(240) 제한, 파일 카드(248px)는 텍스트와 동일한 288 폭 허용
+  const isImageType = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.IMAGE || message.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA;
+  // 파일 메시지: 다운로드 버튼을 메타 컬럼에 둔다 (보낸 메시지=좌측, 받은 메시지=우측 — flex-row-reverse 대칭 활용, Figma 1334-33805)
+  const isFileMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE;
+  const fileDownloadUrl = isFileMessage ? message.files?.[0]?.presignedUrl : undefined;
   const isTextMessage = message.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !isDeleted;
   const firstUrl = isTextMessage ? extractFirstUrl(message.text) : null;
   // 공지 등록 가능: 텍스트 + 단일이미지/미디어/파일 (전송완료된 것만, 묶음 사진 제외 — RN 패리티)
@@ -90,7 +96,7 @@ export function MessageBubble({
       )}
       {!isMe && isSameSender && <div className="w-9 shrink-0" />}
 
-      <div className={cn('flex flex-col', isMe ? 'items-end' : 'items-start')} style={{ maxWidth: isMediaType ? 240 : 288 }}>
+      <div className={cn('flex flex-col', isMe ? 'items-end' : 'items-start')} style={{ maxWidth: isImageType ? 240 : 288 }}>
         {!isMe && !isSameSender && (
           <span className="mb-1 text-sub-sm font-medium text-text-secondary">{message.name}</span>
         )}
@@ -117,7 +123,14 @@ export function MessageBubble({
             </div>
           )}
           {!isDeleted && (
-            <div className={cn('flex shrink-0 flex-col gap-0.5', isMe ? 'items-end' : 'items-start')}>
+            <div
+              className={cn(
+                'flex shrink-0 flex-col gap-0.5',
+                isMe ? 'items-end' : 'items-start',
+                // 파일: 메타 컬럼을 카드 높이만큼 늘려 다운로드는 상단, 시간은 하단에 붙인다 (Figma 1334-33805)
+                isFileMessage && fileDownloadUrl && 'self-stretch justify-between',
+              )}
+            >
               {message.isLocal ? (
                 isFailed ? (
                   <FailedMessageActions
@@ -131,8 +144,22 @@ export function MessageBubble({
                 )
               ) : (
                 <>
-                  {message.notReadCount > 0 && <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>}
-                  {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
+                  {isFileMessage && fileDownloadUrl && (
+                    <a
+                      href={fileDownloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      aria-label="파일 다운로드"
+                      className="flex size-8 items-center justify-center rounded-[10px] bg-black/30 transition-colors hover:bg-black/45"
+                    >
+                      <IconDownload width={18} height={18} className="text-white" />
+                    </a>
+                  )}
+                  <div className={cn('flex flex-col gap-0.5', isMe ? 'items-end' : 'items-start')}>
+                    {message.notReadCount > 0 && <span className="text-[10px] font-medium text-primary">{message.notReadCount}</span>}
+                    {showTime && <span className="text-[10px] text-text-tertiary">{message.time}</span>}
+                  </div>
                 </>
               )}
             </div>
