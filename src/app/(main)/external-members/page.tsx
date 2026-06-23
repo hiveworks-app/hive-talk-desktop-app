@@ -28,7 +28,7 @@ export default function ExternalMembersPage() {
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-background">
-      <header className="border-b border-divider px-4 py-3">
+      <header className="electron-drag border-b border-divider px-4 py-3">
         <div className="flex items-center justify-between">
           <h2 className="text-heading-md font-bold text-text-primary">외부 멤버</h2>
           <button

@@ -35,7 +35,7 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-white">
-      <div className="flex h-14 items-center gap-2 px-4">
+      <div className="electron-drag flex h-14 items-center gap-2 px-4">
         <button onClick={handleBack} className="text-text-primary hover:text-text-secondary">
           <IconChevronLeft size={24} />
         </button>
