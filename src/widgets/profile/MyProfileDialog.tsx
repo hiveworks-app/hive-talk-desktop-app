@@ -26,7 +26,11 @@ export function MyProfileDialog({ isOpen, onClose }: MyProfileDialogProps) {
   };
 
   return (
-    <ProfileDialogShell title="내 프로필" onClose={handleClose}>
+    // 편집 모드: 타이틀 "프로필 수정" + 닫기(✕)는 보기 모드로 복귀(편집 취소). 보기 모드: 닫기(✕)는 모달 종료.
+    <ProfileDialogShell
+      title={isEditing ? '프로필 수정' : '내 프로필'}
+      onClose={isEditing ? () => setIsEditing(false) : handleClose}
+    >
       {isEditing ? (
         <ProfileEditMode user={user} onDone={() => setIsEditing(false)} />
       ) : (

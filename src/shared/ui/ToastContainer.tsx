@@ -17,7 +17,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-[9999] flex -translate-x-1/2 flex-col gap-2">
+    <div className="fixed right-6 top-6 z-[9999] flex flex-col items-end gap-2">
       {toasts.map(toast => (
         <button
           key={toast.id}
