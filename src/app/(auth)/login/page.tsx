@@ -42,7 +42,8 @@ export default function LoginPage() {
   if (accessToken && !isProcessing) return null;
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-white">
+    // Electron: 로그인 화면 빈 영역을 드래그 핸들로 (입력·버튼·링크는 화이트리스트 규칙으로 자동 no-drag)
+    <div className="electron-drag flex flex-1 items-center justify-center bg-white">
       <div className="flex w-full max-w-[400px] flex-col items-center px-4">
         <Image src="/hivetalk-login-logo.png" alt="HiveTalk" width={200} height={115} priority />
         <p className="mt-3 text-sub tracking-tight text-text-secondary">
