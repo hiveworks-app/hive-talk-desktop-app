@@ -286,31 +286,50 @@ body {
   background-color: var(--color-gray-400);
 }
 
-/* Electron: 전체 윈도우 드래그 (타이틀바 없는 frameless window) */
+/* Electron: 화이트리스트 방식 드래그 제어
+ * 기본은 창 이동 불가(no-drag), .electron-drag 핸들로 지정한 영역에서만 창이 이동한다.
+ * (이전: body 전체 drag + 인터랙티브 요소 예외 → 휴리스틱이라 빈 div 등에서 의도치 않게 창이 끌리던 문제를 제거) */
 body {
-  -webkit-app-region: drag;
-}
-
-/* 인터랙티브 요소는 드래그 제외 */
-button, a, input, textarea, select, label,
-[role="button"], [role="link"], [role="checkbox"], [role="radio"],
-[contenteditable="true"] {
   -webkit-app-region: no-drag;
 }
 
-/* 스크롤 가능한 콘텐츠 영역은 드래그 제외 */
-.scrollbar-thin,
-.overflow-y-auto,
-.overflow-auto {
-  -webkit-app-region: no-drag;
-}
-
-/* 수동 제어용 유틸리티 클래스 */
+/* 드래그 핸들: 이 영역을 잡고 끌면 창이 이동한다 */
 .electron-drag {
   -webkit-app-region: drag;
 }
+
+/* 드래그 핸들 내부의 인터랙티브 요소는 클릭 가능하도록 no-drag로 복귀시킨다.
+ * (drag 영역 위에서는 클릭/선택이 OS 창 이동에 먹히므로 반드시 되돌려야 함) */
+.electron-drag button,
+.electron-drag a,
+.electron-drag input,
+.electron-drag textarea,
+.electron-drag select,
+.electron-drag label,
+.electron-drag [role="button"],
+.electron-drag [role="link"],
+.electron-drag [role="checkbox"],
+.electron-drag [role="radio"],
+.electron-drag [contenteditable="true"],
 .electron-no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* macOS auth 화면(로그인 등 헤더 없는 화면)용 상단 드래그 스트립.
+ * electron-safe-top(48px)이 만든 빈 안전영역에 정확히 포개져 콘텐츠를 가리지 않는다.
+ * Windows는 네이티브 titleBarOverlay가 상단 드래그를 제공하므로 숨긴다. */
+.electron-mac-drag-strip {
+  display: none;
+}
+html[data-electron-mac] .electron-mac-drag-strip {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  z-index: 40;
+  -webkit-app-region: drag;
 }
 
 /* macOS Electron: 트래픽 라이트 safe area (auth 페이지 등 AppNav 없는 화면) */

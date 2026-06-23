@@ -26,7 +26,7 @@ export function ChatRoomHeader({
   return (
     <header className="electron-drag bg-chat-bg">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="electron-no-drag flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={onBack}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-colors hover:bg-black/5 md:hidden"
@@ -43,7 +43,7 @@ export function ChatRoomHeader({
             )}
           </div>
         </div>
-        <div className="electron-no-drag flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => {
               if (search.isSearchMode) {
@@ -73,7 +73,7 @@ export function ChatRoomHeader({
       </div>
       {/* 검색바 */}
       {search.isSearchMode && (
-        <div className="flex items-center gap-2 border-t border-divider px-4 py-2">
+        <div className="electron-no-drag flex items-center gap-2 border-t border-divider px-4 py-2">
           <input
             ref={searchInputRef}
             type="text"
