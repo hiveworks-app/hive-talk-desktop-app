@@ -63,5 +63,5 @@ export function MessageContent({ message, onOpenMedia }: MessageContentProps) {
     );
   }
 
-  return <span className="whitespace-pre-wrap break-words">{message.text}</span>;
+  return <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{message.text}</span>;
 }

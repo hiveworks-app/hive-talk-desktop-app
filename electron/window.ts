@@ -14,10 +14,13 @@ export function createWindow(
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
   const win = new BrowserWindow({
-    width: 400,
-    height: 640,
-    minWidth: 400,
-    minHeight: 640,
+    // 멀티컬럼(좌측 네비 + 채팅 목록 사이드바 + 채팅) 데스크톱 레이아웃 기준 폭.
+    // 최소 880은 md(768) 이상을 보장해 목록+채팅이 항상 함께 보이도록 한다.
+    // 시작은 최소폭(880)으로 연다. 작은 디스플레이에서 화면보다 커지지 않도록 작업영역으로 클램프.
+    width: Math.min(880, screenWidth),
+    height: Math.min(800, screenHeight),
+    minWidth: Math.min(880, screenWidth),
+    minHeight: Math.min(600, screenHeight),
     maxWidth: screenWidth,
     maxHeight: screenHeight,
     title: 'HiveTalk',

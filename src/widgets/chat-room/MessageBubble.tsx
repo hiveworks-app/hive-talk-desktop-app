@@ -75,7 +75,7 @@ export function MessageBubble({
 
   // 채팅 말풍선: 내 말풍선=노랑(#FFED66)+진한 글씨, 상대=흰색+진한 글씨. (Figma 1077-15393, chat-bg 위 배치)
   // 글씨는 테마 무관 항상 진한색(gray-900) — 흰/노란 말풍선 가독성 유지.
-  const bubbleStyle = cn('rounded-xl px-3 py-2 text-sub', isMe ? 'bg-yellow-300 text-gray-900' : 'bg-white text-gray-900');
+  const bubbleStyle = cn('min-w-0 rounded-xl px-3 py-2 text-sub', isMe ? 'bg-yellow-300 text-gray-900' : 'bg-white text-gray-900');
 
   if (isSystem) {
     return (
@@ -96,7 +96,14 @@ export function MessageBubble({
       )}
       {!isMe && isSameSender && <div className="w-9 shrink-0" />}
 
-      <div className={cn('flex flex-col', isMe ? 'items-end' : 'items-start')} style={{ maxWidth: isImageType ? 240 : 288 }}>
+      <div
+        className={cn(
+          'flex min-w-0 flex-col',
+          isMe ? 'items-end' : 'items-start',
+          // 반응형 폭: 텍스트/파일은 채팅영역의 72%(최대 560px), 이미지는 그리드+시간 공간 확보용 고정폭
+          isImageType ? 'max-w-[304px]' : 'max-w-[min(72%,560px)]',
+        )}
+      >
         {!isMe && !isSameSender && (
           <span className="mb-1 text-sub-sm font-medium text-text-secondary">{message.name}</span>
         )}
