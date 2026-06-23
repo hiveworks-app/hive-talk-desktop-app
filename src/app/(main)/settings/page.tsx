@@ -64,12 +64,14 @@ export default function SettingsPage() {
   const versionText = appVersion ?? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden bg-background">
-      <header className="flex items-center border-b border-divider px-4 py-3">
+    <main className="flex flex-1 flex-col overflow-hidden bg-gray-50">
+      {/* 회색(gray-50) 상단 영역 — 헤더 구분선 제거, 아래 둥근 패널이 분리 (Figma 2382-53597) */}
+      <header className="flex h-14 shrink-0 items-center px-4">
         <h2 className="text-heading-lg font-semibold text-text-primary">전체설정</h2>
       </header>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto">
+      {/* 콘텐츠 패널: 둥근 흰 영역 (멤버목록·채팅 패턴) */}
+      <div className="scrollbar-thin flex-1 overflow-y-auto rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {/* 프로필 카드 */}
         <div className="flex items-center gap-3.5 px-4 py-3.5">
           <ProfileCircle name={user?.name ?? ''} size="lg" storageKey={user?.profileUrl} />
