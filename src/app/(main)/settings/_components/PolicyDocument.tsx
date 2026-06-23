@@ -2,7 +2,7 @@
 
 import type { PolicySection } from '@/features/policy/type';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconChevronLeft } from '@/shared/ui/icons';
+import { IconClose } from '@/shared/ui/icons';
 import { SettingsOverlay } from './SettingsOverlay';
 
 interface PolicyDocumentProps {
@@ -19,15 +19,17 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
 
   return (
     <SettingsOverlay bg="bg-background">
-      <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+        <h2 className="max-w-[calc(100%-5.5rem)] truncate text-heading-md font-bold text-text-primary">
+          {title}
+        </h2>
         <button
           onClick={() => router.back()}
-          className="electron-no-drag text-text-tertiary hover:text-text-secondary"
-          aria-label="뒤로가기"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          aria-label="닫기"
         >
-          <IconChevronLeft size={20} />
+          <IconClose size={20} />
         </button>
-        <h2 className="truncate text-heading-md font-bold text-text-primary">{title}</h2>
       </header>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto px-4 py-5">

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { isWithdrawPasswordMismatch, useWithdrawAccount } from '@/features/withdrawal/queries';
 import { Checkbox } from '@/shared/ui/Checkbox';
-import { IconChevronLeft } from '@/shared/ui/icons';
+import { IconChevronLeft, IconClose } from '@/shared/ui/icons';
 import { useAuthStore } from '@/store/auth/authStore';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
 
@@ -25,13 +25,9 @@ export default function WithdrawalPage() {
   const [passwordError, setPasswordError] = useState('');
   const { mutate: withdraw, isPending } = useWithdrawAccount();
 
-  const goBack = () => {
-    if (step === 'password') {
-      setStep('intro');
-      return;
-    }
-    router.push('/settings/personal-security');
-  };
+  // ←(이전 단계): 비밀번호 입력 → 안내. X(닫기): 개인/보안으로 나가기. 역할 분리.
+  const stepBack = () => setStep('intro');
+  const close = () => router.push('/settings/personal-security');
 
   const handleSubmit = () => {
     if (password.length === 0 || isPending) return;
@@ -55,17 +51,26 @@ export default function WithdrawalPage() {
 
   return (
     <SettingsOverlay bg="bg-background">
-      <header className="flex items-center gap-3 border-b border-divider px-4 py-3">
-        {step !== 'complete' && (
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+        {step === 'password' && (
           <button
-            onClick={goBack}
-            className="electron-no-drag text-text-tertiary hover:text-text-secondary"
-            aria-label="뒤로가기"
+            onClick={stepBack}
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            aria-label="이전 단계"
           >
             <IconChevronLeft size={20} />
           </button>
         )}
         <h2 className="text-heading-md font-bold text-text-primary">하이브톡 탈퇴</h2>
+        {step !== 'complete' && (
+          <button
+            onClick={close}
+            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            aria-label="닫기"
+          >
+            <IconClose size={20} />
+          </button>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto p-6">

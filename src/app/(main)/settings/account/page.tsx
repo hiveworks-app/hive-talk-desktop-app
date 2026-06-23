@@ -6,7 +6,7 @@ import IconCardProfile from '@assets/icons/setting-card-profile.svg';
 import IconPhoneVerified from '@assets/icons/phone-verified.svg';
 import { useGetCredentialInfo } from '@/features/profile/queries';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconChevronLeft, IconChevronRight } from '@/shared/ui/icons';
+import { IconChevronRight, IconClose } from '@/shared/ui/icons';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { formatMaskedPhone } from '@/shared/utils/phone';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -29,19 +29,16 @@ export default function AccountInfoPage() {
 
   return (
     <SettingsOverlay bg="bg-gray-50">
-      {/* TopBar — 뒤로가기 + 가운데 정렬 타이틀 */}
-      <header className="flex h-[52px] shrink-0 items-center gap-3.5 px-4">
+      {/* TopBar — 가운데 정렬 타이틀 + 우상단 닫기 */}
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+        <h2 className="text-heading-md font-bold text-text-primary">하이브톡 계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag shrink-0 text-text-primary"
-          aria-label="뒤로가기"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          aria-label="닫기"
         >
-          <IconChevronLeft size={24} />
+          <IconClose size={20} />
         </button>
-        <h2 className="flex-1 text-center text-heading-md font-medium text-text-primary">
-          하이브톡 계정정보
-        </h2>
-        <span className="w-6 shrink-0" aria-hidden />
       </header>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-5 pb-8">
