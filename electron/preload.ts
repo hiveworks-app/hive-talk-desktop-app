@@ -48,4 +48,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   installUpdate: () => ipcRenderer.invoke('install-update'),
   setSuppressEsc: (suppress: boolean) => ipcRenderer.invoke('set-suppress-esc', suppress),
+  setChatRoomActive: (active: boolean) => ipcRenderer.invoke('set-chat-room-active', active),
 });

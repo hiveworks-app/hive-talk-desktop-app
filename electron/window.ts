@@ -7,6 +7,35 @@ export function setEscSuppressed(value: boolean) {
   escSuppressed = value;
 }
 
+/** 평상시(목록·멤버·설정) 단일 컬럼 폭 */
+export const WINDOW_WIDTH_NARROW = 480;
+/** 채팅방(목록 + 대화) 멀티컬럼 폭 — md(768) 이상이라 사이드바+대화가 함께 보인다 */
+export const WINDOW_WIDTH_CHAT = 960;
+
+/**
+ * 채팅방 진입/이탈에 따라 창 폭을 동적으로 조절한다.
+ * 진입 시 우측으로 확장(좌측 고정, 화면 오른쪽을 넘으면 좌측으로 슬라이드), 이탈 시 좁게 복귀.
+ * 최대화·전체화면 상태에서는 건드리지 않는다.
+ */
+export function resizeWindowForChat(win: BrowserWindow | null, chatActive: boolean) {
+  if (!win || win.isDestroyed() || win.isMaximized() || win.isFullScreen()) return;
+
+  const { workArea } = screen.getDisplayMatching(win.getBounds());
+  const target = chatActive ? WINDOW_WIDTH_CHAT : WINDOW_WIDTH_NARROW;
+  const width = Math.min(target, workArea.width);
+
+  const bounds = win.getBounds();
+  if (bounds.width === width) return;
+
+  let x = bounds.x;
+  if (x + width > workArea.x + workArea.width) {
+    x = Math.max(workArea.x, workArea.x + workArea.width - width);
+  }
+
+  // 두 번째 인자(animate)는 macOS에서만 동작 — 부드러운 슬라이드 확장
+  win.setBounds({ x, y: bounds.y, width, height: bounds.height }, true);
+}
+
 export function createWindow(
   serverUrl: string,
   deps: { getIsQuitting: () => boolean },
@@ -14,12 +43,11 @@ export function createWindow(
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
   const win = new BrowserWindow({
-    // 멀티컬럼(좌측 네비 + 채팅 목록 사이드바 + 채팅) 데스크톱 레이아웃 기준 폭.
-    // 최소 880은 md(768) 이상을 보장해 목록+채팅이 항상 함께 보이도록 한다.
-    // 시작은 최소폭(880)으로 연다. 작은 디스플레이에서 화면보다 커지지 않도록 작업영역으로 클램프.
-    width: Math.min(880, screenWidth),
+    // 평상시(목록·멤버·설정)는 좁은 단일 컬럼으로 연다. 채팅방 진입 시 우측으로 확장한다(resizeWindowForChat).
+    // 작은 디스플레이에서 화면보다 커지지 않도록 작업영역으로 클램프.
+    width: Math.min(WINDOW_WIDTH_NARROW, screenWidth),
     height: Math.min(800, screenHeight),
-    minWidth: Math.min(880, screenWidth),
+    minWidth: Math.min(440, screenWidth),
     minHeight: Math.min(600, screenHeight),
     maxWidth: screenWidth,
     maxHeight: screenHeight,
