@@ -60,7 +60,7 @@ export default function MembersPage() {
                 ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Escape') clearSearch(); }}
                 placeholder="찾으시는 분의 성함을 입력하세요."
-                className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                className="flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
               />
               <button onClick={clearSearch} className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100">
                 <IconCloseStroke width={20} height={20} />
@@ -70,7 +70,17 @@ export default function MembersPage() {
         </div>
       </div>
 
-      <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
+      {/* 내 프로필: 검색 모드일 땐 접어 검색 input과 토글되도록 (동시 노출 방지) */}
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-out',
+          isSearchVisible ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
+        )}
+      >
+        <div className="overflow-hidden">
+          <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {isOrgMember && (
