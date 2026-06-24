@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
-import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { handleForceLogout, refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import { useAuthStore } from '@/store/auth/authStore';
 import { routeMessage } from './handlers/messageRouter';
 import { createHeartbeat, isPongMessage, type HeartbeatController } from './heartbeat';
@@ -107,16 +107,41 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
         return;
       }
 
+      const MAX_RECONNECT = 10;
+
+      // 401/비정상 종료(1006) → 토큰 갱신 후 재연결. RN 앱과 동일하게 재시도 횟수를 캡한다.
+      // 토큰이 영구 거부되는 상황(예: 이메일=로그인ID 변경으로 서버가 세션 무효화)에서
+      // refresh→재연결→1006 무한 루프를 막고, 한도 초과/갱신 실패 시 강제 로그아웃한다.
       if (reason.includes('401') || e.code === 1006) {
+        const attempt = reconnectAttemptRef.current;
+        if (attempt >= MAX_RECONNECT) {
+          console.warn(`[WS] 인증 재연결 ${MAX_RECONNECT}회 초과 → 강제 로그아웃`);
+          handleForceLogout();
+          return;
+        }
+        reconnectAttemptRef.current = attempt + 1;
+        const delay = attempt === 0 ? 0 : Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+
+        let newToken: string | null = null;
         try {
-          const newTk = await refreshAccessToken();
-          if (newTk) { connectWebSocketRef.current(newTk); return; }
-        } catch { /* refresh 실패 */ }
-        if (reason.includes('401')) { useAuthStore.getState().logout(); window.location.href = '/login'; return; }
+          newToken = await refreshAccessToken();
+        } catch {
+          /* refresh 예외 → 아래에서 강제 로그아웃 */
+        }
+        if (!newToken) {
+          handleForceLogout();
+          return;
+        }
+        const token = newToken;
+        reconnectTimerRef.current = setTimeout(() => {
+          if (!forceCloseRef.current) connectWebSocketRef.current(token);
+        }, delay);
+        return;
       }
 
       if (wasForce) return;
-      const MAX_RECONNECT = 10;
+
+      // 그 외 비정상 종료 → 백오프 재연결 (캡 적용)
       const attempt = reconnectAttemptRef.current;
       if (attempt >= MAX_RECONNECT) { console.warn(`[WS] 최대 재연결 시도 횟수(${MAX_RECONNECT})에 도달`); return; }
       const delay = attempt === 0 ? 0 : Math.min(1000 * Math.pow(2, attempt - 1), 30000);
