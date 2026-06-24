@@ -18,7 +18,7 @@ export const validatePassword = (password: string): string => {
     return '비밀번호에 공백을 포함할 수 없습니다';
   }
   if (password.length < 8) {
-    return '비밀번호는 8자 이상이어야 합니다';
+    return '8자리 이상 입력해 주세요.';
   }
 
   const hasLetter = /[a-zA-Z]/.test(password);
@@ -26,7 +26,7 @@ export const validatePassword = (password: string): string => {
   const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
   if (!hasLetter || !hasNumber || !hasSpecial) {
-    return '영문, 숫자, 특수문자를 포함해야 합니다';
+    return '영문,숫자,특수문자 3종류를 조합해 주세요.';
   }
 
   return '';
