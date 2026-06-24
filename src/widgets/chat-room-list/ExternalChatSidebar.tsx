@@ -159,7 +159,7 @@ export function ExternalChatSidebar() {
                   if (e.key === 'Escape') closeSearch();
                 }}
                 placeholder="채팅방명 또는 참여자 이름 검색"
-                className="min-w-0 flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                className="min-w-0 flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
               />
               <button
                 onClick={closeSearch}

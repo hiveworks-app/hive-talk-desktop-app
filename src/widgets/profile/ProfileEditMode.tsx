@@ -203,7 +203,7 @@ function ProfileInput({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={PROFILE_FIELD_MAX_LENGTH}
-      className="h-14 w-full rounded-[10px] border border-gray-200 bg-surface px-4 text-[16px] leading-[22px] text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+      className="h-14 w-full rounded-[10px] border border-gray-200 bg-surface px-4 text-[16px] leading-[22px] text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
     />
   );
 }
