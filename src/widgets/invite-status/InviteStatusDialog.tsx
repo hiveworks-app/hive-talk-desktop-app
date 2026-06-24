@@ -8,7 +8,7 @@ import {
 } from '@/features/external-member/queries';
 import { cn } from '@/shared/lib/cn';
 import { useDimmed } from '@/shared/hooks/useDimmed';
-import { IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { USER_TYPE } from '@/shared/types/user';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -61,8 +61,8 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
         {/* 헤더: 초대현황(좌) / X(우) — 다른 모달과 닫기 버튼 위치 통일 */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
           <h2 className="text-base font-bold text-gray-900">초대현황</h2>
-          <button type="button" onClick={onClose} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
-            <IconClose size={20} />
+          <button type="button" onClick={onClose} aria-label="닫기" className="text-gray-900">
+            <IconCloseStroke width={20} height={20} />
           </button>
         </div>
 

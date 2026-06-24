@@ -3,7 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
-import { IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { useExternalInvite, type InviteTab } from '@/features/external-member/useExternalInvite';
 
 interface ExternalInviteDialogProps {
@@ -38,9 +38,9 @@ export function ExternalInviteDialog({ open, onClose }: ExternalInviteDialogProp
               type="button"
               onClick={onClose}
               aria-label="닫기"
-              className="text-gray-500 hover:text-gray-900"
+              className="text-gray-900"
             >
-              <IconClose size={20} />
+              <IconCloseStroke width={20} height={20} />
             </button>
           </div>
 

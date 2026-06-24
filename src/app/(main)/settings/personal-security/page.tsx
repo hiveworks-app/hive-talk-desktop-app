@@ -1,5 +1,6 @@
 'use client';
 
+import IconIndicatorMore from '@assets/icons/indicator-more.svg';
 import {
   useGetMyTerms,
   useToggleAdInfoConsent,
@@ -7,7 +8,7 @@ import {
 } from '@/features/terms/queries';
 import { TERMS_CODE } from '@/features/terms/type';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconChevronRight, IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { Toggle } from '@/shared/ui/Toggle';
 import { useUIStore } from '@/store';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
@@ -42,10 +43,10 @@ export default function PersonalSecurityPage() {
         <h2 className="text-heading-md font-bold text-text-primary">개인/보안</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="닫기"
         >
-          <IconClose size={20} />
+          <IconCloseStroke width={20} height={20} />
         </button>
       </header>
 
@@ -115,7 +116,7 @@ function LinkRow({
       className="flex w-full items-center justify-between border-b border-divider px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-pressed"
     >
       <span className={`text-sub ${danger ? 'text-red-500' : 'text-text-primary'}`}>{title}</span>
-      <IconChevronRight size={16} className={danger ? 'text-red-400' : 'text-text-tertiary'} />
+      <IconIndicatorMore width={16} height={16} className={danger ? 'text-red-400' : 'text-gray-400'} />
     </button>
   );
 }

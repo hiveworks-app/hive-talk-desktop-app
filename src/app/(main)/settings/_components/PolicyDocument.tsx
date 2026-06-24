@@ -2,7 +2,7 @@
 
 import type { PolicySection } from '@/features/policy/type';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { SettingsOverlay } from './SettingsOverlay';
 
 interface PolicyDocumentProps {
@@ -25,10 +25,10 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
         </h2>
         <button
           onClick={() => router.back()}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="닫기"
         >
-          <IconClose size={20} />
+          <IconCloseStroke width={20} height={20} />
         </button>
       </header>
 

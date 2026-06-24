@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@/shared/lib/cn';
-import { IconChevronDown, IconChevronLeft, IconChevronUp, IconClose, IconPerson, IconSearch, IconSidePanel } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
+import { IconChevronDown, IconChevronLeft, IconChevronUp, IconPerson, IconSearch, IconSidePanel } from '@/shared/ui/icons';
 import type { UseChatRoomSearchReturn } from '@/features/chat-room/useChatRoomSearch';
 
 interface ChatRoomHeaderProps {
@@ -112,9 +113,9 @@ export function ChatRoomHeader({
           </div>
           <button
             onClick={search.exitSearchMode}
-            className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary hover:bg-gray-100"
+            className="flex h-7 w-7 items-center justify-center rounded text-text-primary hover:bg-gray-100"
           >
-            <IconClose size={14} />
+            <IconCloseStroke width={14} height={14} />
           </button>
         </div>
       )}

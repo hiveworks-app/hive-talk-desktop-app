@@ -144,3 +144,5 @@ export { default as IconMessageResend } from './message-resend.svg';
 
 // 신고
 export { default as IconSirenDefault } from './siren-default.svg';
+
+export { default as IconIndicatorMore } from './indicator-more.svg';

@@ -7,6 +7,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
 import { IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
 import { SelectMemberRow } from './SelectMemberRow';
@@ -47,8 +48,8 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
             {/* 헤더: 대화상대 선택(좌) / X(우) — 확인은 하단 버튼으로 */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
               <h2 className="text-base font-bold text-gray-900">대화상대 선택</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
-                <IconClose size={20} />
+              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
+                <IconCloseStroke width={20} height={20} />
               </button>
             </div>
 
@@ -153,8 +154,8 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                 </svg>
               </button>
               <h2 className="text-base font-bold text-gray-900">채팅방 정보 설정</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
-                <IconClose size={20} />
+              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
+                <IconCloseStroke width={20} height={20} />
               </button>
             </div>
 

@@ -1,9 +1,11 @@
 'use client';
 
+import IconArrowBack from '@assets/icons/arrow_back.svg';
+import IconIndicatorMore from '@assets/icons/indicator-more.svg';
 import IconPhoneVerified from '@assets/icons/phone-verified.svg';
 import { useGetCredentialInfo } from '@/features/profile/queries';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconChevronLeft, IconChevronRight, IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { formatDotDate } from '@/shared/utils/formatTimeUtils';
 import { formatMaskedPhone } from '@/shared/utils/phone';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -22,18 +24,18 @@ export default function AccountDetailPage() {
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
         <button
           onClick={() => router.push('/settings/account')}
-          className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="뒤로가기"
         >
-          <IconChevronLeft size={20} />
+          <IconArrowBack width={20} height={20} />
         </button>
         <h2 className="text-heading-md font-bold text-text-primary">계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="닫기"
         >
-          <IconClose size={20} />
+          <IconCloseStroke width={20} height={20} />
         </button>
       </header>
 
@@ -92,7 +94,7 @@ function DetailCard({
           <span className="flex-1 text-label font-semibold text-text-primary">{title}</span>
           <span className="flex shrink-0 items-center gap-0.5 text-label text-text-tertiary">
             변경
-            <IconChevronRight size={16} className="text-text-tertiary" />
+            <IconIndicatorMore width={16} height={16} className="text-gray-400" />
           </span>
         </button>
       ) : (

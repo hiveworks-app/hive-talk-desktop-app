@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import IconCardAccount from '@assets/icons/setting-card-account.svg';
 import IconCardProfile from '@assets/icons/setting-card-profile.svg';
+import IconIndicatorMore from '@assets/icons/indicator-more.svg';
 import IconPhoneVerified from '@assets/icons/phone-verified.svg';
 import { useGetCredentialInfo } from '@/features/profile/queries';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { IconChevronRight, IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { formatMaskedPhone } from '@/shared/utils/phone';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -34,10 +35,10 @@ export default function AccountInfoPage() {
         <h2 className="text-heading-md font-bold text-text-primary">하이브톡 계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="닫기"
         >
-          <IconClose size={20} />
+          <IconCloseStroke width={20} height={20} />
         </button>
       </header>
 
@@ -96,7 +97,7 @@ function CardHeader({
     <>
       <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>
       <span className="flex-1 text-label font-semibold text-text-primary">{title}</span>
-      <IconChevronRight size={16} className="shrink-0 text-text-tertiary" />
+      <IconIndicatorMore width={16} height={16} className="shrink-0 text-gray-400" />
     </>
   );
 
