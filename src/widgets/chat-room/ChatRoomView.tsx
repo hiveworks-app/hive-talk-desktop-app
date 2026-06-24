@@ -171,6 +171,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           onToggleSidePanel={() => setIsSidePanelOpen(prev => !prev)}
         />
 
+        {/* 채팅 본문(메시지+입력창) 래퍼 — 업무태그 바텀시트 오버레이의 기준(relative) */}
+        <div className="relative flex flex-1 flex-col overflow-hidden">
         <div className="relative flex-1 overflow-hidden bg-chat-bg">
           {/* 공지 배너 — 절대 위치 오버레이: 펼침/접힘이 메시지 레이아웃(스크롤·위치)에 영향 주지 않도록 띄운다 */}
           {effectiveRoomId && (
@@ -228,8 +230,11 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           <SelectedTagOverlay />
         </div>
 
-        {isTagOpen && <TagSelectPanel onConfirm={handleTagConfirm} />}
-        <ChatInput onSend={handleSendWithTags} onFilesSelected={handleFilesSelected} onEditTag={handleOpenAddTag} />
+          <ChatInput onSend={handleSendWithTags} onFilesSelected={handleFilesSelected} onEditTag={handleOpenAddTag} />
+
+          {/* 업무태그 바텀시트 — 채팅 본문 위 오버레이 (딤은 메시지+입력창만 덮음) */}
+          {isTagOpen && <TagSelectPanel onConfirm={handleTagConfirm} />}
+        </div>
       </main>
 
       <SidePanel

@@ -390,3 +390,28 @@ html[data-electron-win] .electron-fixed-safe-top {
 .animate-indeterminate {
   animation: indeterminate-slide 1.2s ease-in-out infinite;
 }
+
+/* 업무태그 바텀시트 — 딤 페이드 + 시트 슬라이드업 (RN BottomSheet 패리티) */
+@keyframes tag-dim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-tag-dim-in {
+  animation: tag-dim-in 0.2s ease-out;
+}
+
+@keyframes tag-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-tag-sheet-up {
+  animation: tag-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
