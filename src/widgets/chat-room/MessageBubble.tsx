@@ -8,10 +8,9 @@ import type { MediaViewerItem } from '@/shared/ui/MediaViewer';
 import { LinkPreviewCard } from '@/shared/ui/LinkPreviewCard';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { ChatMessageUI, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
-import { TagChip } from '@/shared/ui/TagChip';
 import { extractFirstUrl } from '@/shared/utils/linkPreview';
-import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { BubbleTagRow } from './BubbleTagRow';
 import { DateSeparator } from './DateSeparator';
 import { FailedMessageActions } from './FailedMessageActions';
 import { MessageContent } from './MessageContent';
@@ -74,7 +73,6 @@ export function MessageBubble({
   const showTime = !isNextSameGroup;
 
   const showSnackbar = useUIStore(s => s.showSnackbar);
-  const currentUserId = useAuthStore(s => s.user?.id);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(message.text);
@@ -114,18 +112,6 @@ export function MessageBubble({
       >
         {!isMe && !isSameSender && (
           <span className="mb-1 text-sub-sm font-medium text-text-secondary">{message.name}</span>
-        )}
-        {hasTags && (
-          <div className={cn('mb-1 flex flex-wrap gap-1', isMe ? 'justify-end' : 'justify-start')}>
-            {message.tags!.map(tag => (
-              <TagChip
-                key={tag.taggingId ?? tag.tagId}
-                label={tag.title}
-                variant={String(tag.userId) === String(currentUserId) ? 'mine' : 'others'}
-                size="small"
-              />
-            ))}
-          </div>
         )}
         <div className={cn('flex items-end gap-1', isMe ? 'flex-row-reverse' : 'flex-row')}>
           {isDeleted ? (
@@ -181,6 +167,13 @@ export function MessageBubble({
           )}
         </div>
         {firstUrl && <LinkPreviewCard url={firstUrl} className="mt-1" />}
+        {hasTags && (
+          <BubbleTagRow
+            tags={message.tags!}
+            onClick={onEditTag ? () => onEditTag(message) : undefined}
+            className="mt-1"
+          />
+        )}
       </div>
     </div>
   );
