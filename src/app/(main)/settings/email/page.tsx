@@ -1,7 +1,9 @@
 'use client';
 
+import IconArrowBack from '@assets/icons/arrow_back.svg';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { cn } from '@/shared/lib/cn';
-import { IconCheck, IconChevronLeft, IconClose } from '@/shared/ui/icons';
+import { IconCheck } from '@/shared/ui/icons';
 import { Spinner } from '@/shared/ui/Spinner';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
 import { useChangeEmail } from './useChangeEmail';
@@ -45,19 +47,19 @@ export default function ChangeEmailPage() {
         {step !== 'DONE' && (
           <button
             onClick={goBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
             aria-label={step === 'CODE' ? '이전 단계' : '뒤로가기'}
           >
-            <IconChevronLeft size={20} />
+            <IconArrowBack width={20} height={20} />
           </button>
         )}
         <h2 className="text-heading-md font-bold text-text-primary">이메일</h2>
         <button
           onClick={step === 'DONE' ? goToAccountDetail : close}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
           aria-label="닫기"
         >
-          <IconClose size={20} />
+          <IconCloseStroke width={20} height={20} />
         </button>
       </header>
 

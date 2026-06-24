@@ -9,7 +9,8 @@ import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
-import { IconChevronLeft, IconChevronRight, IconClose, IconImage, IconDescription, IconAdd, IconLogout } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
+import { IconChevronLeft, IconChevronRight, IconImage, IconDescription, IconAdd, IconLogout } from '@/shared/ui/icons';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { isOffline } from '@/shared/utils/offlineGuard';
@@ -159,9 +160,9 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
         </div>
         <button
           onClick={onClose}
-          className="flex h-6 w-6 items-center justify-center rounded text-text-tertiary hover:bg-gray-100"
+          className="flex h-6 w-6 items-center justify-center rounded text-text-primary hover:bg-gray-100"
         >
-          <IconClose size={14} />
+          <IconCloseStroke width={14} height={14} />
         </button>
       </div>
 

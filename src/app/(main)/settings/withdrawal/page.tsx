@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import IconArrowBack from '@assets/icons/arrow_back.svg';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { isWithdrawPasswordMismatch, useWithdrawAccount } from '@/features/withdrawal/queries';
 import { Checkbox } from '@/shared/ui/Checkbox';
-import { IconChevronLeft, IconClose } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { useAuthStore } from '@/store/auth/authStore';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
 
@@ -55,20 +56,20 @@ export default function WithdrawalPage() {
         {step === 'password' && (
           <button
             onClick={stepBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
             aria-label="이전 단계"
           >
-            <IconChevronLeft size={20} />
+            <IconArrowBack width={20} height={20} />
           </button>
         )}
         <h2 className="text-heading-md font-bold text-text-primary">하이브톡 탈퇴</h2>
         {step !== 'complete' && (
           <button
             onClick={close}
-            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
             aria-label="닫기"
           >
-            <IconClose size={20} />
+            <IconCloseStroke width={20} height={20} />
           </button>
         )}
       </header>

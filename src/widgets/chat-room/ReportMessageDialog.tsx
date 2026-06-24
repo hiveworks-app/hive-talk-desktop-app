@@ -7,7 +7,8 @@ import { useGetReportCategories, useReportMessage } from '@/features/report-mess
 import { FALLBACK_REPORT_CATEGORIES, REPORT_DETAIL_INFO_TEXT } from '@/features/report-message/reportCategories';
 import { isReportRoomType, type ReportCategory } from '@/features/report-message/type';
 import { Button } from '@/shared/ui/Button';
-import { IconChevronLeft, IconChevronRight, IconClose, IconReport } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
+import { IconChevronLeft, IconChevronRight, IconReport } from '@/shared/ui/icons';
 import { useUIStore } from '@/store/uiStore';
 
 const MAX_REPORT_CONTENT_LENGTH = 300;
@@ -102,10 +103,10 @@ export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose
             <button
               type="button"
               onClick={resetAndClose}
-              className="text-gray-500 hover:text-gray-900"
+              className="text-gray-900"
               aria-label="신고 닫기"
             >
-              <IconClose size={20} />
+              <IconCloseStroke width={20} height={20} />
             </button>
           </div>
 

@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useGetMembers } from '@/features/members/queries';
 import { Button } from '@/shared/ui/Button';
-import { IconClose, IconSearch } from '@/shared/ui/icons';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
+import { IconSearch } from '@/shared/ui/icons';
 import { useAuthStore } from '@/store/auth/authStore';
 import { MemberRow } from '@/widgets/create-room/MemberRow';
 
@@ -67,8 +68,8 @@ export function InviteMemberDialog({ open, onClose, existingUserIds, onInvite }:
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex h-[560px] max-h-[80vh] w-[420px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-xl focus:outline-none">
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
             <Dialog.Title className="text-base font-bold text-gray-900">대화상대 초대</Dialog.Title>
-            <button type="button" onClick={close} aria-label="닫기" className="text-gray-500 hover:text-gray-900">
-              <IconClose size={20} />
+            <button type="button" onClick={close} aria-label="닫기" className="text-gray-900">
+              <IconCloseStroke width={20} height={20} />
             </button>
           </div>
 
