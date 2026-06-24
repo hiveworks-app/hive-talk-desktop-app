@@ -44,7 +44,7 @@ export default function ExternalMembersPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="이름 또는 이메일로 검색"
-            className="w-full rounded-lg border border-divider bg-gray-50 px-3 py-2 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+            className="w-full rounded-lg border border-divider bg-gray-50 px-3 py-2 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
           />
         </div>
       </header>

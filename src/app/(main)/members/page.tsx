@@ -60,7 +60,7 @@ export default function MembersPage() {
                 ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Escape') clearSearch(); }}
                 placeholder="찾으시는 분의 성함을 입력하세요."
-                className="flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                className="flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
               />
               <button onClick={clearSearch} className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100">
                 <IconCloseStroke width={20} height={20} />

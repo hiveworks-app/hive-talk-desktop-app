@@ -72,7 +72,7 @@ export function ExternalInviteDialog({ open, onClose }: ExternalInviteDialogProp
               placeholder={activeTab === 'email' ? '이메일로 추가' : '연락처로 추가'}
               inputMode={activeTab === 'phone' ? 'numeric' : 'email'}
               autoComplete="off"
-              className="w-full rounded-lg border border-divider bg-gray-50 px-3 py-2.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+              className="w-full rounded-lg border border-divider bg-gray-50 px-3 py-2.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
             />
           </div>
 

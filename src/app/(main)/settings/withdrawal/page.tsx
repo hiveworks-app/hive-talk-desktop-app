@@ -136,7 +136,7 @@ export default function WithdrawalPage() {
                   }}
                   placeholder="비밀번호"
                   autoComplete="current-password"
-                  className={`w-full rounded-lg border bg-surface px-3 py-2.5 text-sub text-text-primary outline-none focus:border-primary ${passwordError ? 'border-red-400' : 'border-divider'}`}
+                  className={`w-full rounded-lg border bg-surface px-3 py-2.5 text-sub text-text-primary outline-none transition ${passwordError ? 'border-red-400 ring-1 ring-inset ring-red-400' : 'border-divider focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary'}`}
                 />
                 {passwordError && <p className="mt-1 text-sub-sm text-red-500">{passwordError}</p>}
               </div>

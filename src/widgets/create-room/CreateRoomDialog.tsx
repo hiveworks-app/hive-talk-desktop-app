@@ -147,7 +147,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                   onChange={(e) => r.setGmTitle(e.target.value)}
                   maxLength={r.maxTitle}
                   placeholder={r.namePlaceholder}
-                  className="h-12 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none placeholder:truncate placeholder:text-text-tertiary focus:border-primary"
+                  className="h-12 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none transition placeholder:truncate placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                 />
                 <span className="text-right text-sub-sm text-text-tertiary">{r.gmTitle.length}/{r.maxTitle}</span>
               </div>

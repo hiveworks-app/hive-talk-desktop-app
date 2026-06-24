@@ -84,7 +84,7 @@ export function ChatRoomHeader({
               if (e.key === 'Escape') search.exitSearchMode();
             }}
             placeholder="메시지 검색..."
-            className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+            className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
           />
           {search.totalCount > 0 && (
             <span className="shrink-0 text-sub-sm text-text-secondary">

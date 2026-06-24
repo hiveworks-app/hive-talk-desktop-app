@@ -184,7 +184,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                       }}
                       maxLength={50}
                       placeholder="채팅방 이름"
-                      className="min-w-0 flex-1 rounded-md border border-divider bg-gray-50 px-2.5 py-1.5 text-sub text-text-primary outline-none focus:border-primary"
+                      className="min-w-0 flex-1 rounded-md border border-divider bg-gray-50 px-2.5 py-1.5 text-sub text-text-primary outline-none transition focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                     />
                     <button
                       onClick={handleTitleSubmit}
