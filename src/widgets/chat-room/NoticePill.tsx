@@ -12,7 +12,8 @@ interface NoticePillProps extends HTMLAttributes<HTMLDivElement> {
 export function NoticePill({ children, className, ...props }: NoticePillProps) {
   return (
     <div className={cn('flex justify-center', className)} {...props}>
-      <span className="rounded-[10px] bg-black/10 px-2.5 py-1.5 text-center text-sub-sm text-gray-900">
+      {/* 흰 배경 위 연회색 pill — RN systemMessageBackground(#F8F9FA) + gray-800 텍스트 (7/23 시안 확정) */}
+      <span className="rounded-[10px] bg-gray-50 px-2.5 py-1.5 text-center text-sub-sm text-gray-800">
         {children}
       </span>
     </div>

@@ -64,3 +64,29 @@ export const filterByhangeulSearch = <T>(
 
   return items.filter(item => searchhangeul(getSearchText(item), keyword));
 };
+
+// ────────────────────────────────────────────────
+// 인덱스 룰러 라벨 (RN getIndexLabel 패리티)
+// ────────────────────────────────────────────────
+
+const CHOSEONG_LIST = [
+  'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ',
+  'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
+] as const;
+
+const TWIN_TO_PLAIN_CHOSEONG: Record<string, string> = {
+  ㄲ: 'ㄱ', ㄸ: 'ㄷ', ㅃ: 'ㅂ', ㅆ: 'ㅅ', ㅉ: 'ㅈ',
+};
+
+/** 이름 첫 글자 → 룰러 인덱스 라벨 (한글 초성/영문 대문자/#) */
+export function getIndexLabel(char: string): string {
+  const code = char.charCodeAt(0);
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    const choseong = CHOSEONG_LIST[Math.floor((code - 0xac00) / 28 / 21)];
+    return TWIN_TO_PLAIN_CHOSEONG[choseong] ?? choseong;
+  }
+  // 한글 호환 자모 단독 입력 닉네임 (ㄱ, ㄴ 등)
+  if (code >= 0x3131 && code <= 0x314e) return TWIN_TO_PLAIN_CHOSEONG[char] ?? char;
+  if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
+  return '#';
+}

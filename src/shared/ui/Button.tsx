@@ -1,7 +1,15 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark' | 'primary-light' | 'outlined';
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'dark'
+  | 'primary-light'
+  | 'outlined'
+  | 'warning';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,27 +18,37 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
+/**
+ * RN Button 패리티 매핑 (RN shared/ui/Button/Button.tsx):
+ * primary=fill/primary, secondary=filled-contrast/dark, dark=fill/dark, danger=fill/danger,
+ * primary-light=filled-contrast/primary, outlined=outlined/primary, warning=fill/warning.
+ * pressed 색은 hover(데스크톱 어포던스)와 active 양쪽에 적용.
+ */
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-on-primary hover:bg-[var(--color-state-primary-pressed)] disabled:bg-disabled disabled:text-text-placeholder',
+    'bg-primary text-on-primary hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-blue-300 disabled:text-white',
   secondary:
-    'bg-gray-100 text-text-primary hover:bg-gray-200 disabled:opacity-50',
+    'bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400',
   ghost:
-    'text-text-secondary hover:bg-gray-100 disabled:opacity-50',
+    'text-primary hover:opacity-80 active:text-blue-300 disabled:text-gray-500',
   dark:
-    'bg-[#4E5968] text-white hover:bg-[#3B4552] disabled:bg-[#ADB5BD] disabled:text-white',
+    'bg-gray-700 text-white hover:bg-gray-800 active:bg-gray-800 disabled:bg-gray-400 disabled:text-white',
   danger:
-    'bg-state-error text-on-primary hover:opacity-90 disabled:opacity-50',
+    'bg-state-error text-on-primary hover:bg-state-error-pressed active:bg-state-error-pressed disabled:opacity-50',
   'primary-light':
-    'bg-[#E6F3FF] text-primary hover:bg-[#A7CBFA] disabled:opacity-50',
+    'bg-blue-100 text-primary hover:bg-blue-300 active:bg-blue-300 disabled:bg-blue-100 disabled:text-blue-300',
   outlined:
-    'border border-primary text-primary bg-transparent hover:bg-primary/5 disabled:opacity-50',
+    'border border-primary text-primary bg-transparent hover:border-blue-300 hover:text-blue-300 active:border-blue-300 active:text-blue-300 disabled:border-gray-200 disabled:text-gray-500',
+  warning:
+    'bg-yellow-300 text-gray-900 hover:bg-yellow active:bg-yellow disabled:bg-gray-400 disabled:text-white',
 };
 
+/* 데스크톱 크기 체계 (RN은 터치 기준 lg 56/md 48/sm 40 — 마우스 기준으로 축소):
+ * lg 40px(주요 CTA), md 36px(다이얼로그 버튼), sm 32px(보조) — 모두 medium */
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-sub-sm rounded-md',
-  md: 'h-[var(--size-touch-target)] px-4 text-sub rounded-lg',
-  lg: 'h-11 px-5 text-sub rounded-lg',
+  sm: 'h-8 px-3 text-sub rounded-md',
+  md: 'h-9 px-4 text-body rounded-lg',
+  lg: 'h-10 px-5 text-body rounded-[10px]',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -38,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center font-semibold transition-colors',
+        'inline-flex items-center justify-center font-medium transition-colors',
         variantStyles[variant],
         sizeStyles[size],
         fullWidth && 'w-full',

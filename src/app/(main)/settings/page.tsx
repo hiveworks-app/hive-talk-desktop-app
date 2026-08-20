@@ -8,8 +8,10 @@ import IconBell from '@assets/icons/setting-bell.svg';
 import IconLogout from '@assets/icons/setting-logout.svg';
 import IconSecurity from '@assets/icons/setting-security.svg';
 import IconSync from '@assets/icons/setting-sync.svg';
-import { MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { MEMBERS_KEY, PINNED_MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { apiLogout } from '@/features/auth/api';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { formatSyncedAt } from '@/shared/utils/formatTimeUtils';
 import { useUIStore } from '@/store';
@@ -37,7 +39,51 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const handleLogout = () => {
+  // 수동 업데이트 확인 (RN AppVersionScreen 대응) — 최신이면 안내, 새 버전이면 자동 다운로드 시작
+  // (다운로드 완료 시 레이아웃 하단 '재시작' 배너가 안내)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const handleCheckUpdate = async () => {
+    if (isCheckingUpdate) return;
+    const api = (window as unknown as {
+      electronAPI?: {
+        isElectron?: boolean;
+        checkForUpdates?: () => Promise<{ status: 'available' | 'up-to-date' | 'error'; version?: string }>;
+      };
+    }).electronAPI;
+    if (!api?.isElectron || !api.checkForUpdates) {
+      showSnackbar({ message: '데스크톱 앱에서만 업데이트를 확인할 수 있어요.', state: 'error' });
+      return;
+    }
+    setIsCheckingUpdate(true);
+    try {
+      const result = await api.checkForUpdates();
+      if (result.status === 'available') {
+        showSnackbar({
+          message: `새 버전(v${result.version})을 다운로드하고 있어요. 완료되면 안내해 드릴게요.`,
+          state: 'success',
+        });
+      } else if (result.status === 'up-to-date') {
+        showSnackbar({ message: '최신 버전을 사용 중이에요.', state: 'success' });
+      } else {
+        // 일시적 실패(네트워크 등)만 안내 (RN 정책 패리티)
+        showSnackbar({ message: '업데이트 확인에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
+      }
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const [isLogoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  // 로그아웃 — 컨펌 후 서버 세션 종료 API 호출 → 로컬 로그아웃.
+  // RN 패리티: API 실패 시 스낵바 안내 후 중단 (로컬 로그아웃 안 함 — 세션 잔존 방지)
+  const handleLogoutConfirm = async () => {
+    setLogoutConfirmOpen(false);
+    try {
+      await apiLogout();
+    } catch {
+      showSnackbar({ message: '로그아웃에 실패했습니다. 다시 시도해주세요.', state: 'error' });
+      return;
+    }
     useAuthStore.getState().logout();
     router.replace('/login');
   };
@@ -46,12 +92,19 @@ export default function SettingsPage() {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
-      await queryClient.refetchQueries({ queryKey: MEMBERS_KEY });
+      // 멤버 + 관심멤버 함께 갱신 (RN SettingsScreen 패리티)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: MEMBERS_KEY }),
+        queryClient.invalidateQueries({ queryKey: PINNED_MEMBERS_KEY }),
+      ]);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: MEMBERS_KEY }),
+        queryClient.refetchQueries({ queryKey: PINNED_MEMBERS_KEY }),
+      ]);
       setLastSyncedAt(Date.now());
       showSnackbar({ message: '멤버 목록을 동기화했습니다.', state: 'success' });
     } catch {
-      showSnackbar({ message: '동기화에 실패했습니다.', state: 'error' });
+      showSnackbar({ message: '친구목록을 갱신을 실패했습니다.', state: 'error' });
     } finally {
       setIsSyncing(false);
     }
@@ -67,7 +120,7 @@ export default function SettingsPage() {
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-50">
       {/* 회색(gray-50) 상단 영역 — 헤더 구분선 제거, 아래 둥근 패널이 분리 (Figma 2382-53597) */}
       <header className="flex h-14 shrink-0 items-center px-4">
-        <h2 className="text-heading-lg font-semibold text-text-primary">전체설정</h2>
+        <h2 className="text-heading-xl font-semibold text-text-primary">전체설정</h2>
       </header>
 
       {/* 콘텐츠 패널: 둥근 흰 영역 (멤버목록·채팅 패턴) */}
@@ -103,7 +156,7 @@ export default function SettingsPage() {
           onClick={() => router.push('/settings/notifications')}
         />
         <SettingRow
-          icon={<IconSync className="h-5 w-5" />}
+          icon={<IconSync className={isSyncing ? 'h-5 w-5 animate-spin' : 'h-5 w-5'} />}
           title={isSyncing ? '멤버 목록 동기화중...' : '멤버 목록 동기화'}
           right={lastSyncedAt ? formatSyncedAt(lastSyncedAt) : undefined}
           onClick={handleSyncMembers}
@@ -114,15 +167,32 @@ export default function SettingsPage() {
           title="개인/보안"
           onClick={() => router.push('/settings/personal-security')}
         />
-        <SettingRow icon={<IconAppv className="h-5 w-5" />} title="앱 버전" right={versionText} />
+        <SettingRow
+          icon={<IconAppv className="h-5 w-5" />}
+          title={isCheckingUpdate ? '업데이트 확인 중...' : '앱 버전'}
+          right={versionText}
+          onClick={() => void handleCheckUpdate()}
+          disabled={isCheckingUpdate}
+        />
         <SettingRow
           icon={<IconLogout className="h-5 w-5" />}
           title="로그아웃"
-          onClick={handleLogout}
+          onClick={() => setLogoutConfirmOpen(true)}
         />
       </div>
 
       <MyProfileDialog isOpen={showProfile} onClose={() => setShowProfile(false)} />
+
+      {/* 로그아웃 확인 (RN 패리티) */}
+      <ConfirmDialog
+        open={isLogoutConfirmOpen}
+        title="로그아웃 하시겠어요?"
+        confirmLabel="로그아웃"
+        cancelLabel="취소"
+        destructive
+        onConfirm={() => void handleLogoutConfirm()}
+        onCancel={() => setLogoutConfirmOpen(false)}
+      />
     </main>
   );
 }
@@ -150,7 +220,7 @@ function SettingRow({
 
   // 앱 버전처럼 동작 없는 행은 비-인터랙티브 div로 렌더
   if (!onClick) {
-    return <div className="flex w-full items-center gap-2.5 px-4 py-4">{content}</div>;
+    return <div className="flex w-full items-center gap-2.5 px-4 py-3">{content}</div>;
   }
 
   return (
@@ -158,7 +228,7 @@ function SettingRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-2.5 px-4 py-4 text-left transition-colors hover:bg-surface-pressed disabled:pointer-events-none"
+      className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface-pressed disabled:pointer-events-none"
     >
       {content}
     </button>

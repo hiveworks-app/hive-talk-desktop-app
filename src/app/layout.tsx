@@ -40,15 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <head>
-        {/* Pretendard Variable Font — CDN preconnect + preload */}
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          as="style"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-      </head>
+      {/* Pretendard는 npm 패키지로 번들 (globals.css @import) — CDN 의존 제거로 오프라인/첫 실행에서도 타이포 유지 */}
       <body className="antialiased">
         <SentryInit />
         <ReactQueryProvider>

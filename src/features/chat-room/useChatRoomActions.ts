@@ -4,14 +4,15 @@ import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSidePanelParticipantsQuery } from "@/features/chat-room-side-panel/queries";
 import { apiDMCreate, apiGMCreate } from "@/features/create-chat-room/api";
-import { useChatMediaUpload } from "@/features/chat-room/useChatMediaUpload";
+import { apiEMCreate } from "@/features/external-chat/api";
+import { discardMediaRetryFiles, useChatMediaUpload } from "@/features/chat-room/useChatMediaUpload";
 import {
   WS_CHANNEL_TYPE,
   WS_MESSAGE_CONTENT_TYPE,
   RemoveTagMessageProps,
   UpdateTagToMessageProps,
 } from "@/shared/types/websocket";
-import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from "@/shared/config/queryKeys";
+import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from "@/shared/config/queryKeys";
 import { formatKoreanTime } from "@/shared/utils/formatTimeUtils";
 import { useAppWebSocket } from "@/shared/websocket/WebSocketContext";
 import { useWebSocketMessageBuilder } from "@/shared/websocket/useWebSocketMessageBuilder";
@@ -19,6 +20,9 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { isOffline } from "@/shared/utils/offlineGuard";
 import { useChatRoomRuntimeStore } from "@/store/chat/chatRoomRuntimeStore";
 import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
+import { useFailedMessagesStore } from "@/store/chat/failedMessagesStore";
+import { useUIStore } from "@/store/uiStore";
+import { useLeaveRoom } from "@/features/chat-room-list/useLeaveRoom";
 
 type ChatScrollDirection = "before" | "after";
 
@@ -30,6 +34,8 @@ export const useChatRoomActions = () => {
   );
   const queryClient = useQueryClient();
   const { send, removePendingPublish } = useAppWebSocket();
+  // 빈 방 정리용(실패 메시지 삭제 → 확정 메시지 0건이면 방 EXIT)
+  const { leaveRoom } = useLeaveRoom();
   const { channelType } = useChatRoomInfo();
   const currentRoomId = useChatRoomRuntimeStore((s) => s.currentRoomId);
   const setLoading = useChatRoomRuntimeStore((s) => s.setLoading);
@@ -102,6 +108,8 @@ export const useChatRoomActions = () => {
 
     let newRoomId: string | null = null;
 
+    // RN 패리티 — draft 방 생성 동안 로딩 오버레이
+    useUIStore.getState().showLoadingOverlay({ message: '채팅방을 만들고 있어요' });
     try {
       if (ct === WS_CHANNEL_TYPE.DIRECT_MESSAGE) {
         const res = await apiDMCreate(invitedUserIds[0]);
@@ -113,10 +121,21 @@ export const useChatRoomActions = () => {
           userIdList: invitedUserIds.filter((id) => id !== String(myUserId)),
         });
         newRoomId = res.payload.roomId;
+      } else if (ct === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE) {
+        // EM draft — 첫 메시지 전송 시 생성 (취소 시 빈 방 잔존 방지, RN 패리티).
+        // 자기 자신 포함 시 서버 ERM005 — /app/gm과 동일하게 제외.
+        const myUserId = useAuthStore.getState().user?.id;
+        const res = await apiEMCreate({
+          title: roomName ?? "",
+          userIdList: invitedUserIds.filter((id) => id !== String(myUserId)),
+        });
+        newRoomId = res.payload.roomId;
       }
     } catch (err) {
       console.error("[ensureRoomId] 방 생성 실패:", err);
       return null;
+    } finally {
+      useUIStore.getState().hideLoadingOverlay();
     }
 
     if (!newRoomId) return null;
@@ -125,22 +144,24 @@ export const useChatRoomActions = () => {
     useChatRoomInfo.getState().setChatRoomInfo({ roomId: newRoomId });
     useChatRoomRuntimeStore.getState().setRoomId(newRoomId);
 
-    // WebSocket 구독 + 초대
+    // WebSocket 구독 + 초대 (EM은 서버가 초대 시스템 메시지를 자동 발행 — 클라이언트 invite 스킵, RN FR-26)
     send(buildSubscribeMessage({ channelIdOverride: newRoomId }));
-    sendInvite(invitedUserIds, newRoomId);
+    if (ct !== WS_CHANNEL_TYPE.EXTERNAL_MESSAGE) {
+      sendInvite(invitedUserIds, newRoomId);
+    }
     useChatRoomInfo.setState({ invitedUserIds: [] });
 
     // React Query 캐시 갱신
     const targetKey =
-      ct === WS_CHANNEL_TYPE.DIRECT_MESSAGE
-        ? DM_ROOM_LIST_KEY
+      ct === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? DM_ROOM_LIST_KEY
+        : ct === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? EM_ROOM_LIST_KEY
         : GM_ROOM_LIST_KEY;
     queryClient.invalidateQueries({ queryKey: targetKey });
 
     return newRoomId;
   }, [send, buildSubscribeMessage, sendInvite, queryClient]);
 
-  const { sendMediaMessage, sendDocumentMessage } = useChatMediaUpload(
+  const { sendMediaMessage, sendDocumentMessage, retryMediaMessage } = useChatMediaUpload(
     sendNewRoomInviteIfNeeded,
     ensureRoomId,
   );
@@ -157,8 +178,9 @@ export const useChatRoomActions = () => {
         }),
       );
 
-      const { otherUserIsExit, invitedUserIds } = useChatRoomInfo.getState();
-      if (otherUserIsExit && invitedUserIds.length > 0) {
+      // 자동초대는 상대가 "자발적으로 나간" 경우만 — 회원탈퇴/소속해제(otherUserIsRemoved)면 불가 (정책 dm.md)
+      const { otherUserIsExit, otherUserIsRemoved, invitedUserIds } = useChatRoomInfo.getState();
+      if (otherUserIsExit && !otherUserIsRemoved && invitedUserIds.length > 0) {
         sendInvite(invitedUserIds, roomId);
         useChatRoomInfo.setState({ otherUserIsExit: false });
       }
@@ -195,16 +217,18 @@ export const useChatRoomActions = () => {
   const startSendTimer = useCallback(
     (localId: string) => {
       const timer = setTimeout(() => {
-        const msg = useChatRoomRuntimeStore
-          .getState()
-          .messages.find((m) => m.id === localId);
+        const { messages, currentRoomId, patchMessageById } = useChatRoomRuntimeStore.getState();
+        const msg = messages.find((m) => m.id === localId);
         if (msg?.isLocal) {
           if (msg.retryPayload?.content) {
             removePendingPublish(msg.retryPayload.content);
           }
-          useChatRoomRuntimeStore
-            .getState()
-            .patchMessageById(localId, { localStatus: "failed" });
+          patchMessageById(localId, { localStatus: "failed" });
+          // 실패 메시지 영속화 — 방 이탈/재실행 후 복원 + 목록 느낌표 판정 소스 (RN 패리티)
+          const failedRoomId = msg.retryPayload?.roomId || currentRoomId;
+          if (failedRoomId) {
+            useFailedMessagesStore.getState().saveFailed(failedRoomId, { ...msg, localStatus: 'failed' });
+          }
         }
         localTimersRef.current.delete(localId);
       }, MESSAGE_SEND_TIMEOUT);
@@ -216,6 +240,8 @@ export const useChatRoomActions = () => {
   const sendTextMessage = useCallback(
     (content: string, tagList: string[] = []) => {
       if (!content.trim()) return;
+      // DM 상대 회원탈퇴/소속해제 — 전송 불가 (입력바 비활성의 이중 방어, 정책 dm.md)
+      if (useChatRoomInfo.getState().otherUserIsRemoved) return;
 
       if (tagList.length > 0) {
         setNextMyTags(
@@ -277,6 +303,8 @@ export const useChatRoomActions = () => {
 
   const retryTextMessage = useCallback(
     (messageId: string) => {
+      // 미디어/파일 실패는 보관된 원본 File로 재업로드 (RN retryPayload/retryFilePayload 대응)
+      if (retryMediaMessage(messageId)) return;
       const msg = useChatRoomRuntimeStore
         .getState()
         .messages.find((m) => m.id === messageId);
@@ -289,6 +317,8 @@ export const useChatRoomActions = () => {
 
       // 이전 전송이 pending queue에 남아있을 수 있으므로 먼저 제거 (중복 방지)
       removePendingPublish(content);
+      // 재시도 시작 — 영속 실패 목록에서 제거 (다시 실패하면 타이머가 재저장)
+      useFailedMessagesStore.getState().removeFailed(effectiveRoomId, messageId);
 
       // 재시도: 현재 시간으로 갱신 + 메시지를 맨 아래로 이동
       const now = new Date().toISOString();
@@ -307,7 +337,7 @@ export const useChatRoomActions = () => {
       doSend(effectiveRoomId, content, tagList);
       startSendTimer(messageId);
     },
-    [doSend, startSendTimer, removePendingPublish],
+    [doSend, startSendTimer, removePendingPublish, retryMediaMessage],
   );
 
   const removeFailedMessage = useCallback(
@@ -318,14 +348,44 @@ export const useChatRoomActions = () => {
       if (msg?.retryPayload?.content) {
         removePendingPublish(msg.retryPayload.content);
       }
+      // 미디어/파일 실패 삭제 시 재전송용 원본 정리
+      discardMediaRetryFiles(msg?.fileId);
       useChatRoomRuntimeStore.getState().removeMessageById(messageId);
+      // 영속 실패 목록에서도 제거 (목록 느낌표 해제)
+      const failedRoomId = msg?.retryPayload?.roomId || useChatRoomRuntimeStore.getState().currentRoomId;
+      if (failedRoomId) useFailedMessagesStore.getState().removeFailed(failedRoomId, messageId);
       const timer = localTimersRef.current.get(messageId);
       if (timer) {
         clearTimeout(timer);
         localTimersRef.current.delete(messageId);
       }
+
+      // 첫 메시지 실패 삭제로 방이 "빈 방"(서버 확정 일반 메시지 0건 + 남은 실패 0건)이 되면
+      // 방 자체를 정리 — 방 생성 성공 후 전송만 실패한 경우 서버에 빈 방이 잔존하는 것 방지 (2026-08-20 결정).
+      const state = useChatRoomRuntimeStore.getState();
+      const roomId = state.currentRoomId;
+      if (roomId) {
+        const SYSTEM_TYPES = new Set<string>([
+          WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE,
+          WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT,
+          WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE,
+          WS_MESSAGE_CONTENT_TYPE.SUBMIT_CHANGE_TITLE,
+          WS_MESSAGE_CONTENT_TYPE.SUBMIT_NOTICE,
+          WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED,
+        ]);
+        const hasConfirmed = state.messages.some(
+          (m) => !m.isLocal && !SYSTEM_TYPES.has(m.messageContentType),
+        );
+        const remainingFailed =
+          useFailedMessagesStore.getState().byRoom[roomId]?.length ?? 0;
+        if (!hasConfirmed && remainingFailed === 0) {
+          const ct = useChatRoomInfo.getState().channelType;
+          leaveRoom(roomId, ct, { silent: true });
+          useUIStore.getState().showSnackbar({ message: '메시지가 없는 채팅방이 정리되었어요.', state: 'info' });
+        }
+      }
     },
-    [removePendingPublish],
+    [removePendingPublish, leaveRoom],
   );
 
   const loadMoreBeforeMessage = useCallback(

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { getSidePanelBeforeFileQuery } from '@/features/chat-room-side-panel/queries';
+import { getFilesInfiniteQuery, getSidePanelBeforeFileQuery } from '@/features/chat-room-side-panel/queries';
 import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { IconDownload, IconSearch } from '@/shared/ui/icons';
 import { Spinner } from '@/shared/ui/Spinner';
+import { formatBytes } from '@/shared/utils/fileUtils';
+import { SenderFilterDropdown } from './SenderFilterDropdown';
 import type { MediaListType } from '@/shared/types/media';
 import type { WebSocketChannelTypes } from '@/shared/types/websocket';
 
@@ -19,23 +21,45 @@ interface FilesTabProps {
 const fileNameOf = (file: MediaListType) => file.path.split('/').pop() || '파일';
 
 export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery(
-    getSidePanelBeforeFileQuery(roomId, lastMessageId, channelType),
-  );
-  const { download, downloadingId, downloadMany, bulkDownloading } = useFileDownload();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [senderIds, setSenderIds] = useState<string[]>([]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // 파일명/보낸사람 필터는 서버(GET /app/chat/files)에서 처리 (RN 패리티) —
+  // 필터가 없으면 base 캐시(사이드패널 진입 시 목록)를 그대로 사용.
+  const isFilterMode = senderIds.length > 0 || debouncedQuery.length > 0;
+  const baseQuery = useInfiniteQuery({
+    ...getSidePanelBeforeFileQuery(roomId, lastMessageId, channelType),
+    enabled: !isFilterMode,
+  });
+  const filterQuery = useInfiniteQuery({
+    ...getFilesInfiniteQuery({
+      roomId,
+      channelType,
+      contentType: ['FILE'],
+      senders: senderIds,
+      fileName: debouncedQuery,
+    }),
+    enabled: isFilterMode,
+  });
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = isFilterMode
+    ? filterQuery
+    : baseQuery;
+
+  const { download, downloadingId, downloadMany, bulkDownloading } = useFileDownload();
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const allFiles: MediaListType[] = data?.pages.flat() ?? [];
-  const q = query.trim().toLowerCase();
-  // 서버 sender 필터 파라미터가 없어 로드된 페이지에 대해 파일명/보낸사람 클라이언트 필터
-  const filtered = q
-    ? allFiles.filter(f => {
-        const name = fileNameOf(f).toLowerCase();
-        return name.includes(q) || (f.author ?? '').toLowerCase().includes(q);
-      })
-    : allFiles;
+  const allFiles: MediaListType[] = data?.pages.flatMap(p => p.items) ?? [];
+  const q = debouncedQuery.toLowerCase();
+  const filtered = allFiles;
+  // 서버가 dataset 전체 totals를 매 페이지 반환 — "총 N개 · 용량" 헤더 (RN 패리티)
+  const totalItems = data?.pages[0]?.pagination.totalItems ?? 0;
+  const totalFileSize = data?.pages[0]?.totalFileSize ?? 0;
 
   const allSelected = filtered.length > 0 && filtered.every(f => selected.has(f.id));
   const toggle = (id: string) =>
@@ -61,8 +85,8 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
     return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
-  if (allFiles.length === 0) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">파일이 없습니다</div>;
+  if (allFiles.length === 0 && !isFilterMode) {
+    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">파일이 없어요.</div>;
   }
 
   return (
@@ -74,7 +98,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
             취소
           </button>
           <span className="text-sub-sm text-text-tertiary">{selected.size}개 선택</span>
-          <button type="button" onClick={toggleAll} className="text-sub-sm text-primary hover:underline">
+          <button type="button" onClick={toggleAll} className="text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
             {allSelected ? '선택 해제' : '전체 선택'}
           </button>
         </div>
@@ -85,19 +109,34 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="파일명·보낸사람 검색"
+              placeholder="파일명 검색"
               className="min-w-0 flex-1 bg-transparent text-sub-sm text-text-primary outline-none placeholder:text-text-tertiary"
             />
           </div>
-          <button type="button" onClick={() => setSelectMode(true)} className="shrink-0 text-sub-sm text-primary hover:underline">
+          <SenderFilterDropdown
+            roomId={roomId}
+            channelType={channelType}
+            contentType={['FILE']}
+            selectedIds={senderIds}
+            onChange={setSenderIds}
+          />
+          <button type="button" onClick={() => setSelectMode(true)} className="shrink-0 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
             선택
           </button>
         </div>
       )}
 
+      {/* 총 개수 · 총 용량 (서버 dataset totals — RN SidePanelSelectItemTitle 패리티) */}
+      {totalItems > 0 && (
+        <div className="flex items-center gap-1.5 px-4 pb-1 pt-2 text-sub-sm text-text-secondary">
+          <span>총 {totalItems}개</span>
+          {totalFileSize > 0 && <span className="text-text-tertiary">{formatBytes(totalFileSize, { fallback: '' })}</span>}
+        </div>
+      )}
+
       <div className="flex-1 py-1">
         {q && filtered.length === 0 && (
-          <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">검색 결과가 없습니다</div>
+          <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">찾는 파일이 없어요.</div>
         )}
         {filtered.map(file => {
           const fileName = fileNameOf(file);
@@ -132,7 +171,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
                   type="button"
                   onClick={() => download(file.id, file.presignedUrl ?? file.path, fileName)}
                   disabled={isDownloading}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-gray-100 hover:text-primary disabled:opacity-50"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
                   aria-label="다운로드"
                 >
                   {isDownloading ? <Spinner /> : <IconDownload size={16} />}
@@ -145,7 +184,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
           <button
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
+            className="w-full py-2 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
           >
             {isFetchingNextPage ? '로딩 중...' : '더 보기'}
           </button>
@@ -162,7 +201,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled"
           >
             {bulkDownloading ? <Spinner /> : <IconDownload size={16} />}
-            {bulkDownloading ? '다운로드 중...' : `${selected.size}개 다운로드`}
+            {bulkDownloading ? '다운로드 중...' : '파일 다운로드'}
           </button>
         </div>
       )}

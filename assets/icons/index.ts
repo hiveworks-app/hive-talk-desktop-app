@@ -24,6 +24,11 @@ export { default as IconSettingsFilled } from './settings-filled.svg';
 // Status Icons
 export { default as IconErrorWarning } from './error-warning.svg';
 
+// Block Icons (사용자 차단)
+export { default as IconBlock } from './block.svg';
+export { default as IconCaution } from './caution.svg';
+export { default as IconCrown } from './crown.svg';
+
 // Utility Icons
 export { default as IconCircleClose } from './circle-close.svg';
 export { default as IconCloseStroke } from './close-stroke.svg';
@@ -146,3 +151,6 @@ export { default as IconMessageResend } from './message-resend.svg';
 export { default as IconSirenDefault } from './siren-default.svg';
 
 export { default as IconIndicatorMore } from './indicator-more.svg';
+
+// Chat Draft (작성중 표시)
+export { default as IconChatDraft } from './chat-draft.svg';

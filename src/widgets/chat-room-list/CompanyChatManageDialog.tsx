@@ -6,6 +6,7 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useGetDMRoomList, useGetGMRoomList } from '@/features/chat-room-list/queries';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { LEAVE_CONFIRM_DESCRIPTION } from '@/shared/config/constants';
 import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { getLastMessagePreview } from '@/shared/utils/chatUtils';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
@@ -14,14 +15,17 @@ import type { GroupAvatarUser } from '@/shared/ui/GroupProfileAvatar';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { ChatRoomManageOverlay, type ManageRoomEntry } from './ChatRoomManageOverlay';
+import { useDraftStore } from '@/store/chat/draftStore';
+import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 
 interface CompanyChatManageDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
+// sortAt 우선 — 차단 발신자 메시지로 상단 이동 금지된 방의 freeze 시각 반영 (목록 사이드바와 동일 기준)
 const lastActivityMs = (room: GetChatRoomListItemType) =>
-  Date.parse(room.messageList[0]?.message.createdAt ?? room.roomModel.createdAt ?? '') || 0;
+  Date.parse(room.sortAt ?? room.messageList[0]?.message.createdAt ?? room.roomModel.createdAt ?? '') || 0;
 
 /**
  * 사내채팅(DM/GM) 채팅방 관리 모달 — 공용 오버레이에 DM+GM 데이터/나가기 로직 주입.
@@ -77,6 +81,9 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
     ids.forEach(roomId => {
       const builder = isDMRoom(roomId) ? dmBuilder : gmBuilder;
       send(builder.buildExitMessageRoom({ channelIdOverride: roomId }));
+      // 나간 방의 드래프트·실패 메시지 정리 (RN 패리티)
+      useDraftStore.getState().clearDraft(roomId);
+      useFailedMessagesStore.getState().removeRoom(roomId);
     });
 
     // 내가 나갈 땐 WS가 목록을 갱신하지 않으므로 DM/GM 캐시에서 낙관적 제거
@@ -92,5 +99,19 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
     showSnackbar({ message: `${ids.length}개 채팅방을 나갔어요.`, state: 'success' });
   };
 
-  return <ChatRoomManageOverlay open={open} onClose={onClose} rooms={rooms} onLeave={handleLeave} />;
+  // RN 패리티 — 선택이 전부 DM이면 SIMPLE, GM이 하나라도 있으면 GROUP 설명
+  const resolveLeaveNotice = (ids: string[]) => {
+    const allDM = ids.every(id => dmRooms.some(r => r.roomModel.roomId === id));
+    return allDM ? LEAVE_CONFIRM_DESCRIPTION.SIMPLE : LEAVE_CONFIRM_DESCRIPTION.GROUP;
+  };
+
+  return (
+    <ChatRoomManageOverlay
+      open={open}
+      onClose={onClose}
+      rooms={rooms}
+      onLeave={handleLeave}
+      resolveLeaveNotice={resolveLeaveNotice}
+    />
+  );
 }

@@ -15,8 +15,8 @@ export const FALLBACK_REPORT_CATEGORIES: ReportCategoriesPayload = {
       name: '스팸·광고',
       requiresDetail: false,
       descriptions: [
-        '수신자의 동의 없이 전송된 영리목적의 광고성 정보 (스팸 메세지)',
-        '음란·도박 사이트 등 불법 행위를 위한 광고성 정보 (불법 스팸 메세지)',
+        '수신자의 동의 없이 전송된 영리목적의 광고성 정보 (스팸 메시지)',
+        '음란·도박 사이트 등 불법 행위를 위한 광고성 정보 (불법 스팸 메시지)',
         '동일하거나 의미 없는 내용을 반복적으로 전송하는 행위',
         '외부 사이트·서비스로의 가입이나 이용을 유도하는 행위',
       ],
@@ -63,8 +63,8 @@ export const FALLBACK_REPORT_CATEGORIES: ReportCategoriesPayload = {
       name: '기타',
       requiresDetail: true,
       descriptions: [
-        '불쾌감을 주거나 부적절한 내용의 메세지',
-        '업무 환경을 저해하는 메세지',
+        '불쾌감을 주거나 부적절한 내용의 메시지',
+        '업무 환경을 저해하는 메시지',
         '기타 서비스 이용에 방해가 되는 행위',
       ],
     },

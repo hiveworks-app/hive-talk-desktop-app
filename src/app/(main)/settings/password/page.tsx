@@ -51,16 +51,16 @@ export default function ChangePasswordPage() {
         {step !== 'DONE' && (
           <button
             onClick={goBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
             aria-label={step === 'RESET' ? '이전 단계' : '뒤로가기'}
           >
             <IconArrowBack width={20} height={20} />
           </button>
         )}
-        <h2 className="text-heading-md font-bold text-text-primary">비밀번호</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">비밀번호</h2>
         <button
           onClick={step === 'DONE' ? goToAccountDetail : close}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />
@@ -86,14 +86,14 @@ export default function ChangePasswordPage() {
 
             <div className="flex flex-col gap-3">
               {/* 이메일 (읽기 전용) */}
-              <div className="flex h-14 items-center rounded-[10px] border border-outline bg-disabled px-4">
+              <div className="flex h-10 items-center rounded-[10px] border border-outline bg-disabled px-4">
                 <span className="truncate text-body font-medium text-text-tertiary">
                   {userEmail || '-'}
                 </span>
               </div>
 
               {/* 휴대폰 입력 + 인증요청 */}
-              <div className="flex h-14 items-center gap-2 rounded-[10px] border border-outline bg-surface px-4">
+              <div className="flex h-10 items-center gap-2 rounded-[10px] border border-outline bg-surface px-4">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -115,7 +115,7 @@ export default function ChangePasswordPage() {
                         : 'bg-gray-100 text-gray-600', // 비활성: gray 100(#F3F5F8) 배경 + gray 600(#6B7684) 글자
                   )}
                 >
-                  {isSending ? <Spinner /> : isCodeSent ? '재요청' : '인증요청'}
+                  {isSending ? <Spinner /> : isCodeSent ? '재전송' : '인증요청'}
                 </button>
               </div>
 
@@ -124,7 +124,7 @@ export default function ChangePasswordPage() {
                 <div className="flex flex-col gap-2">
                   <div
                     className={cn(
-                      'flex h-14 items-center gap-2 rounded-[10px] border px-4 transition',
+                      'flex h-10 items-center gap-2 rounded-[10px] border px-4 transition',
                       isCodeDisabled
                         ? 'border-outline bg-disabled' // 5회 실패/시간초과: 비활성 회색
                         : codeErrorMessage
@@ -170,7 +170,7 @@ export default function ChangePasswordPage() {
             <button
               onClick={handleVerifyCode}
               disabled={!canVerify}
-              className="h-14 w-full rounded-xl bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+              className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
             >
               {isLoading ? '확인 중...' : '비밀번호 변경'}
             </button>
@@ -189,7 +189,7 @@ export default function ChangePasswordPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-14 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
+                    'flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
                     passwordError
                       ? 'border-state-error ring-1 ring-inset ring-state-error'
                       : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary',
@@ -238,7 +238,7 @@ export default function ChangePasswordPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-14 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
+                    'flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
                     confirmError
                       ? 'border-state-error ring-1 ring-inset ring-state-error'
                       : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary',
@@ -290,7 +290,7 @@ export default function ChangePasswordPage() {
             <button
               onClick={handleChangePassword}
               disabled={!canSubmitReset}
-              className="h-14 w-full rounded-xl bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+              className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
             >
               {isLoading ? '변경 중...' : '새 비밀번호로 변경'}
             </button>

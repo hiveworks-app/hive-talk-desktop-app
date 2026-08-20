@@ -30,14 +30,15 @@ export function SentInviteRow({ invite }: SentInviteRowProps) {
   const { className, label } = getStatusStyle(invite.status);
 
   return (
-    <div className="flex items-center gap-2.5 px-4 py-3">
+    <div className="flex items-center gap-2.5 px-4 py-2.5">
+      {/* 아바타 40px — 받은 초대 행과 동일 (RN ProfileImage small) */}
       <ProfileCircle name={invite.name} size="sm" storageKey={invite.profileUrl} />
-      <span className="min-w-0 flex-1 truncate text-sub font-medium text-text-primary">
+      <span className="min-w-0 flex-1 truncate text-body text-gray-900">
         {invite.name}
       </span>
       <div className="flex shrink-0 items-center gap-1.5">
-        <span className="text-sub-sm text-text-tertiary">{getRelativeTime(invite.sentAt)}</span>
-        <span className={cn('rounded-full px-3 py-1 text-sub-sm font-medium', className)}>
+        <span className="text-sub-sm text-gray-600">{getRelativeTime(invite.sentAt)}</span>
+        <span className={cn('rounded-full px-3.5 py-1.5 text-sub font-medium', className)}>
           {label}
         </span>
       </div>

@@ -105,20 +105,24 @@ export function AppNav() {
                 }
               }}
               className={cn(
-                "electron-no-drag flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                isActive
-                  ? "text-black"
-                  : "text-text-tertiary hover:text-text-secondary",
+                "electron-no-drag flex w-full flex-col items-center gap-0.5 transition-colors",
+                // RN BottomNavigationItem 패리티 — active gray-900 / inactive gray-400
+                isActive ? "text-gray-900" : "text-gray-400 hover:text-text-secondary",
               )}
             >
               <div className="relative">
-                <item.Icon width={26} height={26} />
+                <item.Icon width={24} height={24} />
+                {/* compact 뱃지 — 16px, caption semibold, 999+ 상한.
+                    pb-[1px]·pl-[5px]/pr-1 = 스크린샷 실측 기반 광학 보정(Pretendard 디센트 + 글리프 반픽셀):
+                    숫자 잉크가 원 중심 대비 0.5px 위/왼쪽에 그려지는 것을 0.5px씩 되밀어 정중앙 */}
                 {badgeCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-state-error px-1 text-[9px] font-bold text-on-primary">
-                    {badgeCount > 99 ? "99+" : badgeCount}
+                  <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-state-error pb-[1px] pl-[5px] pr-1 text-[11px] font-bold leading-none antialiased text-on-primary [font-family:-apple-system,system-ui,sans-serif]">
+                    {badgeCount > 999 ? "999+" : badgeCount}
                   </span>
                 )}
               </div>
+              {/* RN 패리티 — 아이콘 아래 caption 라벨 상시 표시 */}
+              <span className="text-caption font-medium">{item.label}</span>
             </Link>
           );
         })}

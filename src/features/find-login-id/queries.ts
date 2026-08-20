@@ -1,9 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
-import { isApiError } from '@/shared/api';
 import { useUIStore } from '@/store';
 import { apiFindLoginIdSendSms, apiFindLoginIdVerify } from './api';
 
-/** 아이디 찾기 SMS 발송 */
+/** 아이디 찾기 SMS 발송 — 발송 실패(일치 계정 없음 등)는 호출부에서 인라인 에러로 처리 */
 export const useFindLoginIdSendSms = () => {
   const showSnackbar = useUIStore(state => state.showSnackbar);
 
@@ -13,19 +12,6 @@ export const useFindLoginIdSendSms = () => {
       showSnackbar({
         message: '인증번호가 발송되었습니다.',
         state: 'success',
-      });
-    },
-    onError: (err: unknown) => {
-      if (isApiError(err)) {
-        showSnackbar({
-          message: err.message || '요청에 실패했습니다. 잠시 후 다시 시도해주세요.',
-          state: 'error',
-        });
-        return;
-      }
-      showSnackbar({
-        message: '요청에 실패했습니다. 잠시 후 다시 시도해주세요.',
-        state: 'error',
       });
     },
   });

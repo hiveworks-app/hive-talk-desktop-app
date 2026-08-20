@@ -1,22 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { comparePolicyMemberName } from '@/features/members/policySort';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useGetBlockedMembers } from '@/features/block/queries';
 import { useGetMembers } from '@/features/members/queries';
+import { getMemberNewSince, selectNewMembers } from '@/features/members/newMember';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
+import { NEW_MEMBER_WINDOW_MS } from '@/shared/config/constants';
 import { useReceivedInvites } from '@/features/external-member/queries';
-import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useMemberInviteStore } from '@/store/memberInviteStore';
 import type { NormalizedMember } from './_components/MemberListItem';
 
-type MemberChipType = 'all' | 'company' | 'external';
+export type MemberChipType = 'all' | 'company' | 'external';
 
 /**
  * MemberItem(/app/users) → 멤버 행 표시용 정규화.
  * 협력멤버(isExternal)는 부서·직급 대신 회사명을 노출하고 id에 external- prefix를 부여한다.
  * (RN 앱 src/features/members/lib.ts와 동일 규칙 — 협력/사내 단일 소스 패리티)
  */
-function normalizeMember(item: MemberItem): NormalizedMember {
+export function normalizeMember(item: MemberItem): NormalizedMember {
   const isExternal = item.isExternal === true;
   return {
     id: `${isExternal ? 'external' : 'company'}-${item.userId}`,
@@ -30,20 +34,29 @@ function normalizeMember(item: MemberItem): NormalizedMember {
 }
 
 /** 활성 칩에 따라 멤버를 사내/협력으로 필터 (all=구분 없음) */
-function scopeByChip(items: MemberItem[], chip: MemberChipType): MemberItem[] {
+export function scopeByChip(items: MemberItem[], chip: MemberChipType): MemberItem[] {
   if (chip === 'company') return items.filter(m => m.isExternal !== true);
   if (chip === 'external') return items.filter(m => m.isExternal === true);
   return items;
 }
 
+// 마지막 선택 칩 (세션 보존 — 영속 아님, RN 패리티)
+let lastActiveChip: MemberChipType | null = null;
+
 export function useMembersPage() {
   const user = useAuthStore(s => s.user);
   const isOrgMember = user?.userType === USER_TYPE.ORG_MEMBER;
 
-  const [search, setSearch] = useState('');
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const [activeChip, setActiveChip] = useState<MemberChipType>(isOrgMember ? 'all' : 'external');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  // 멤버 검색은 별도 풀스크린 화면(MemberSearchOverlay) — RN /member-search 방식 (2026-08-20 사용자 확정)
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  // 칩 상태는 모듈 스코프에 보존 — 페이지 이탈/재진입에도 유지 (RN companyChatChipStore 패턴)
+  const [activeChip, setActiveChipState] = useState<MemberChipType>(
+    () => lastActiveChip ?? (isOrgMember ? 'all' : 'external'),
+  );
+  const setActiveChip = useCallback((chip: MemberChipType) => {
+    lastActiveChip = chip;
+    setActiveChipState(chip);
+  }, []);
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
   // 멤버 초대 모달(이메일/연락처 검색 초대) 노출 여부 — 초대하기(사람+) 버튼이 연다.
@@ -55,31 +68,62 @@ export function useMembersPage() {
   const { data: receivedInvites = [] } = useReceivedInvites();
   const receivedInviteCount = receivedInvites.length;
 
+  // 초대장 도착 모달 '확인하기' → 멤버목록 진입 시 초대현황 자동 오픈 (1회 소비, RN 패리티)
   useEffect(() => {
-    if (isSearchVisible) requestAnimationFrame(() => searchInputRef.current?.focus());
-  }, [isSearchVisible]);
+    if (useMemberInviteStore.getState().consumeOpenInviteStatus()) {
+      const timer = setTimeout(() => setIsStatusOpen(true), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // 멤버목록 단일 소스: /app/users 가 사내·협력 멤버를 isExternal 로 함께 응답한다.
   // (/app/externals 는 초대 관리 전용이라 멤버목록 소스로 쓰지 않는다)
   const { data: members = [], isLoading } = useGetMembers();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
+  // 차단 멤버는 멤버목록·관심멤버 양쪽에서 숨김 (정책 block.md — 차단멤버 관리에서만 노출)
+  // cold start write-through(스토어 영속) 겸용 — 상시 마운트 지점
+  const { data: blockedMembers = [] } = useGetBlockedMembers();
 
   // 외부유저는 칩이 없으므로 항상 'all'(서버가 협력멤버만 응답) — RN과 동일
   const effectiveChip: MemberChipType = isOrgMember ? activeChip : 'all';
 
-  const filteredMembers = useMemo(
-    () => filterByhangeulSearch(members, search, item => item.name),
-    [members, search],
-  );
-  const filteredPinned = useMemo(
-    () => filterByhangeulSearch(pinnedMembers, search, item => item.name),
-    [pinnedMembers, search],
+  const blockedIdSet = useMemo(
+    () => new Set(blockedMembers.map(m => String(m.userId))),
+    [blockedMembers],
   );
 
+  const filteredMembers = useMemo(
+    () => members.filter(m => !blockedIdSet.has(String(m.userId))),
+    [members, blockedIdSet],
+  );
+  const filteredPinned = useMemo(
+    () => pinnedMembers.filter(m => !blockedIdSet.has(String(m.userId))),
+    [pinnedMembers, blockedIdSet],
+  );
+
+  // 정책 정렬: 한글→영문→숫자(1..9,0)→특수문자 + ko collator (정책 member.md — 서버 name,ASC로는 표현 불가)
   const displayMembers = useMemo(
-    () => scopeByChip(filteredMembers, effectiveChip).map(normalizeMember),
+    () =>
+      [...scopeByChip(filteredMembers, effectiveChip)]
+        .sort((a, b) => comparePolicyMemberName(a.name, b.name))
+        .map(normalizeMember),
     [filteredMembers, effectiveChip],
   );
+
+  // 신규 멤버(24h) — 차단·칩·검색이 적용된 목록 기준 (RN useNewMembers 패리티).
+  // 만료 경계 시각에 자동 재판정해 24h가 지나면 섹션에서 사라진다 (+500ms jitter 버퍼).
+  const [newMemberNowTick, setNewMemberNowTick] = useState(() => Date.now());
+  const newMembers = useMemo(
+    () => selectNewMembers(scopeByChip(filteredMembers, effectiveChip), newMemberNowTick),
+    [filteredMembers, effectiveChip, newMemberNowTick],
+  );
+  useEffect(() => {
+    if (newMembers.length === 0) return;
+    const earliest = Math.min(...newMembers.map(m => getMemberNewSince(m) ?? 0));
+    const delay = Math.max(0, earliest + NEW_MEMBER_WINDOW_MS + 500 - Date.now());
+    const timer = setTimeout(() => setNewMemberNowTick(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [newMembers]);
   // 관심멤버도 칩별로 분기 (협력 칩 → 협력 pinned만) — 정책: 관심멤버 수는 탭별 표시
   const pinnedDisplay = useMemo(
     () => scopeByChip(filteredPinned, effectiveChip).map(normalizeMember),
@@ -88,36 +132,33 @@ export function useMembersPage() {
 
   const hasContent = pinnedDisplay.length > 0 || displayMembers.length > 0;
 
-  // 검색어가 입력된 상태인지 (공백만 입력한 경우는 검색으로 보지 않음)
-  const isSearching = search.trim().length > 0;
-
   // 활성 칩별 섹션 헤더 라벨 (협력 칩 → '협력멤버', 사내 칩 → '사내멤버')
   const memberSectionLabel =
     activeChip === 'company' ? '사내멤버' : activeChip === 'external' ? '협력멤버' : '전체멤버';
 
-  // 검색 중 헤더에 표시할 "검색결과 (N)"의 N — 본문 멤버 리스트 개수.
-  // 관심멤버 섹션은 자체적으로 '관심멤버 (N)' 카운트를 따로 가지므로,
-  // 본문 헤더 숫자는 화면 본문 행 수와 1:1로 맞춘다. (모바일 패리티: 검색결과 카운트)
-  const searchResultCount = displayMembers.length;
-
-  const handleMemberPress = useCallback(
+  /** 행 id(prefix 포함) → 원본 MemberItem — 프로필 열기·우클릭 메뉴 공용 */
+  const findMemberByRowId = useCallback(
     (id: string) => {
       const userId = id.replace(/^(company|external)-/, '');
-      const member = members.find(m => String(m.userId) === userId);
-      if (member) setSelectedMember(member);
+      return members.find(m => String(m.userId) === userId) ?? null;
     },
     [members],
   );
 
-  const toggleSearch = useCallback(() => setIsSearchVisible(prev => !prev), []);
-  const clearSearch = useCallback(() => { setSearch(''); setIsSearchVisible(false); }, []);
+  const handleMemberPress = useCallback(
+    (id: string) => {
+      const member = findMemberByRowId(id);
+      if (member) setSelectedMember(member);
+    },
+    [findMemberByRowId],
+  );
 
   return {
-    isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
-    activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
-    isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, hasContent, memberSectionLabel,
-    isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
+    isOrgMember, isSearchOpen, setIsSearchOpen,
+    activeChip, setActiveChip, selectedMember, setSelectedMember,
+    isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, findMemberByRowId, isLoading,
+    pinnedDisplay, hasContent, memberSectionLabel, newMembers,
+    isInviteOpen, setIsInviteOpen,
     isStatusOpen, setIsStatusOpen, receivedInviteCount,
   };
 }

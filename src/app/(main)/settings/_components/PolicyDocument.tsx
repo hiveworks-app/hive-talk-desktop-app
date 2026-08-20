@@ -20,12 +20,12 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
   return (
     <SettingsOverlay bg="bg-background">
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
-        <h2 className="max-w-[calc(100%-5.5rem)] truncate text-heading-md font-bold text-text-primary">
+        <h2 className="max-w-[calc(100%-5.5rem)] truncate text-heading-md font-medium text-text-primary">
           {title}
         </h2>
         <button
           onClick={() => router.back()}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />
@@ -36,11 +36,12 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
         <div className="mx-auto max-w-[640px] space-y-4">
           {sections.map((section, index) => (
             <section key={index}>
+              {/* RN PolicyDocumentScreen 패리티 — 제목·본문 모두 text-sub regular gray-900 */}
               {section.title && (
-                <h3 className="text-sub font-semibold text-text-primary">{section.title}</h3>
+                <h3 className="text-sub text-gray-900">{section.title}</h3>
               )}
               <p
-                className={`whitespace-pre-line text-sub leading-relaxed text-text-secondary ${
+                className={`whitespace-pre-line text-sub text-gray-900 ${
                   section.title ? 'mt-1' : ''
                 }`}
               >

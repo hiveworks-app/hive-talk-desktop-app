@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { getSidePanelBeforeAttachmentQuery } from '@/features/chat-room-side-panel/queries';
+import { getFilesInfiniteQuery, getSidePanelBeforeAttachmentQuery } from '@/features/chat-room-side-panel/queries';
 import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
 import { cn } from '@/shared/lib/cn';
 import { Checkbox } from '@/shared/ui/Checkbox';
@@ -12,6 +12,7 @@ import { Spinner } from '@/shared/ui/Spinner';
 import type { MediaListType } from '@/shared/types/media';
 import { WS_MESSAGE_CONTENT_TYPE, type WebSocketChannelTypes } from '@/shared/types/websocket';
 import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
+import { SenderFilterDropdown } from './SenderFilterDropdown';
 import { useSidePanelMediaViewer } from './useSidePanelMediaViewer';
 
 interface MediaTabProps {
@@ -23,15 +24,33 @@ interface MediaTabProps {
 const fileNameOf = (media: MediaListType) => media.path.split('/').pop() || '미디어';
 
 export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery(
-    getSidePanelBeforeAttachmentQuery(roomId, lastMessageId, channelType),
-  );
+  // 보낸사람 필터는 서버(GET /app/chat/files)에서 처리 (RN 패리티) — 없으면 base 캐시 사용
+  const [senderIds, setSenderIds] = useState<string[]>([]);
+  const isFilterMode = senderIds.length > 0;
+  const baseQuery = useInfiniteQuery({
+    ...getSidePanelBeforeAttachmentQuery(roomId, lastMessageId, channelType),
+    enabled: !isFilterMode,
+  });
+  const filterQuery = useInfiniteQuery({
+    ...getFilesInfiniteQuery({
+      roomId,
+      channelType,
+      contentType: ['IMAGE', 'MEDIA'],
+      senders: senderIds,
+    }),
+    enabled: isFilterMode,
+  });
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = isFilterMode
+    ? filterQuery
+    : baseQuery;
+
   const { download, downloadingId, downloadMany, bulkDownloading } = useFileDownload();
   const [query, setQuery] = useState('');
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const allMedia: MediaListType[] = data?.pages.flat() ?? [];
+  const allMedia: MediaListType[] = data?.pages.flatMap(p => p.items) ?? [];
+  const totalItems = data?.pages[0]?.pagination.totalItems ?? 0;
   const q = query.trim().toLowerCase();
   const filtered = q
     ? allMedia.filter(m => {
@@ -66,8 +85,8 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
     return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
-  if (allMedia.length === 0) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없습니다</div>;
+  if (allMedia.length === 0 && !isFilterMode) {
+    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없어요.</div>;
   }
 
   return (
@@ -79,7 +98,7 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
             취소
           </button>
           <span className="text-sub-sm text-text-tertiary">{selected.size}개 선택</span>
-          <button type="button" onClick={toggleAll} className="text-sub-sm text-primary hover:underline">
+          <button type="button" onClick={toggleAll} className="text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
             {allSelected ? '선택 해제' : '전체 선택'}
           </button>
         </div>
@@ -94,15 +113,27 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
               className="min-w-0 flex-1 bg-transparent text-sub-sm text-text-primary outline-none placeholder:text-text-tertiary"
             />
           </div>
-          <button type="button" onClick={() => setSelectMode(true)} className="shrink-0 text-sub-sm text-primary hover:underline">
+          <SenderFilterDropdown
+            roomId={roomId}
+            channelType={channelType}
+            contentType={['IMAGE', 'MEDIA']}
+            selectedIds={senderIds}
+            onChange={setSenderIds}
+          />
+          <button type="button" onClick={() => setSelectMode(true)} className="shrink-0 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
             선택
           </button>
         </div>
       )}
 
+      {/* 총 개수 (서버 dataset totals — RN 패리티) */}
+      {totalItems > 0 && (
+        <div className="px-4 pb-0.5 pt-2 text-sub-sm text-text-secondary">총 {totalItems}개</div>
+      )}
+
       <div className="flex-1 px-4 py-2">
         {q && filtered.length === 0 ? (
-          <div className="py-8 text-center text-sub-sm text-text-tertiary">검색 결과가 없습니다</div>
+          <div className="py-8 text-center text-sub-sm text-text-tertiary">찾는 사진/동영상이 없어요.</div>
         ) : (
           <div className="grid grid-cols-3 gap-1">
             {filtered.map((media, mediaIndex) => {
@@ -164,7 +195,7 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
           <button
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="mt-2 w-full py-2 text-sub-sm text-primary hover:underline disabled:opacity-50"
+            className="mt-2 w-full py-2 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
           >
             {isFetchingNextPage ? '로딩 중...' : '더 보기'}
           </button>
@@ -181,7 +212,7 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
             className={cn('flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled')}
           >
             {bulkDownloading ? <Spinner /> : <IconDownload size={16} />}
-            {bulkDownloading ? '다운로드 중...' : `${selected.size}개 다운로드`}
+            {bulkDownloading ? '다운로드 중...' : '사진/동영상 다운로드'}
           </button>
         </div>
       )}

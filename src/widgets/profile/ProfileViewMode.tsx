@@ -10,28 +10,29 @@ interface ProfileViewModeProps {
 }
 
 export function ProfileViewMode({ user, onEdit }: ProfileViewModeProps) {
-  const isGuest = user.role === 'GUEST';
-  // 게스트(협력멤버)는 입력해둔 회사명을 함께 노출하고, 사내 멤버는 부서·직책만 노출한다.
-  const lines = isGuest
-    ? [user.companyName, user.department, user.job]
-    : [user.department, user.job];
+  // RN MyProfileView 패리티 — 회사명은 role 무관 값이 있으면 표시
+  const lines = [user.companyName, user.department, user.job];
 
+  // RN MyProfileView 패리티 — 콘텐츠 세로 중앙 정렬, 이미지 블록과 버튼 사이 30px
   return (
-    <div className="flex flex-col px-4 pb-6 pt-7">
-      <ProfileInfoSection
-        name={user.name}
-        email={user.email}
-        storageKey={user.profileUrl}
-        lines={lines}
-        showMeBadge
-      />
-      <button
-        onClick={onEdit}
-        className="mt-[30px] flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[16px] font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)]"
-      >
-        <IconPencil width={18} height={18} />
-        프로필 수정
-      </button>
+    <div className="flex flex-1 flex-col items-center justify-center px-4 py-6">
+      <div className="flex w-full flex-col items-center gap-[30px]">
+        <ProfileInfoSection
+          name={user.name}
+          email={user.email}
+          storageKey={user.profileUrl}
+          lines={lines}
+          showMeBadge
+        />
+        {/* RN Button outlined/dark 패리티 — 흰 배경 + gray-200 테두리 + gray-900 텍스트, 연필 24px */}
+        <button
+          onClick={onEdit}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-gray-200 bg-white text-body font-medium text-gray-900 transition-colors hover:bg-gray-50"
+        >
+          <IconPencil width={24} height={24} />
+          프로필 수정
+        </button>
+      </div>
     </div>
   );
 }

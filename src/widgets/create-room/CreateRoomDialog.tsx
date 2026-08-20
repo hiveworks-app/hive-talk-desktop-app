@@ -1,7 +1,6 @@
 'use client';
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
-import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
@@ -15,32 +14,46 @@ import { useCreateRoom } from './useCreateRoom';
 interface CreateRoomDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  /** DM 대화초대 → 기존 상대 포함 신규 GM 생성 진입 (RN 패리티) */
+  presetMemberIds?: string[];
 }
 
-export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
+export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoomDialogProps) {
   useDimmed(isOpen);
-  const r = useCreateRoom(onClose);
+  const r = useCreateRoom(onClose, presetMemberIds);
 
   if (!isOpen) return null;
 
   const noSearchResult = r.hasAnyMember && r.pinnedSection.length === 0 && r.companySection.length === 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={r.close} />
+    <div className="electron-no-drag fixed inset-0 z-50 flex items-center justify-center">
+      <div className="animate-fade-in-fast absolute inset-0 bg-black/40" onClick={r.close} />
 
-      <div className="relative z-10 flex h-full w-full flex-col bg-white">
+      <div className="animate-overlay-in relative z-10 flex h-full w-full flex-col bg-white">
         {/* macOS 신호등(좌상단 창 버튼) 영역 확보용 드래그 바 */}
         <div className="electron-drag h-8 w-full shrink-0" />
 
         {r.step === 1 ? (
           <>
-            {/* 헤더: 대화상대 선택(좌) / X(우) — 확인은 하단 버튼으로 */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
-              <h2 className="text-base font-bold text-gray-900">대화상대 선택</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
-                <IconCloseStroke width={20} height={20} />
-              </button>
+            {/* 헤더: X(좌) / 대화상대 선택(중앙) / {N} 확인(우 텍스트 버튼) — RN CreateChatRoomStep1 패리티 */}
+            <div className="relative h-[52px] shrink-0 border-b border-gray-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+                <h2 className="truncate text-heading-md font-medium text-gray-900">대화상대 선택</h2>
+              </div>
+              <div className="flex h-full items-center justify-between px-4">
+                <button onClick={r.close} aria-label="닫기" className="flex h-8 w-8 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+                  <IconCloseStroke width={20} height={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={r.handleStep1Confirm}
+                  disabled={!r.canConfirmStep1}
+                  className="px-1 text-heading-sm font-medium text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 disabled:text-text-tertiary"
+                >
+                  {r.count > 0 ? `${r.count} ` : ''}확인
+                </button>
+              </div>
             </div>
 
             {/* 선택된 대화상대 (가로 스크롤, X로 제외) */}
@@ -49,7 +62,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                 {r.selectedMembers.map((m) => (
                   <div key={m.userId} className="flex w-[60px] shrink-0 flex-col items-center gap-1 px-1.5 pt-1">
                     <div className="relative">
-                      <ProfileCircle name={m.name} size="sm" storageKey={m.profileUrl} className="h-10 w-10" />
+                      <ProfileCircle name={m.name} size="sm" storageKey={m.profileUrl} />
                       <button
                         onClick={() => r.removeSelected(String(m.userId))}
                         aria-label={`${m.name} 제외`}
@@ -109,26 +122,27 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
               )}
             </div>
 
-            {/* 하단 확인 버튼 */}
-            <div className="shrink-0 border-t border-gray-100 p-4">
-              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep1} onClick={r.handleStep1Confirm}>
-                {r.count > 0 ? `${r.count} ` : ''}확인
-              </Button>
-            </div>
           </>
         ) : (
           <>
-            {/* 헤더: ←(좌) / 채팅방 정보 설정 / X(우) — 확인은 하단 버튼으로 */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
-              <button onClick={r.goBack} aria-label="뒤로" className="text-gray-700 hover:text-gray-900">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <h2 className="text-base font-bold text-gray-900">채팅방 정보 설정</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
-                <IconCloseStroke width={20} height={20} />
-              </button>
+            {/* 헤더: X(좌 — Step1 복귀+이름 초기화) / 채팅방 정보 설정(중앙) / 확인(우) — RN Step2 패리티 */}
+            <div className="relative h-[52px] shrink-0 border-b border-gray-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+                <h2 className="truncate text-heading-md font-medium text-gray-900">채팅방 정보 설정</h2>
+              </div>
+              <div className="flex h-full items-center justify-between px-4">
+                <button onClick={r.goBack} aria-label="뒤로" className="flex h-8 w-8 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+                  <IconCloseStroke width={20} height={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={r.handleStep2Confirm}
+                  disabled={!r.canConfirmStep2}
+                  className="px-1 text-heading-sm font-medium text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 disabled:text-text-tertiary"
+                >
+                  확인
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-1 flex-col items-center gap-3.5 overflow-y-auto px-4 pt-5">
@@ -140,7 +154,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
 
               {/* 채팅방 이름 (필수) */}
               <div className="flex w-full flex-col gap-1">
-                <label className="text-sub-sm text-text-primary">채팅방 이름 (필수)</label>
+                <label className="text-sub-lg text-text-primary">채팅방 이름 (필수)</label>
                 <input
                   autoFocus
                   type="text"
@@ -148,7 +162,7 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
                   onChange={(e) => r.setGmTitle(e.target.value)}
                   maxLength={r.maxTitle}
                   placeholder={r.namePlaceholder}
-                  className="h-12 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none transition placeholder:truncate placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+                  className="h-9 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none transition placeholder:truncate placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                 />
                 <span className="text-right text-sub-sm text-text-tertiary">{r.gmTitle.length}/{r.maxTitle}</span>
               </div>
@@ -161,12 +175,6 @@ export function CreateRoomDialog({ isOpen, onClose }: CreateRoomDialogProps) {
               </div>
             </div>
 
-            {/* 하단 확인 버튼 */}
-            <div className="shrink-0 border-t border-gray-100 p-4">
-              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep2} onClick={r.handleStep2Confirm}>
-                확인
-              </Button>
-            </div>
           </>
         )}
       </div>

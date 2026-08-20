@@ -1,7 +1,6 @@
-/** SMS 인증번호 발송 요청 (비밀번호 찾기) */
+/** SMS 인증번호 발송 요청 (비밀번호 찾기) — 서버 스펙상 name 없음 (RN 패리티) */
 export interface FindPasswordSmsRequest {
   email: string;
-  name: string;
   phoneHead: string;
   phoneMid: string;
   phoneTail: string;

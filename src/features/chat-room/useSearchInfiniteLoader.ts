@@ -2,6 +2,7 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import { ChatMessageUI, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
+import { extractFileName } from '@/shared/utils/fileUtils';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 
 export function findSearchResults(messages: ChatMessageUI[], keyword: string): number[] {
@@ -9,8 +10,22 @@ export function findSearchResults(messages: ChatMessageUI[], keyword: string): n
   const lowerKeyword = keyword.toLowerCase();
   const results: number[] = [];
   messages.forEach((msg, index) => {
-    if (msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT && !msg.isDeleted) {
+    if (msg.isDeleted) return;
+
+    // TEXT 메시지: 본문에서 검색
+    if (msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.TEXT) {
       if (msg.text.toLowerCase().includes(lowerKeyword)) results.push(index);
+      return;
+    }
+
+    // FILE 메시지: 파일명에서 검색 (RN 패리티) — 검색에 걸리는 글자 = 화면 표시 글자가
+    // 일치하도록 ChatFileCard와 동일하게 extractFileName(file.path)로 파일명을 뽑는다.
+    // 비디오·파일은 메시지당 1개씩만 전송되므로 files[0]만 검사한다.
+    if (msg.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE) {
+      const file = msg.files?.[0];
+      if (file && extractFileName(file.path ?? '').toLowerCase().includes(lowerKeyword)) {
+        results.push(index);
+      }
     }
   });
   return results;

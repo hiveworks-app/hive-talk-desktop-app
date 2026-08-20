@@ -15,6 +15,8 @@ export const WS_OPERATION = {
   REMOVE_TAG: 'REMOVE_TAG',
   EXIT_MESSAGE_ROOM: 'EXIT_MESSAGE_ROOM',
   ACCOUNT: 'ACCOUNT', // 계정 관련 이벤트 (정지 등)
+  DISCONNECT: 'DISCONNECT', // 서버 세션 강제 종료 (중복 로그인 SC010 등)
+  MEMBER_REMOVED: 'MEMBER_REMOVED', // 방 스코프 멤버 제거 — {BROADCAST|INIT}/MEMBER_REMOVED/DIRECT_MESSAGE (회원탈퇴·소속해제)
 } as const;
 
 /** 계정 이벤트 하위 타입 — socketResponseType의 channelType 슬롯에 실린다 */
@@ -47,8 +49,36 @@ export const WS_MESSAGE_CONTENT_TYPE = {
   SUBMIT_INVITE: 'SUBMIT_INVITE',
   SUBMIT_EXIT: 'SUBMIT_EXIT',
   SUBMIT_ROOM_TITLE_UPDATE: 'SUBMIT_ROOM_TITLE_UPDATE', // 방 제목 변경 시스템 안내 (payload.content = 새 제목)
+  SUBMIT_CHANGE_TITLE: 'SUBMIT_CHANGE_TITLE', // 방 제목 변경 (구 타입 — ROOM_TITLE_UPDATE와 동일 의미, RN 패리티)
+  SUBMIT_NOTICE: 'SUBMIT_NOTICE', // 공지 등록 시스템 안내 ("N님이 공지를 올렸어요.")
   SYSTEM_REPORTED: 'SYSTEM_REPORTED', // 신고 확정 시 메시지를 대체하는 시스템 안내
+  REPORTED_MASK: 'REPORTED_MASK', // 신고 접수(신고자 본인 기기만) 마스킹 — 인라인 안내 버블로 노출
 } as const;
+
+/** 시스템 안내 메시지 타입 — 읽음 카운트 대상이 아니며 발신자 읽음 클램프도 제외 (RN 패리티) */
+export type WebSocketSystemMessageType =
+  | typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE
+  | typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT
+  | typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_CHANGE_TITLE
+  | typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE
+  | typeof WS_MESSAGE_CONTENT_TYPE.SUBMIT_NOTICE
+  | typeof WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED;
+
+export function isSystemMessageContentType(
+  messageContentType: string | null | undefined,
+): messageContentType is WebSocketSystemMessageType {
+  switch (messageContentType) {
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE:
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_EXIT:
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_CHANGE_TITLE:
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_ROOM_TITLE_UPDATE:
+    case WS_MESSAGE_CONTENT_TYPE.SUBMIT_NOTICE:
+    case WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED:
+      return true;
+    default:
+      return false;
+  }
+}
 
 export type WebSocketOperationTypes = (typeof WS_OPERATION)[keyof typeof WS_OPERATION];
 export type WebSocketChannelUrlTypes =

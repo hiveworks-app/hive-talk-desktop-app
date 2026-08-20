@@ -26,9 +26,9 @@ export function FileConfirmDialog({ items, onConfirm, onCancel }: FileConfirmDia
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative z-10 w-full max-w-sm rounded-xl bg-background shadow-2xl">
+    <div className="electron-no-drag fixed inset-0 z-50 flex items-center justify-center">
+      <div className="animate-fade-in-fast absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="animate-pop-in relative z-10 w-full max-w-sm rounded-xl bg-background shadow-2xl">
         {/* 헤더 */}
         <div className="border-b border-divider px-5 py-4">
           <h3 className="text-heading-sm font-bold text-text-primary">파일 전송</h3>

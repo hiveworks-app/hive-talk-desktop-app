@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { apiGetTagCategoryList, apiGetTagList } from '@/features/tag/api';
 import { TAG_CATEGORY_KEY, TAG_LIST_KEY } from '@/shared/config/queryKeys';
@@ -45,13 +46,17 @@ export const useGetTagInfo = () => {
     tagListQuery.isLoading;
 
   const error = tagCategoryQuery.error || tagListQuery.error;
-  const refetchAll = async () => {
+  // effect deps에 들어갈 수 있는 함수 — 렌더마다 재생성되면 쿼리 상태 전이 리렌더 →
+  // effect 재발화 → refetch 무한 루프가 된다 (v5 refetch는 stable ref, RN 커밋 531fec5f 교훈)
+  const { refetch: refetchTagCategory } = tagCategoryQuery;
+  const { refetch: refetchTagList } = tagListQuery;
+  const refetchAll = useCallback(async () => {
     const [tagCategory, tagList] = await Promise.all([
-      tagCategoryQuery.refetch(),
-      tagListQuery.refetch(),
+      refetchTagCategory(),
+      refetchTagList(),
     ]);
     return { tagCategory: tagCategory.data, tagList: tagList.data };
-  };
+  }, [refetchTagCategory, refetchTagList]);
 
   return {
     tagCategory: tagCategoryQuery.data,

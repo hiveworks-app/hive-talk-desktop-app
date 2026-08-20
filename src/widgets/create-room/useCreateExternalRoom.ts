@@ -1,19 +1,21 @@
 'use client';
 
+import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
-import { useCheckDuplicateEM, useCreateEM } from '@/features/external-chat/queries';
+import { useCheckDuplicateEM } from '@/features/external-chat/queries';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import type { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
-import { useUIStore } from '@/store';
+import { useBlockedMembersStore } from '@/store/blockedMembersStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
+import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 
 export type CreateExternalTab = 'external' | 'company';
 
@@ -21,18 +23,16 @@ const MAX_TITLE = 50;
 
 /**
  * 새 협력채팅(EM) 생성 컨트롤러.
- * Step1: 협력멤버/사내멤버 2탭 멀티선택(탭 간 선택 유지) — **협력멤버 1명 이상 필수** →
- *   중복방 검사(/app/em/rooms/check-duplicate) → Step2: 방 제목(1~50) → POST /app/em 생성 후 입장.
- * (RN CreateExternalRoom 플로우 패리티, 단 협력멤버 최소 1명 규칙은 데스크톱 제품 결정)
+ * Step1: 협력멤버/사내멤버 2탭 멀티선택(탭 간 선택 유지) →
+ *   중복방 검사(/app/em/rooms/check-duplicate) → Step2: 방 제목(1~50) → 첫 전송 시 생성.
+ * (RN CreateExternalRoom 플로우 패리티 — 2026-08-18 협력멤버 최소 1명 데스크톱 규칙 제거, 앱 기준 통일)
  */
 export function useCreateExternalRoom(onClose: () => void) {
   const router = useAppRouter();
   const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
-  const showSnackbar = useUIStore(s => s.showSnackbar);
   const { data: members = [], isLoading } = useGetMembers();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
-  const { mutateAsync: createEM, isPending: isCreating } = useCreateEM();
   const { mutateAsync: checkDuplicate, isPending: isChecking } = useCheckDuplicateEM();
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -45,9 +45,16 @@ export function useCreateExternalRoom(onClose: () => void) {
 
   const setTitle = (v: string) => setTitleRaw(v.slice(0, MAX_TITLE));
 
+  // 차단 멤버는 대화상대 선택에서 제외 (정책 block.md)
+  const blockedItems = useBlockedMembersStore(s => s.items);
+  const blockedIdSet = useMemo(
+    () => new Set(blockedItems.map(m => String(m.userId))),
+    [blockedItems],
+  );
+
   const notMe = useCallback(
-    (m: MemberItem) => String(m.userId) !== String(myUserId),
-    [myUserId],
+    (m: MemberItem) => String(m.userId) !== String(myUserId) && !blockedIdSet.has(String(m.userId)),
+    [myUserId, blockedIdSet],
   );
 
   const externalMembers = useMemo(() => members.filter(m => m.isExternal === true && notMe(m)), [members, notMe]);
@@ -60,7 +67,8 @@ export function useCreateExternalRoom(onClose: () => void) {
   const tabPinned = activeTab === 'external' ? pinnedExternal : pinnedCompany;
 
   const pinnedSection = useMemo(() => filterByhangeulSearch(tabPinned, search, m => m.name), [tabPinned, search]);
-  const memberSection = useMemo(() => filterByhangeulSearch(tabMembers, search, m => m.name), [tabMembers, search]);
+  // 정책 정렬 (RN CreateExternalRoomStep1 패리티) — 관심멤버 섹션은 사용자 지정 순서 유지
+  const memberSection = useMemo(() => [...filterByhangeulSearch(tabMembers, search, m => m.name)].sort((a, b) => comparePolicyMemberName(a.name, b.name)), [tabMembers, search]);
 
   const hasAnyMember = tabMembers.length > 0 || tabPinned.length > 0;
 
@@ -126,6 +134,7 @@ export function useCreateExternalRoom(onClose: () => void) {
         channelType: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE,
         totalUserCount: room.participants.length || others.length + 1,
         otherUserIsExit: others.length === 0,
+        otherUserIsRemoved: false,
         lastMessage: room.lastMessage ?? null,
         initialNotReadCount: room.notReadCount ?? 0,
       });
@@ -152,16 +161,13 @@ export function useCreateExternalRoom(onClose: () => void) {
     }
   };
 
-  const canConfirmStep1 = count >= 1 && hasExternalSelected;
+  // RN 패리티: 1명 이상 선택이면 확인 가능 (협력멤버 필수 규칙 없음)
+  const canConfirmStep1 = count >= 1;
   const canConfirmStep2 = title.trim().length > 0;
 
-  // Step1 확인: 협력멤버 1명 이상 필수 → 중복 검사 → 기존방 이동/새 방(Step2) 분기
+  // Step1 확인: 중복 검사 → 기존방 이동/새 방(Step2) 분기 (RN 패리티)
   const handleStep1Confirm = async () => {
     if (count === 0 || isChecking) return;
-    if (!hasExternalSelected) {
-      showSnackbar({ message: '협력멤버를 1명 이상 선택해 주세요.', state: 'error' });
-      return;
-    }
     try {
       const res = await checkDuplicate([...selectedIds, String(myUserId)].filter(Boolean));
       const { exists, roomIds } = res.payload;
@@ -187,19 +193,23 @@ export function useCreateExternalRoom(onClose: () => void) {
   };
   const closeDuplicate = () => setDuplicateRoomId(null);
 
-  const handleStep2Confirm = async () => {
-    if (!canConfirmStep2 || isCreating) return;
-    try {
-      const res = await createEM({ title: title.trim(), userIdList: [...selectedIds] });
-      const created = res.payload;
-      enterRoom({
-        roomId: created.roomId,
-        title: created.title || title.trim(),
-        participants: created.participants ?? [],
-      });
-    } catch {
-      // 에러 스낵바는 useCreateEM onError에서 처리 — 다이얼로그는 열어둠
-    }
+  // 방을 즉시 만들지 않고 draft로 진입 — 첫 메시지 전송 시 POST /app/em (RN 패리티, 취소 시 빈 방 잔존 방지)
+  const handleStep2Confirm = () => {
+    if (!canConfirmStep2) return;
+    useChatRoomInfo.getState().setChatRoomInfo({
+      roomId: '',
+      roomName: title.trim(),
+      channelType: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE,
+      totalUserCount: selectedIds.size + 1,
+      otherUserIsExit: false,
+      otherUserIsRemoved: false,
+      invitedUserIds: [...selectedIds],
+      lastMessage: null,
+      initialNotReadCount: 0,
+    });
+    useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
+    close();
+    router.push('/external-chat/new');
   };
 
   const goBack = () => setStep(1);
@@ -226,7 +236,6 @@ export function useCreateExternalRoom(onClose: () => void) {
     hasAnyMember,
     isLoading,
     isChecking,
-    isCreating,
     count,
     canConfirmStep1,
     canConfirmStep2,

@@ -25,7 +25,7 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
       | {
           isElectron?: boolean;
           onNotificationClicked?: (
-            callback: (meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => void,
+            callback: (meta: { roomId?: string; channelType?: string; senderName?: string; notReadCount?: number; navigate?: string }) => void,
           ) => () => void;
         }
       | undefined;
@@ -33,7 +33,13 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
     if (!electronAPI?.isElectron || !electronAPI.onNotificationClicked) return;
 
     const cleanup = electronAPI.onNotificationClicked((meta) => {
+      // 초대 수락 등 라우트 지정 알림 — 방 진입 대신 지정 화면으로 이동 (RN 패리티)
+      if (meta.navigate === 'members') {
+        routerRef.current.push('/members');
+        return;
+      }
       const { roomId, channelType, senderName, notReadCount: metaNotReadCount } = meta;
+      if (!roomId) return;
       const targetQueryKey = getTargetQueryKey(channelType as WebSocketChannelTypes);
       const rooms = targetQueryKey
         ? queryClient.getQueryData<GetChatRoomListItemType[]>(targetQueryKey)
@@ -65,6 +71,8 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
           channelType: channelType as WebSocketChannelTypes,
           totalUserCount,
           otherUserIsExit: isOtherUserExit,
+          // 방 스코프 플래그 — partial merge 잔존 방지 명시 재설정 (RN 교훈)
+          otherUserIsRemoved: roomModel.participantDetail?.isRemoved ?? false,
           lastMessage: room.messageList?.[0] ?? null,
           invitedUserIds,
           initialNotReadCount: reliableNotReadCount,
@@ -74,11 +82,14 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
           roomId,
           roomName: senderName,
           channelType: (channelType as WebSocketChannelTypes) ?? WS_CHANNEL_TYPE.DIRECT_MESSAGE,
+          otherUserIsRemoved: false,
           initialNotReadCount: metaNotReadCount ?? 0,
         });
       }
 
-      routerRef.current.push(`/chat/${roomId}`);
+      // EM(협력채팅)은 전용 라우트로 — /chat 고정 라우팅 버그 수정 (RN 패리티)
+      const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
+      routerRef.current.push(`${routePrefix}/${roomId}`);
     });
 
     return cleanup;

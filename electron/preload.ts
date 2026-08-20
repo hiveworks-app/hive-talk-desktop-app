@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     title: string;
     body: string;
     profileImageUrl?: string;
-    meta?: { roomId: string; channelType: string; senderName: string };
+    meta?: { roomId?: string; channelType?: string; senderName?: string; navigate?: string };
   }) => ipcRenderer.invoke('show-notification', data),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   setBadgeCount: (count: number) => ipcRenderer.invoke('set-badge-count', count),
@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => { ipcRenderer.removeListener('update-downloaded', handler); };
   },
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   setSuppressEsc: (suppress: boolean) => ipcRenderer.invoke('set-suppress-esc', suppress),
   setChatRoomActive: (active: boolean) => ipcRenderer.invoke('set-chat-room-active', active),
 });

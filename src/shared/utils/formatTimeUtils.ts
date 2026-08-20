@@ -77,11 +77,12 @@ export function formatChatTimestamp(isoString: string) {
     return timeString;
   }
 
+  // RN 패리티 — 올해 "MM.DD", 이전 연도 "YYYY.MM.DD" (점 구분)
   if (isSameYear) {
-    return `${mm}-${dd}`;
+    return `${mm}.${dd}`;
   }
 
-  return `${year}-${mm}-${dd}`;
+  return `${year}.${mm}.${dd}`;
 }
 
 export function isSameDate(a: Date, b: Date) {

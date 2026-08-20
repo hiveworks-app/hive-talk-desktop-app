@@ -15,18 +15,21 @@ interface NormalizedMember {
 interface MemberListItemProps {
   member: NormalizedMember;
   onClick: () => void;
+  /** 우클릭 컨텍스트 메뉴 (데스크톱 관례) — 미지정 시 브라우저 기본 동작 */
+  onContextMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export type { NormalizedMember };
 
-export function MemberListItem({ member, onClick }: MemberListItemProps) {
+export function MemberListItem({ member, onClick, onContextMenu }: MemberListItemProps) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 px-4 py-[7px] text-left transition-colors hover:bg-gray-50"
+      onContextMenu={onContextMenu}
+      className="flex w-full items-center gap-2.5 px-4 py-1.5 text-left transition-colors hover:bg-gray-50"
     >
-      {/* 아바타 40px (Figma 멤버 아이템 기준 — sm=36px 오버라이드) */}
-      <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} className="h-10 w-10" />
+      {/* 아바타 36px — 데스크톱 밀도 (행 48px = 36 + py 6×2) */}
+      <ProfileCircle name={member.name} size="sm" storageKey={member.storageKey} />
       {/* 이름(+협력멤버 ∞ 배지): 이름은 길면 말줄임, 배지는 고정 */}
       <span className="flex min-w-0 items-center gap-1">
         <span className="min-w-0 truncate text-body text-text-primary">

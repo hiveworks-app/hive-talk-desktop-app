@@ -1,12 +1,13 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   isFileNotice,
   isImageNotice,
   isMediaNotice,
-  parseMediaNoticeContent,
+  isTextNotice,
 } from '@/features/chat-room/notice/noticeUtils';
 import {
   useDeleteNoticeMutation,
@@ -17,8 +18,10 @@ import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import type { ParticipantItemsType } from '@/shared/types/chatRoom';
-import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
-import { IconCampaign, IconPlay } from '@/shared/ui/icons';
+import { WebSocketChannelTypes } from '@/shared/types/websocket';
+import { IconPlay } from '@/shared/ui/icons';
+import { IconNoticeDefault, IconNoticeNew } from '@assets/icons';
+import { useNoticeReadStore } from '@/store/chat/noticeReadStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { NoticeDetailDialog } from './NoticeDetailDialog';
@@ -39,7 +42,7 @@ interface NoticeBannerProps {
 }
 
 // 흰 카드 + section-shadow (Figma 1334-34203/42082). chat-bg 위에 떠 있어 색은 고정값 사용.
-const CARD = 'rounded-[10px] bg-white shadow-[0px_2px_9px_0px_rgba(0,0,0,0.07)]';
+const CARD = 'rounded-[10px] bg-white shadow-[0px_2px_10px_0px_rgba(0,0,0,0.12)]'; // RN noticeBannerShadow 0.12/10
 const PILL_BTN =
   'h-10 flex-1 rounded-md bg-blue-100 text-sub font-medium text-blue-500 transition-opacity hover:opacity-80';
 
@@ -55,16 +58,37 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // 공지 읽음 dot — 미확인 공지는 빨간 dot 아이콘, 상세 열람 시 읽음 처리 (RN 패리티)
+  const markNoticeAsRead = useNoticeReadStore(s => s.markNoticeAsRead);
+  const readNoticeId = useNoticeReadStore(s =>
+    currentUserId && notice
+      ? s.readNoticeByRoom[`${String(currentUserId)}:${channelType}:${roomId}`]
+      : undefined,
+  );
+  const isCurrentNoticeRead = notice ? readNoticeId === notice.noticeId : false;
+  const NoticeIcon = isCurrentNoticeRead ? IconNoticeDefault : IconNoticeNew;
+  const openDetail = () => {
+    if (notice && currentUserId) {
+      markNoticeAsRead({
+        userId: String(currentUserId),
+        roomId,
+        channelType,
+        noticeId: notice.noticeId,
+      });
+    }
+    setDetailOpen(true);
+  };
+
   // 콘텐츠 타입 + 미디어 썸네일 presigned (hook은 무조건 호출, key null이면 disabled)
   const imageNotice = !!notice && isImageNotice(notice);
   const mediaNotice = !!notice && isMediaNotice(notice);
   const fileNotice = !!notice && isFileNotice(notice);
-  const mediaParsed = mediaNotice && notice ? parseMediaNoticeContent(notice.content) : null;
-  const { data: imageUrl } = usePresignedUrl(imageNotice && notice ? notice.content : null);
-  const { data: videoThumbUrl } = usePresignedUrl(mediaParsed?.thumbnailPath ?? null);
+  const { data: imageUrl } = usePresignedUrl(imageNotice && notice ? notice.payload.path : null);
+  const { data: videoThumbUrl } = usePresignedUrl(
+    mediaNotice && notice ? (notice.payload.meta?.thumbnail ?? null) : null,
+  );
 
   const isOwner = !!notice && !!currentUserId && String(notice.userId) === String(currentUserId);
-  const isEM = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE;
 
   // 참여자 캐시에서 등록자 이름 조회 (추가 네트워크 요청 없음 — RN 패리티)
   const creatorName = (() => {
@@ -77,9 +101,9 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
 
   const handleDismiss = useCallback(() => {
     if (!notice) return;
-    // EM은 다시 안보기(DISMISSED) 미지원 → 접어두기(FOLDED)로 대체 (정책)
-    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: isEM ? 'FOLDED' : 'DISMISSED' } });
-  }, [notice, isEM, updateDisplay]);
+    // 다시 안보기(DISMISSED) — EM 포함 전 채널 지원 (RN 7/1 정책 변경)
+    updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: 'DISMISSED' } });
+  }, [notice, updateDisplay]);
 
   const handleFold = useCallback(() => {
     if (!notice) return;
@@ -91,9 +115,14 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
     updateDisplay({ noticeId: notice.noticeId, body: { displayStatus: 'VISIBLE' } });
   }, [notice, updateDisplay]);
 
+  const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const handleDelete = useCallback(() => {
     if (!notice) return;
-    if (!window.confirm('공지사항을 삭제하시겠습니까?')) return;
+    setDeleteConfirmOpen(true);
+  }, [notice]);
+  const confirmDelete = useCallback(() => {
+    if (!notice) return;
+    setDeleteConfirmOpen(false);
     deleteNotice(
       { noticeId: notice.noticeId },
       {
@@ -114,7 +143,21 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
       ? '영상이 공지로 등록되었어요.'
       : fileNotice
         ? '파일이 공지로 등록되었어요.'
-        : notice.content;
+        : isTextNotice(notice) ? notice.payload.content : '';
+
+  // 공지 삭제 확인 — window.confirm 대체 (RN showConfirm 패리티)
+  const deleteConfirmDialog = (
+    <ConfirmDialog
+      open={isDeleteConfirmOpen}
+      title="공지를 내릴까요?"
+      description="채팅방 상단 공지가 삭제됩니다."
+      confirmLabel="공지 내리기"
+      cancelLabel="취소"
+      destructive
+      onConfirm={confirmDelete}
+      onCancel={() => setDeleteConfirmOpen(false)}
+    />
+  );
 
   const detailDialog = detailOpen && (
     <NoticeDetailDialog
@@ -135,9 +178,10 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
           aria-label="공지 펼치기"
           className={cn('flex items-center justify-center p-2.5', CARD)}
         >
-          <IconCampaign size={24} className="text-blue-500" />
+          <NoticeIcon width={24} height={24} />
         </button>
         {detailDialog}
+        {deleteConfirmDialog}
       </div>
     );
   }
@@ -148,21 +192,22 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
       <div className="bg-chat-bg px-4 py-2">
         <div className={cn('flex items-start gap-1 p-2.5', CARD)}>
           <button
-            onClick={() => setDetailOpen(true)}
+            onClick={openDetail}
             className="flex min-w-0 flex-1 items-start gap-1 text-left"
           >
-            <IconCampaign size={24} className="shrink-0 text-blue-500" />
+            <NoticeIcon width={24} height={24} className="shrink-0" />
             <span className="line-clamp-2 flex-1 text-sub font-medium text-gray-900">{previewText}</span>
           </button>
           <button
             onClick={() => setIsExpanded(true)}
             aria-label="공지 펼치기"
-            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70"
+            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
           >
             <ChevronIcon />
           </button>
         </div>
         {detailDialog}
+        {deleteConfirmDialog}
       </div>
     );
   }
@@ -173,10 +218,10 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
       <div className={cn('flex flex-col gap-1.5 p-2.5', CARD)}>
         <div className="flex items-start gap-1.5">
           <button
-            onClick={() => setDetailOpen(true)}
+            onClick={openDetail}
             className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
           >
-            <IconCampaign size={24} className="shrink-0 text-blue-500" />
+            <NoticeIcon width={24} height={24} className="shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="line-clamp-2 text-sub font-medium text-gray-900">{previewText}</span>
               {!imageNotice && !mediaNotice && !!creatorName && (
@@ -187,7 +232,7 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
           <button
             onClick={() => setIsExpanded(false)}
             aria-label="공지 접기"
-            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70"
+            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
           >
             <ChevronIcon up />
           </button>
@@ -195,13 +240,13 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
 
         {/* 이미지/영상 공지: 썸네일 (탭 시 상세) */}
         {imageNotice && imageUrl && (
-          <button onClick={() => setDetailOpen(true)} className="block w-full">
+          <button onClick={openDetail} className="block w-full">
             <img src={imageUrl} alt="공지 이미지" className="max-h-40 w-full rounded-lg object-cover" />
             {!!creatorName && <span className="mt-1 block text-left text-sub-sm text-gray-600">{creatorName}</span>}
           </button>
         )}
         {mediaNotice && (
-          <button onClick={() => setDetailOpen(true)} className="block w-full text-left">
+          <button onClick={openDetail} className="block w-full text-left">
             <span className="relative block">
               {videoThumbUrl && (
                 <img src={videoThumbUrl} alt="공지 동영상" className="max-h-40 w-full rounded-lg object-cover" />
@@ -216,19 +261,18 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
           </button>
         )}
 
-        {/* 액션 버튼 (EM은 다시 안보기 미제공) */}
+        {/* 액션 버튼 — 다시 안보기는 EM 포함 전 채널 노출 (RN 7/1 정책 변경) */}
         <div className="flex gap-2">
-          {!isEM && (
-            <button onClick={handleDismiss} className={PILL_BTN}>
-              다시 안보기
-            </button>
-          )}
+          <button onClick={handleDismiss} className={PILL_BTN}>
+            다시 안보기
+          </button>
           <button onClick={handleFold} className={PILL_BTN}>
             접어두기
           </button>
         </div>
       </div>
       {detailDialog}
+      {deleteConfirmDialog}
     </div>
   );
 }

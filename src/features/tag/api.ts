@@ -8,7 +8,8 @@ export const apiGetTagCategoryList = () => {
 };
 
 export const apiGetTagList = () => {
-  return request<TagListGetPayload>('/app/tags?page=1&size=1000&sort=tagCode%2CASC', {
+  // RN과 동일 파라미터 — 업무태그(COMPANY_ISSUE) 카테고리만 조회해 시트 노출 집합 정합 (RN 패리티)
+  return request<TagListGetPayload>('/app/tags?categoryCode=COMPANY_ISSUE', {
     method: 'GET',
   });
 };

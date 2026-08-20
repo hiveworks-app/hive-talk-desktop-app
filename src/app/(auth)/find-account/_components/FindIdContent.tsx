@@ -1,17 +1,29 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useFindLoginId } from '@/features/find-login-id/useFindLoginId';
 import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { SmsVerificationSection } from './SmsVerificationSection';
 
+/** 이메일 마스킹 — 로컬파트 마지막 2자를 **로 치환 (개인정보 보호, RN maskEmail 패리티) */
+const maskEmail = (email: string): string => {
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return email;
+  const local = email.slice(0, atIndex);
+  const domain = email.slice(atIndex);
+  if (local.length <= 2) return email;
+  return local.slice(0, -2) + '**' + domain;
+};
+
 interface FindIdContentProps {
+  /** result 단계 진입 시 상단 탭 숨김 (RN showSegment 패리티) */
+  onStepChange?: (hideTabs: boolean) => void;
   onFoundEmail: (email: string) => void;
 }
 
-export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
+export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps) {
   const {
     step,
     name,
@@ -24,76 +36,50 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
     timer,
     canSendCode,
     canVerify,
+    sendErrorMessage,
     verifyErrorMessage,
     isMaxFailuresReached,
-    setName,
+    handleNameChange,
     handlePhoneChange,
     setVerificationCode,
     handleSendCode,
     handleVerifyCode,
   } = useFindLoginId();
 
-  const handleGoToFindPassword = useCallback(() => {
-    onFoundEmail(foundEmail);
-  }, [foundEmail, onFoundEmail]);
+  useEffect(() => {
+    const t = setTimeout(() => onStepChange?.(step === 'result'), 0);
+    return () => clearTimeout(t);
+  }, [step, onStepChange]);
+
+  // 찾은 이메일을 비밀번호 찾기 탭에 전달 (결과 화면이 단일 버튼이 되며 자동 전달만 유지 — RN 패리티)
+  useEffect(() => {
+    if (step === 'result' && foundEmail) onFoundEmail(foundEmail);
+  }, [step, foundEmail, onFoundEmail]);
 
   const handleGoToLogin = useCallback(() => {
     window.location.href = '/login';
   }, []);
 
   if (step === 'result') {
+    // RN AccountSuccessView 패리티 — 세로 중앙 정렬, 체크 이미지 50px + "아이디 찾기 완료" +
+    // gray-100 라운드 박스 안 마스킹 이메일, 하단 단일 버튼 "로그인 페이지로 가기"
     return (
       <div className="flex flex-1 flex-col px-4">
-        <div className="flex-1 space-y-[30px] pt-[30px]">
-          <div className="space-y-2">
-            <h2 className="text-heading-lg font-semibold text-text-primary">
-              아이디 찾기 결과
-            </h2>
-            <p className="text-sub text-text-tertiary">
-              회원님의 아이디를 찾았어요.
-            </p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-[30px]">
+          <div className="flex flex-col items-center gap-3">
+            <img src="/find-user-check.png" alt="" className="h-[50px] w-[50px]" />
+            <h2 className="text-heading-md font-semibold text-text-primary">아이디 찾기 완료</h2>
           </div>
-
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-outline p-4">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="text-primary"
-            >
-              <path
-                d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M22 6l-10 7L2 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          <div className="flex w-full items-center justify-center rounded-xl bg-gray-100 p-4">
             <p className="text-heading-md font-semibold text-text-primary">
-              {foundEmail}
+              {maskEmail(foundEmail)}
             </p>
           </div>
         </div>
 
-        <div className="space-y-2 pb-4">
-          <Button
-            variant="outlined"
-            size="lg"
-            fullWidth
-            onClick={handleGoToFindPassword}
-          >
-            비밀번호 찾기
-          </Button>
+        <div className="pb-4">
           <Button variant="primary" size="lg" fullWidth onClick={handleGoToLogin}>
-            로그인하기
+            로그인 페이지로 가기
           </Button>
         </div>
       </div>
@@ -105,11 +91,13 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
       <div className="space-y-5 pt-[30px]">
         <Input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => handleNameChange(e.target.value)}
           placeholder="이름"
-          className="h-11"
+          error={!!sendErrorMessage}
+          className="h-10"
         />
 
+        <div className="space-y-2">
         <div className="relative">
           <Input
             value={phone}
@@ -117,7 +105,8 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
             placeholder="휴대전화(-없이)"
             inputMode="numeric"
             maxLength={11}
-            className="h-11 pr-24"
+            error={!!sendErrorMessage}
+            className="h-10 pr-24"
           />
           <button
             type="button"
@@ -132,6 +121,11 @@ export function FindIdContent({ onFoundEmail }: FindIdContentProps) {
           >
             {isSending ? '발송 중...' : isCodeSent ? '재발송' : '인증요청'}
           </button>
+        </div>
+        {/* 발송 실패("일치하는 계정 없음" 등) 인라인 에러 — 토스트 대신 필드 하단 표기 (RN 패리티) */}
+        {sendErrorMessage && (
+          <p className="text-sub-sm text-state-error">{sendErrorMessage}</p>
+        )}
         </div>
 
         {isCodeSent && (

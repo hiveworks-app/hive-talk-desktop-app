@@ -1,6 +1,7 @@
 import { MEMBERS_KEY, PRESIGNED_URL } from '@/shared/config/queryKeys';
 import type { ParticipantItemsType } from '@/shared/types/chatRoom';
 import type { ProfileUpdatedPayload, WebSocketBroadcastProps } from '@/shared/types/websocket';
+import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import type { MessageHandlerDeps } from './types';
 
 /**
@@ -37,6 +38,18 @@ export function handleProfileUpdated(
   queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
   queryClient.invalidateQueries({ queryKey: ['organizationMembers'] });
   queryClient.invalidateQueries({ queryKey: ['externalMembers'] });
+
+  // 2-1) 현재 방 런타임 메시지의 발신자 표시 스냅샷 갱신 — 말풍선 이름·시스템 문구 소급 반영 (RN 패리티)
+  const { messages } = useChatRoomRuntimeStore.getState();
+  if (messages.some(m => m.senderId === userId)) {
+    useChatRoomRuntimeStore.setState(state => ({
+      messages: state.messages.map(m =>
+        m.senderId === userId
+          ? { ...m, name: p.name, thumbnailProfileUrl: p.thumbnailProfileUrl ?? null }
+          : m,
+      ),
+    }));
+  }
 
   // 3) presigned 이미지 캐시 무효화 — 새 프로필 사진 로드
   if (p.profileUrl) queryClient.invalidateQueries({ queryKey: PRESIGNED_URL(p.profileUrl) });

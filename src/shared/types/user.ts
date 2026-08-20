@@ -55,4 +55,8 @@ export interface MemberItem {
   thumbnailProfileUrl?: string | null;
   /** 협력멤버(외부) 여부 — /app/users가 isExternal로 사내/협력을 함께 구분해 응답 (RN 패리티) */
   isExternal?: boolean;
+  /** 사내 가입 시각 (신규 멤버 24h 판정용, 서버 원문 ISO 보존) */
+  joinedAt?: string | null;
+  /** 협력 성립 시각 — ⚠️ 사내멤버에도 동일 값이 채워져 오므로 반드시 isExternal 분기 (RN 실측) */
+  contactedAt?: string | null;
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { cn } from '@/shared/lib/cn';
+import { useRef, useState } from 'react';
+import type { MemberItem } from '@/shared/types/user';
 import IconSearchDefault from '@assets/icons/search-default.svg';
-import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconAddMemberDefault from '@assets/icons/static/add-member-default.svg';
 import IconEnvelope from '@assets/icons/envelope.svg';
 import IconStarFilled from '@assets/icons/star-filled.svg';
@@ -12,38 +12,65 @@ import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDi
 import { InviteStatusDialog } from '@/widgets/invite-status/InviteStatusDialog';
 import { MyProfileHeader } from './_components/MyProfileHeader';
 import { MemberListItem } from './_components/MemberListItem';
+import { MemberRowContextMenu } from './_components/MemberRowContextMenu';
+import { MemberSearchOverlay } from './_components/MemberSearchOverlay';
+// [임시 숨김] 초성 인덱스 룰러 — 사용자 요청(2026-08-19)으로 잠시 비활성화 (삭제 아님)
+// import { ChoseongIndexBar } from './_components/ChoseongIndexBar';
 import { Chip } from '@/shared/ui/Chip';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { useMembersPage } from './useMembersPage';
 
 export default function MembersPage() {
   const {
-    isOrgMember, search, setSearch, isSearchVisible, toggleSearch, clearSearch,
-    activeChip, setActiveChip, searchInputRef, selectedMember, setSelectedMember,
-    isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, isLoading,
-    pinnedDisplay, hasContent, memberSectionLabel,
-    isSearching, searchResultCount, isInviteOpen, setIsInviteOpen,
+    isOrgMember, isSearchOpen, setIsSearchOpen,
+    activeChip, setActiveChip, selectedMember, setSelectedMember,
+    isMyProfileOpen, setIsMyProfileOpen, displayMembers, handleMemberPress, findMemberByRowId, isLoading,
+    pinnedDisplay, hasContent, memberSectionLabel, newMembers,
+    isInviteOpen, setIsInviteOpen,
     isStatusOpen, setIsStatusOpen, receivedInviteCount,
   } = useMembersPage();
+
+  // 멤버 행 우클릭 메뉴 (데스크톱 관례) — 커서 좌표 + 대상 멤버
+  const [memberMenu, setMemberMenu] = useState<{ x: number; y: number; member: MemberItem } | null>(null);
+  const handleRowContextMenu = (id: string) => (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const member = findMemberByRowId(id);
+    if (member) setMemberMenu({ x: e.clientX, y: e.clientY, member });
+  };
+
+  // 인덱스 룰러 점프용 스크롤 컨테이너 (30명 이상일 때만 룰러 노출 — RN 패리티)
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  // [임시 숨김] 인덱스 룰러 노출 조건·점프 핸들러 — 사용자 요청(2026-08-19)으로 잠시 비활성화.
+  // 복원 시 아래 주석과 상단 import, 목록 상단의 <ChoseongIndexBar /> JSX 주석을 함께 해제하면 된다.
+  // const showIndexBar = !isSearching && displayMembers.length >= 30;
+  // const jumpToMemberIndex = (index: number) => {
+  //   const el = listContainerRef.current?.querySelector(`[data-ruler-index="${index}"]`);
+  //   el?.scrollIntoView({ block: 'start' });
+  // };
+  // const jumpToTop = () => {
+  //   listContainerRef.current?.scrollTo({ top: 0 });
+  // };
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-100">
       <header className="electron-drag">
         <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-heading-lg font-semibold text-text-primary">멤버목록</h2>
+          <h2 className="text-heading-xl font-semibold text-text-primary">멤버목록</h2>
           <div className="electron-no-drag flex items-center gap-1">
-            <button onClick={toggleSearch} aria-label="멤버 검색" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
-              <IconSearchDefault width={20} height={20} />
+            {/* 검색은 별도 풀스크린 화면으로 push (RN /member-search 방식 — 2026-08-20 사용자 확정) */}
+            <button onClick={() => setIsSearchOpen(true)} aria-label="멤버 검색" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+              <IconSearchDefault width={24} height={24} />
             </button>
             {/* 초대하기(사람+)는 사내멤버 전용 — 게스트에게는 노출하지 않는다 (RN MembersScreen 패리티) */}
             {isOrgMember && (
-              <button onClick={() => setIsInviteOpen(true)} aria-label="멤버 초대" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
-                <IconAddMemberDefault width={20} height={20} />
+              <button onClick={() => setIsInviteOpen(true)} aria-label="멤버 초대" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+                <IconAddMemberDefault width={24} height={24} />
               </button>
             )}
             {/* 편지봉투 = 초대현황(받은/보낸). 받은 초대가 있으면 빨간 dot 표시 (RN 패리티) */}
-            <button onClick={() => setIsStatusOpen(true)} aria-label="초대 현황" className="relative flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200">
-              <IconEnvelope width={20} height={20} />
+            <button onClick={() => setIsStatusOpen(true)} aria-label="초대 현황" className="relative flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+              <IconEnvelope width={24} height={24} />
               {receivedInviteCount > 0 && (
                 <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-state-error" />
               )}
@@ -52,35 +79,7 @@ export default function MembersPage() {
         </div>
       </header>
 
-      <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', isSearchVisible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
-        <div className="overflow-hidden">
-          <div className="bg-gray-100 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <input
-                ref={searchInputRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Escape') clearSearch(); }}
-                placeholder="찾으시는 분의 성함을 입력하세요."
-                className="flex-1 rounded-md border border-divider bg-white px-3 py-1.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
-              />
-              <button onClick={clearSearch} className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary hover:bg-gray-100">
-                <IconCloseStroke width={20} height={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 내 프로필: 검색 모드일 땐 접어 검색 input과 토글되도록 (동시 노출 방지) */}
-      <div
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-out',
-          isSearchVisible ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
-        )}
-      >
-        <div className="overflow-hidden">
-          <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
-        </div>
-      </div>
+      <MyProfileHeader onOpenProfile={() => setIsMyProfileOpen(true)} />
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {isOrgMember && (
@@ -91,53 +90,96 @@ export default function MembersPage() {
           </div>
         )}
 
-        <div className="scrollbar-thin flex-1 overflow-y-auto">
+        <div className="relative flex-1 overflow-hidden">
+        {/* [임시 숨김] 초성/알파벳 인덱스 룰러 (RN ChoseongIndexBar 패리티 — 클릭 점프)
+            사용자 요청(2026-08-19)으로 잠시 숨김 — 코드 삭제 아님. 복원 시 이 주석과
+            상단 import·showIndexBar/jump 핸들러 주석을 함께 해제하면 된다.
+        {showIndexBar && (
+          <ChoseongIndexBar
+            names={displayMembers.map(m => m.name)}
+            onJump={jumpToMemberIndex}
+            onJumpToTop={jumpToTop}
+          />
+        )}
+        */}
+        <div ref={listContainerRef} className="scrollbar-thin h-full overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">로딩 중...</span></div>
-          ) : isSearching && !hasContent ? (
-            <div className="flex h-full flex-col">
-              <div className="flex items-center gap-1 px-4 py-3">
-                <span className="text-sub-sm text-text-secondary">검색결과 (0)</span>
-              </div>
-              <EmptyState variant="search" message="찾으시는 멤버가 없어요." className="flex-1 pb-[94px]" />
+            /* RN 패리티 — 첫 동기화 중 32px 스피너 */
+            <div className="flex h-full items-center justify-center">
+              <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-gray-200 border-t-gray-400" />
             </div>
           ) : !hasContent ? (
-            <div className="flex items-center justify-center py-8"><span className="text-sub text-text-tertiary">아직 함께할 멤버가 없어요.</span></div>
+            /* RN 패리티 — 빈 상태는 꿀벌 일러스트 + 중앙 정렬 */
+            <EmptyState message="아직 함께할 멤버가 없어요." className="h-full" />
           ) : (
             <>
+              {/* 신규 멤버 섹션 — 칩 아래·관심멤버 위, 가로 스크롤 (RN NewMemberSection 패리티, Figma 2444:129748) */}
+              {newMembers.length > 0 && (
+                <div className="border-b border-divider pb-[7px] pt-[7px]">
+                  <div className="px-4 pb-[7px]">
+                    <span className="text-sub-sm text-text-secondary">새로운 멤버 ({newMembers.length})</span>
+                  </div>
+                  <div className="scrollbar-thin flex overflow-x-auto px-4">
+                    {newMembers.map(m => (
+                      <button
+                        key={m.userId}
+                        onClick={() => handleMemberPress(`${m.isExternal ? 'external' : 'company'}-${m.userId}`)}
+                        className="flex w-[66px] shrink-0 flex-col items-center gap-[1px] rounded-lg px-2 py-[7px] transition-colors hover:bg-gray-100"
+                      >
+                        <ProfileCircle name={m.name} size="md" storageKey={m.thumbnailProfileUrl || m.profileUrl} className="h-11 w-11" />
+                        <span className="w-full truncate text-center text-sub-sm text-text-primary">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {pinnedDisplay.length > 0 && (
                 <div className="border-b border-divider pb-3.5">
                   <div className="flex items-end gap-1 px-4 pt-1">
-                    <IconStarFilled width={20} height={20} className="text-yellow-300" />
+                    <IconStarFilled width={20} height={20} className="text-yellow" />
                     <span className="text-sub-sm text-text-secondary">관심멤버 ({pinnedDisplay.length})</span>
                   </div>
-                  {/* 관심멤버는 표시 전용 — 등록/해제·순서변경은 모바일 전담 (데스크톱 view-only) */}
+                  {/* 관심멤버 순서변경·일괄 편집은 기어 메뉴 > 멤버목록 편집에서 (RN 패리티) */}
                   <div className="mt-1 flex flex-col">
                     {pinnedDisplay.map(item => (
-                      <MemberListItem key={item.id} member={item} onClick={() => handleMemberPress(item.id)} />
+                      <MemberListItem key={item.id} member={item} onClick={() => handleMemberPress(item.id)} onContextMenu={handleRowContextMenu(item.id)} />
                     ))}
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-1 px-4 py-3">
                 <span className="text-sub-sm text-text-secondary">
-                  {isSearching ? `검색결과 (${searchResultCount})` : `${memberSectionLabel} (${displayMembers.length})`}
+                  {`${memberSectionLabel} (${displayMembers.length})`}
                 </span>
               </div>
               <div className="flex flex-col">
-                {displayMembers.map(item => (
-                  <MemberListItem
-                    key={item.id}
-                    member={item}
-                    onClick={() => handleMemberPress(item.id)}
-                  />
+                {displayMembers.map((item, index) => (
+                  <div key={item.id} data-ruler-index={index}>
+                    <MemberListItem
+                      member={item}
+                      onClick={() => handleMemberPress(item.id)}
+                      onContextMenu={handleRowContextMenu(item.id)}
+                    />
+                  </div>
                 ))}
               </div>
             </>
           )}
         </div>
+        </div>
       </div>
 
+      {isSearchOpen && <MemberSearchOverlay onClose={() => setIsSearchOpen(false)} />}
+      {/* 멤버 행 우클릭 메뉴 — 프로필 보기/관심멤버/차단 */}
+      {memberMenu && (
+        <MemberRowContextMenu
+          member={memberMenu.member}
+          x={memberMenu.x}
+          y={memberMenu.y}
+          onOpenProfile={() => setSelectedMember(memberMenu.member)}
+          onClose={() => setMemberMenu(null)}
+        />
+      )}
       <UserProfileDialog isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} member={selectedMember} />
       <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
       <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { handleForceLogout, refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { isSessionDisconnect } from '@/shared/types/websocket';
+import type { WebSocketEnvelope } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
 import { routeMessage } from './handlers/messageRouter';
 import { createHeartbeat, isPongMessage, type HeartbeatController } from './heartbeat';
 import type { Listener } from './type';
@@ -55,11 +59,14 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
     const accessToken = newToken || useAuthStore.getState().accessToken;
     if (!WS_URL || !accessToken || !loginUserId) return;
     if (wsRef.current || isConnectingRef.current) return;
+    // 중복 로그인 안내(SC010) 유예 중 — 모든 재연결 트리거가 이 함수를 거치므로 여기서 일괄 차단
+    if (useSessionDisconnectStore.getState().noticeVisible) return;
 
     isConnectingRef.current = true;
     const ws = new WebSocket(`${WS_URL}/app/ws?Authorization=${encodeURIComponent(accessToken)}`);
 
     ws.onopen = () => {
+      const wasReconnect = reconnectAttemptRef.current > 0;
       wsRef.current = ws;
       reconnectAttemptRef.current = 0;
       setIsConnected(true);
@@ -67,6 +74,13 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       pendingQueue.current.forEach(msg => ws.send(JSON.stringify(msg)));
       pendingQueue.current = [];
       isConnectingRef.current = false;
+
+      // 재연결 성공 — 끊김 동안 유실된 메시지·방 목록 재수렴 (RN 패리티)
+      if (wasReconnect) {
+        queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
+        queryClient.invalidateQueries({ queryKey: GM_ROOM_LIST_KEY });
+        queryClient.invalidateQueries({ queryKey: EM_ROOM_LIST_KEY });
+      }
     };
 
     ws.onmessage = event => {
@@ -77,6 +91,16 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       let parsed: unknown = null;
       try { parsed = JSON.parse(event.data); } catch { /* 비 JSON은 그대로 라우팅 */ }
       if (isPongMessage(parsed)) return;
+
+      // 🔌 SESSION/DISCONNECT (중복 로그인 SC010) → 소켓 종료 + 강제 종료 안내 다이얼로그.
+      // 로그아웃은 다이얼로그 확인 시점에 수행 — 유예 구간 자동 동작은 noticeVisible 가드가 차단
+      if (parsed !== null && typeof parsed === 'object' && isSessionDisconnect(parsed as WebSocketEnvelope)) {
+        const envelope = parsed as { response?: { code?: string; message?: string } };
+        console.info('[WS] SESSION/DISCONNECT 수신 → 강제 종료 안내', envelope.response?.code, envelope.response?.message);
+        useSessionDisconnectStore.getState().showNotice();
+        disconnectWebSocket();
+        return;
+      }
 
       routeMessage(event.data, {
         queryClient, listenersRef, processedReadEventsRef, pendingReadCallbacksRef,
@@ -95,6 +119,9 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       const wasForce = forceCloseRef.current;
       forceCloseRef.current = false;
       const reason = e.reason ?? '';
+
+      // 중복 로그인 안내(SC010) 유예 중 — 재연결/토큰 갱신 시도 없이 다이얼로그 확인 대기
+      if (useSessionDisconnectStore.getState().noticeVisible) return;
 
       // 오프라인이면 토큰 갱신/재연결 시도 없이 online 이벤트에서 재연결
       if (!navigator.onLine) {
@@ -129,6 +156,8 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
           /* refresh 예외 → 아래에서 강제 로그아웃 */
         }
         if (!newToken) {
+          // refresh가 SC010으로 거절된 경우 — 강제 로그아웃 대신 안내 다이얼로그 확인 대기
+          if (useSessionDisconnectStore.getState().noticeVisible) return;
           handleForceLogout();
           return;
         }
@@ -141,10 +170,11 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
 
       if (wasForce) return;
 
-      // 그 외 비정상 종료 → 백오프 재연결 (캡 적용)
+      // 그 외 비정상 종료 → 백오프 재연결. 영구 포기 제거 — 캡 도달 후에도 30초 간격
+      // 저빈도 무한 재시도 (RN 패리티: 잠깐의 서버 장애로 앱 재시작 전까지 먹통이 되는 것 방지)
       const attempt = reconnectAttemptRef.current;
-      if (attempt >= MAX_RECONNECT) { console.warn(`[WS] 최대 재연결 시도 횟수(${MAX_RECONNECT})에 도달`); return; }
-      const delay = attempt === 0 ? 0 : Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+      if (attempt === MAX_RECONNECT) console.warn(`[WS] 재연결 ${MAX_RECONNECT}회 초과 — 30초 간격 저빈도 재시도로 전환`);
+      const delay = attempt === 0 ? 0 : Math.min(1000 * Math.pow(2, Math.min(attempt - 1, 5)), 30000);
       reconnectAttemptRef.current = attempt + 1;
       reconnectTimerRef.current = setTimeout(async () => {
         if (!forceCloseRef.current) {
@@ -169,6 +199,8 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
   }, []);
 
   const send = useCallback((data: unknown) => {
+    // 중복 로그인 안내(SC010) 유예 중 — 발행 fail-closed (재연결 큐잉도 차단)
+    if (useSessionDisconnectStore.getState().noticeVisible) return;
     const ws = wsRef.current;
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     if (!ws || ws.readyState !== WebSocket.OPEN || !isOnline) {

@@ -32,10 +32,10 @@ export default function AccountInfoPage() {
     <SettingsOverlay bg="bg-gray-50">
       {/* TopBar — 가운데 정렬 타이틀 + 우상단 닫기 */}
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
-        <h2 className="text-heading-md font-bold text-text-primary">하이브톡 계정정보</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">하이브톡 계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />
@@ -44,13 +44,15 @@ export default function AccountInfoPage() {
 
       <div className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-5 pb-8">
         <div className="mx-auto flex max-w-[560px] flex-col gap-3.5">
-          {/* 계정 정보 */}
-          <section className="overflow-hidden rounded-xl border border-outline bg-surface">
-            <CardHeader
-              icon={<IconCardAccount className="h-5 w-5" />}
-              title="계정 정보"
-              onClick={() => router.push('/settings/account/detail')}
-            />
+          {/* 계정 정보 — RN 패리티: 카드 전체가 클릭 영역 */}
+          <section
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push('/settings/account/detail')}
+            onKeyDown={e => { if (e.key === 'Enter') router.push('/settings/account/detail'); }}
+            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-colors hover:bg-surface-pressed/40"
+          >
+            <CardHeader icon={<IconCardAccount className="h-5 w-5" />} title="계정 정보" />
             <InfoRow label="이메일" value={user?.email || '-'} />
             <InfoRow label="비밀번호" value="비공개" />
             <InfoRow
@@ -60,13 +62,15 @@ export default function AccountInfoPage() {
             />
           </section>
 
-          {/* 프로필 정보 */}
-          <section className="overflow-hidden rounded-xl border border-outline bg-surface">
-            <CardHeader
-              icon={<IconCardProfile className="h-5 w-5" />}
-              title="프로필 정보"
-              onClick={() => setShowProfile(true)}
-            />
+          {/* 프로필 정보 — RN 패리티: 카드 전체가 클릭 영역 */}
+          <section
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowProfile(true)}
+            onKeyDown={e => { if (e.key === 'Enter') setShowProfile(true); }}
+            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-colors hover:bg-surface-pressed/40"
+          >
+            <CardHeader icon={<IconCardProfile className="h-5 w-5" />} title="프로필 정보" />
             <div className="flex items-center px-4 py-3.5">
               <span className="flex-1 text-body font-medium text-gray-800">프로필 사진</span>
               <ProfileCircle name={user?.name ?? ''} size="md" storageKey={user?.profileUrl} />

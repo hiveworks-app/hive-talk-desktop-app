@@ -13,7 +13,6 @@ interface RoomLifecycleDeps {
   send: (msg: unknown) => void;
   addListener: (roomId: string, cb: (data: WebSocketEnvelope) => void) => void;
   removeListener: (roomId: string) => void;
-  clearPendingReadEvents: () => void;
   participantsManager: ParticipantsManager;
   recalculateAllMessagesNotReadCount: (p: ParticipantItemsType[]) => void;
   handleWsMessageRef: MutableRefObject<(data: WebSocketEnvelope) => void>;
@@ -35,7 +34,7 @@ interface RoomLifecycleDeps {
 export function useRoomLifecycle(deps: RoomLifecycleDeps) {
   const {
     currentRoomId, channelType, isConnected, send, addListener, removeListener,
-    clearPendingReadEvents, participantsManager, recalculateAllMessagesNotReadCount,
+    participantsManager, recalculateAllMessagesNotReadCount,
     handleWsMessageRef, viewStateRef, isMountedRef, needsFetchAfterReconnectRef,
     isReconnectFetchRef, lastMessage, builders, getLastLocalMessageId,
   } = deps;
@@ -68,7 +67,7 @@ export function useRoomLifecycle(deps: RoomLifecycleDeps) {
         viewStateRef.current = 'out';
       }
       removeListener(currentRoomId);
-      clearPendingReadEvents();
+      // 보류 READ는 전역 레지스트리가 유지 — 방 전환으로 비우지 않는다 (TTL sweep이 상한 관리, RN §7.4)
     };
   }, [currentRoomId]);
 

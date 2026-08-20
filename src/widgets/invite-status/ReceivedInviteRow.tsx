@@ -5,37 +5,29 @@ import type { ReceivedInviteItem } from '@/features/external-member/type';
 
 interface ReceivedInviteRowProps {
   invite: ReceivedInviteItem;
-  onAccept: () => void;
-  onReject: () => void;
-  disabled?: boolean;
+  /** [응답하기] 클릭 — 상위(초대현황 화면)가 응답 바텀시트를 연다 (RN 구조 동일) */
+  onRespond: () => void;
 }
 
-export function ReceivedInviteRow({ invite, onAccept, onReject, disabled = false }: ReceivedInviteRowProps) {
+/**
+ * 받은 초대 행 (RN InviteListItem 패리티).
+ * 아바타 40 · 이름(text-body, 길면 말줄임) · 회사명(sub-sm gray-600, flex-1 스페이서) · [응답하기].
+ */
+export function ReceivedInviteRow({ invite, onRespond }: ReceivedInviteRowProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
+    <div className="flex items-center gap-2.5 px-4 py-2.5">
       <ProfileCircle name={invite.name} size="sm" storageKey={invite.profileUrl} />
-      <div className="min-w-0 flex-1">
-        <span className="text-sub font-medium text-text-primary">{invite.name}</span>
-        {invite.companyName && (
-          <p className="truncate text-sub-sm text-text-tertiary">{invite.companyName}</p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <button
-          onClick={onReject}
-          disabled={disabled}
-          className="rounded-lg border border-divider px-2.5 py-1.5 text-sub-sm text-text-secondary hover:bg-surface-pressed disabled:opacity-50"
-        >
-          거절
-        </button>
-        <button
-          onClick={onAccept}
-          disabled={disabled}
-          className="rounded-lg bg-primary px-2.5 py-1.5 text-sub-sm font-semibold text-on-primary hover:bg-[var(--color-state-primary-pressed)] disabled:bg-disabled"
-        >
-          수락
-        </button>
-      </div>
+      {/* 이름 — shrink로 긴 이름만 잘림 (버튼은 밀리지 않음) */}
+      <span className="min-w-0 shrink truncate text-body text-gray-900">{invite.name}</span>
+      {/* 회사명 — flex-1 스페이서 겸용: 버튼을 우측으로 밀어준다 */}
+      <span className="min-w-0 flex-1 truncate text-sub-sm text-gray-600">{invite.companyName ?? ''}</span>
+      <button
+        type="button"
+        onClick={onRespond}
+        className="h-8 shrink-0 rounded-md bg-blue-100 px-3 text-sub font-medium text-blue-500 transition-opacity hover:opacity-70 active:opacity-60"
+      >
+        응답하기
+      </button>
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { isApiError } from '@/shared/api';
 import { useCountdownTimer } from '@/shared/hooks/useCountdownTimer';
 import { isPhonePartsValid, isPhoneValid, parsePhoneParts } from '@/shared/utils/phone';
-import { useUIStore } from '@/store';
 import { useFindLoginIdSendSms, useFindLoginIdVerify } from './queries';
 
 type FindIdStep = 'input' | 'result';
@@ -10,7 +9,6 @@ type FindIdStep = 'input' | 'result';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 export const useFindLoginId = () => {
-  const showSnackbar = useUIStore(state => state.showSnackbar);
   const { mutateAsync: sendSms, isPending: isSending } = useFindLoginIdSendSms();
   const { mutateAsync: verifySms, isPending: isVerifying } = useFindLoginIdVerify();
   const timer = useCountdownTimer();
@@ -25,15 +23,18 @@ export const useFindLoginId = () => {
 
   const [failCount, setFailCount] = useState(0);
   const [verifyErrorMessage, setVerifyErrorMessage] = useState('');
+  // 발송 실패("일치하는 계정 없음" 등)는 토스트 대신 Input 하단 인라인 에러 (RN 패리티)
+  const [sendErrorMessage, setSendErrorMessage] = useState('');
 
   const handleSendCode = useCallback(async () => {
+    setSendErrorMessage('');
     if (!name.trim()) {
-      showSnackbar({ message: '이름을 입력해주세요.', state: 'error' });
+      setSendErrorMessage('이름을 입력해주세요.');
       return;
     }
     const parts = parsePhoneParts(phone);
     if (!isPhonePartsValid(parts)) {
-      showSnackbar({ message: '전화번호를 정확히 입력해주세요.', state: 'error' });
+      setSendErrorMessage('전화번호를 정확히 입력해주세요.');
       return;
     }
     try {
@@ -43,10 +44,14 @@ export const useFindLoginId = () => {
       setVerifyErrorMessage('');
       setFailCount(0);
       timer.start();
-    } catch {
-      // onError 콜백에서 스낵바 처리됨
+    } catch (err) {
+      setSendErrorMessage(
+        isApiError(err)
+          ? err.message || '입력하신 정보와 일치하는 계정이 없습니다.'
+          : '요청에 실패했습니다. 잠시 후 다시 시도해주세요.',
+      );
     }
-  }, [name, phone, sendSms, showSnackbar, timer]);
+  }, [name, phone, sendSms, timer]);
 
   const handleVerifyCode = useCallback(async () => {
     if (!verificationCode.trim()) return;
@@ -73,14 +78,21 @@ export const useFindLoginId = () => {
     }
   }, [name, phone, verificationCode, verifySms, failCount]);
 
+  const handleNameChange = useCallback((text: string) => {
+    setName(text);
+    setSendErrorMessage('');
+  }, []);
+
   const handlePhoneChange = useCallback((text: string) => {
     setPhone(text.replace(/\D/g, ''));
+    setSendErrorMessage('');
   }, []);
 
   const isMaxFailuresReached = failCount >= MAX_VERIFY_ATTEMPTS;
   const canSendCode = name.trim().length > 0 && isPhoneValid(phone) && !isSending;
+  // SMS 인증번호는 5자리 (RN 패리티)
   const canVerify =
-    verificationCode.length > 0 &&
+    verificationCode.length === 5 &&
     timer.isRunning &&
     !isVerifying &&
     !isMaxFailuresReached;
@@ -97,9 +109,10 @@ export const useFindLoginId = () => {
     timer,
     canSendCode,
     canVerify,
+    sendErrorMessage,
     verifyErrorMessage,
     isMaxFailuresReached,
-    setName,
+    handleNameChange,
     handlePhoneChange,
     setVerificationCode,
     handleSendCode,

@@ -2,6 +2,7 @@
 
 import { cn } from '@/shared/lib/cn';
 import type { MemberItem } from '@/shared/types/user';
+import IconExternalSymbol from '@assets/icons/external-symbol.svg';
 
 interface MemberRowProps {
   member: MemberItem;
@@ -22,10 +23,21 @@ export function MemberRow({ member, selected, onToggle }: MemberRowProps) {
         {member.name.charAt(0)}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-sub font-medium text-text-primary">{member.name}</div>
+        <div className="flex items-center gap-1 text-sub font-medium text-text-primary">
+          <span className="truncate">{member.name}</span>
+          {/* 협력멤버 구분 심볼 (RN 패리티) */}
+          {member.isExternal && <IconExternalSymbol width={18} height={10} className="shrink-0 text-gray-400" />}
+        </div>
         <div className="flex items-center gap-1.5 text-sub-sm text-text-tertiary">
-          {member.department && <span>{member.department}</span>}
-          {member.job && <span>{member.job}</span>}
+          {/* 협력멤버는 회사명, 사내멤버는 부서·직급 (RN 패리티) */}
+          {member.isExternal ? (
+            member.companyName && <span>{member.companyName}</span>
+          ) : (
+            <>
+              {member.department && <span>{member.department}</span>}
+              {member.job && <span>{member.job}</span>}
+            </>
+          )}
         </div>
       </div>
       <div

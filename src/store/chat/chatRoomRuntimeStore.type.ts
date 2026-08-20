@@ -11,16 +11,12 @@ export type ChatRoomRuntimeState = {
   currentRoomId: string | null;
   messages: ChatMessageUI[];
   loading: LoadingState;
-  pendingReadEvents: Map<string, Set<string>>;
   roomMessageCache: Map<string, ChatMessageUI[]>;
   setRoomId: (roomId: string | null) => void;
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   replaceMessages: (next: Message[]) => void;
   deleteMessageById: (id: string | null) => void;
   setLoading: (patch: Partial<LoadingState>) => void;
-  addPendingReadEvent: (messageId: string, userId: string) => void;
-  removePendingReadEvents: (messageIds: string[]) => void;
-  clearPendingReadEvents: () => void;
   addLocalMessage: (msg: ChatMessageUI) => void;
   patchMessageByFileId: (fileId: string, partial: Partial<ChatMessageUI>) => void;
   replaceLocalWithServer: (fileId: string, serverMessage: Message) => void;

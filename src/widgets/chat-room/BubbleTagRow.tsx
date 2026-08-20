@@ -33,7 +33,7 @@ function BubbleTagRowComponent({ tags, onClick, className }: BubbleTagRowProps) 
         return (
           <span
             key={tag.taggingId ?? `${tag.tagId}-${index}`}
-            className="flex shrink-0 items-center justify-center rounded-lg border border-outline bg-white"
+            className="flex shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-[#FAFAFA]"
             style={{ width: CHIP_SIZE, height: CHIP_SIZE }}
           >
             {SvgIcon && <SvgIcon width={ICON_SIZE} height={ICON_SIZE} />}

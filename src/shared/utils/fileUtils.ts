@@ -3,7 +3,9 @@
  */
 export const extractFileName = (uri: string): string => {
   if (!uri) return '';
-  return uri.split('/').pop() ?? '';
+  // NFC 정규화 — macOS/iOS 업로드 파일명은 자소 분리(NFD)로 저장되어 키보드 입력(NFC)과
+  // 바이트가 달라 검색 includes가 실패한다. 표시·검색·하이라이트가 모두 이 관문을 거친다 (RN C11 패리티)
+  return (uri.split('/').pop() ?? '').normalize('NFC');
 };
 
 /**

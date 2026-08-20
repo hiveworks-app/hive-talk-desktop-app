@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   apiGetCredentialInfo,
   apiUpdateMyProfile,
@@ -11,6 +11,7 @@ import { getErrorMessage, uploadToPresignedUrl } from '@/shared/api';
 import { CREDENTIAL_INFO_KEY } from '@/shared/config/queryKeys';
 import { toStringSafe } from '@/shared/utils/utils';
 import { useUIStore } from '@/store';
+import { MEMBERS_KEY, PINNED_MEMBERS_KEY } from '@/shared/config/queryKeys';
 import { useAuthStore } from '@/store/auth/authStore';
 
 /**
@@ -34,6 +35,7 @@ export const useGetCredentialInfo = () => {
 export const useMyProfileUpdate = () => {
   const setAuth = useAuthStore(s => s.setAuth);
   const showSnackbar = useUIStore(state => state.showSnackbar);
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: apiUpdateMyProfile,
@@ -42,6 +44,11 @@ export const useMyProfileUpdate = () => {
         message: '내 정보가 수정되었습니다.',
         state: 'success',
       });
+
+      // 멤버목록·관심멤버·참여자 캐시 stale 방지 — 내 이름/부서 변경 즉시 반영 (RN 패리티)
+      queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+      queryClient.invalidateQueries({ queryKey: PINNED_MEMBERS_KEY });
+      queryClient.invalidateQueries({ predicate: query => query.queryKey[1] === 'participants' });
 
       const myInfo = useAuthStore.getState().user;
       if (!myInfo) return;

@@ -1,11 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import {
   isFileNotice,
   isImageNotice,
   isMediaNotice,
-  parseFileNoticeContent,
-  parseMediaNoticeContent,
+  getFileNoticeInfo,
+  isTextNotice as isTextNoticeGuard,
 } from '@/features/chat-room/notice/noticeUtils';
 import type { NoticeModel } from '@/features/chat-room/notice/type';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
@@ -21,6 +22,8 @@ function formatRegisteredAt(iso: string): string {
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${period} ${h}시 ${mm}분 등록`;
 }
+
+import { MediaViewer, type MediaViewerItem } from '@/shared/ui/MediaViewer';
 
 interface NoticeDetailDialogProps {
   notice: NoticeModel;
@@ -39,13 +42,16 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
   const imageNotice = isImageNotice(notice);
   const mediaNotice = isMediaNotice(notice);
   const fileNotice = isFileNotice(notice);
-  const isTextNotice = !imageNotice && !mediaNotice && !fileNotice;
-  const mediaParsed = mediaNotice ? parseMediaNoticeContent(notice.content) : null;
-  const fileParsed = fileNotice ? parseFileNoticeContent(notice.content) : null;
+  const textNotice = !imageNotice && !mediaNotice && !fileNotice;
+  // v2: 미디어/파일 정보는 payload.path + payload.meta 에서 직접 (RN 패리티)
+  const fileParsed = fileNotice ? getFileNoticeInfo(notice) : null;
 
-  const { data: imageUrl } = usePresignedUrl(imageNotice ? notice.content : null);
-  const { data: videoThumbUrl } = usePresignedUrl(mediaParsed?.thumbnailPath ?? null);
-  const { data: videoUrl } = usePresignedUrl(mediaParsed?.videoPath ?? null);
+  const { data: imageUrl } = usePresignedUrl(imageNotice ? notice.payload.path : null);
+  const { data: videoThumbUrl } = usePresignedUrl(mediaNotice ? (notice.payload.meta?.thumbnail ?? null) : null);
+  const { data: videoUrl } = usePresignedUrl(mediaNotice ? notice.payload.path : null);
+
+  // 공지 첨부 인앱 프리뷰 (RN NoticeImagePreview/VideoPreview 대응 — 새 탭 대신 뷰어)
+  const [previewItem, setPreviewItem] = useState<MediaViewerItem | null>(null);
   const { data: fileUrl } = usePresignedUrl(fileParsed?.filePath ?? null);
 
   return (
@@ -64,7 +70,7 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
             <button
               onClick={onDelete}
               aria-label="공지 삭제"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary transition-colors hover:bg-surface-pressed hover:text-text-secondary"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60"
             >
               <IconDelete size={20} />
             </button>
@@ -72,18 +78,46 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
         </div>
 
         {/* 본문 */}
-        {isTextNotice && (
-          <p className="whitespace-pre-wrap break-words text-body text-text-primary">{notice.content}</p>
+        {textNotice && isTextNoticeGuard(notice) && (
+          <p className="whitespace-pre-wrap break-words text-body text-text-primary">{notice.payload.content}</p>
         )}
 
         {imageNotice && imageUrl && (
-          <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewItem({
+                id: notice.payload.path,
+                type: 'image',
+                url: imageUrl,
+                storageKey: notice.payload.path,
+                author: creatorName,
+                createdAt: notice.createdAt,
+              })
+            }
+            className="block w-full"
+          >
             <img src={imageUrl} alt="공지 이미지" className="w-full rounded-lg object-contain" />
-          </a>
+          </button>
         )}
 
         {mediaNotice && (
-          <a href={videoUrl || undefined} target="_blank" rel="noopener noreferrer" className="relative block">
+          <button
+            type="button"
+            onClick={() =>
+              videoUrl &&
+              setPreviewItem({
+                id: notice.payload.path,
+                type: 'video',
+                url: videoUrl,
+                storageKey: notice.payload.path,
+                author: creatorName,
+                createdAt: notice.createdAt,
+                poster: videoThumbUrl ?? undefined,
+              })
+            }
+            className="relative block w-full"
+          >
             {videoThumbUrl && (
               <img src={videoThumbUrl} alt="공지 동영상" className="w-full rounded-lg object-cover" />
             )}
@@ -92,7 +126,7 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
                 <IconPlay size={24} className="text-white" />
               </span>
             </span>
-          </a>
+          </button>
         )}
 
         {fileNotice && fileParsed && (
@@ -113,6 +147,17 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
           </a>
         )}
       </div>
+
+      {/* 첨부 인앱 뷰어 (줌·다운로드 — 채팅방 뷰어 재사용) */}
+      {previewItem && (
+        <MediaViewer
+          visible
+          items={[previewItem]}
+          currentIndex={0}
+          onIndexChange={() => {}}
+          onClose={() => setPreviewItem(null)}
+        />
+      )}
     </ProfileDialogShell>
   );
 }

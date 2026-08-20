@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { findSearchResults, useSearchInfiniteLoader } from './useSearchInfiniteLoader';
 
@@ -13,6 +13,8 @@ export interface UseChatRoomSearchReturn {
   isSearchMode: boolean;
   searchKeyword: string;
   isSearching: boolean;
+  /** 검색을 완주했는지 — '검색결과 없음' 표시 조건 */
+  hasSearched: boolean;
   searchResults: number[];
   currentIndex: number;
   displayIndex: number;
@@ -44,6 +46,9 @@ export function useChatRoomSearch({ containerRef, loadMoreBeforeMessage }: UseCh
   const setFocusedMessageId = useChatRoomRuntimeStore(s => s.setFocusedMessageId);
   const setCurrentSearchIndex = useChatRoomRuntimeStore(s => s.setCurrentSearchIndex);
 
+  // 검색 상한 경계 — 제출 시점의 최신 메시지 시각. 검색 진행 중 도착한 새 메시지가
+  // 결과 집합에 섞여 인덱스/총건수가 흔들리는 것을 방지 (RN SearchUpperBound 패리티)
+  const [searchBoundary, setSearchBoundary] = useState<number | null>(null);
   const abortSearchRef = useRef(false);
   const isNavigatingRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -66,8 +71,15 @@ export function useChatRoomSearch({ containerRef, loadMoreBeforeMessage }: UseCh
 
   const searchResults = useMemo(() => {
     if (!activeSearchKeyword.trim() || !isSearchMode) return [];
-    return findSearchResults(messages, activeSearchKeyword);
-  }, [activeSearchKeyword, messages, isSearchMode]);
+    const boundary = searchBoundary;
+    const results = findSearchResults(messages, activeSearchKeyword);
+    if (boundary == null) return results;
+    // 경계 이후 도착분 제외 — 과거 페이지 로드는 경계보다 오래된 메시지라 영향 없음
+    return results.filter(idx => {
+      const createdAt = Date.parse(messages[idx]?.createdAt ?? '');
+      return !createdAt || createdAt <= boundary;
+    });
+  }, [activeSearchKeyword, messages, isSearchMode, searchBoundary]);
 
   const currentIndex = useMemo(() => {
     if (!focusedMessageId || searchResults.length === 0) return 0;
@@ -78,14 +90,19 @@ export function useChatRoomSearch({ containerRef, loadMoreBeforeMessage }: UseCh
   }, [focusedMessageId, searchResults, messages]);
 
   const enterSearchMode = useCallback(() => setIsSearchMode(true), [setIsSearchMode]);
-  const exitSearchMode = useCallback(() => { abortSearchRef.current = true; setIsSearchMode(false); }, [setIsSearchMode]);
+  const exitSearchMode = useCallback(() => { abortSearchRef.current = true; setSearchBoundary(null); setIsSearchMode(false); }, [setIsSearchMode]);
   const handleSearchKeywordChange = useCallback((keyword: string) => setSearchKeyword(keyword), [setSearchKeyword]);
 
   const handleSearchSubmit = useCallback(async (keyword: string) => {
     if (!keyword.trim()) return;
-    setActiveSearchKeyword(keyword);
-    setSearchKeyword(keyword);
-    await executeInfiniteSearch(keyword);
+    // NFC 정규화 — NFD 파일명·복사 텍스트와의 자소 분리 불일치 해소 (RN C11 패리티)
+    const normalizedKeyword = keyword.normalize('NFC');
+    // 제출 시점 최신 메시지를 상한 경계로 고정 (재검색 시 갱신)
+    const latest = useChatRoomRuntimeStore.getState().messages;
+    setSearchBoundary(latest.length > 0 ? Date.parse(latest[latest.length - 1].createdAt) || Date.now() : Date.now());
+    setActiveSearchKeyword(normalizedKeyword);
+    setSearchKeyword(normalizedKeyword);
+    await executeInfiniteSearch(normalizedKeyword);
   }, [setActiveSearchKeyword, setSearchKeyword, executeInfiniteSearch]);
 
   const canGoPrev = useMemo(() => searchResults.length > 0 && (currentIndex > 0 || hasMoreBefore), [searchResults.length, currentIndex, hasMoreBefore]);
@@ -120,6 +137,8 @@ export function useChatRoomSearch({ containerRef, loadMoreBeforeMessage }: UseCh
 
   return {
     isSearchMode, searchKeyword, isSearching, searchResults,
+    // 검색을 완주했는지 — '검색결과 없음' 표시 조건 (검색 전/취소와 0건 완주를 구분, RN C5 패리티)
+    hasSearched: activeSearchKeyword.trim().length > 0,
     currentIndex, displayIndex, totalCount: searchResults.length,
     focusedMessageId, canGoPrev, canGoNext,
     enterSearchMode, exitSearchMode, handleSearchKeywordChange,

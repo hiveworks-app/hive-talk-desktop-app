@@ -56,7 +56,7 @@ export function LinkPreviewCard({ url, className }: LinkPreviewCardProps) {
         />
       )}
       <div className="flex flex-col gap-1 p-2.5">
-        <span className="line-clamp-2 text-sub font-semibold text-text-primary">{displayTitle}</span>
+        <span className="line-clamp-2 text-body font-semibold text-text-primary">{displayTitle}</span>
         {description && (
           <span className="line-clamp-1 text-sub-sm text-text-secondary">{description}</span>
         )}

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 
 /**
  * WebSocket 연결이 true → false로 전환되면
@@ -17,7 +18,7 @@ export function useLocalMessageFailureDetector(
 
   useEffect(() => {
     if (prevRef.current && !isConnected) {
-      const { messages, patchMessageById } = useChatRoomRuntimeStore.getState();
+      const { messages, currentRoomId, patchMessageById } = useChatRoomRuntimeStore.getState();
       messages.forEach(msg => {
         if (
           msg.isLocal &&
@@ -28,6 +29,11 @@ export function useLocalMessageFailureDetector(
             removePendingPublish(msg.retryPayload.content);
           }
           patchMessageById(msg.id, { localStatus: 'failed' });
+          // 실패 메시지 영속화 — 방 이탈/재실행 후 복원 + 목록 느낌표 판정 소스 (RN 패리티)
+          const failedRoomId = msg.retryPayload?.roomId || currentRoomId;
+          if (failedRoomId) {
+            useFailedMessagesStore.getState().saveFailed(failedRoomId, { ...msg, localStatus: 'failed' });
+          }
         }
       });
     }

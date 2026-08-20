@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
+import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import type { MediaViewerItem } from './MediaViewer';
 
 const MIN_SCALE = 1;
@@ -60,7 +61,8 @@ export function useMediaViewerControls(
   const goPrev = useCallback(() => { if (hasPrev) navigateTo(currentIndex - 1); }, [hasPrev, currentIndex, navigateTo]);
   const goNext = useCallback(() => { if (hasNext) navigateTo(currentIndex + 1); }, [hasNext, currentIndex, navigateTo]);
 
-  // Keyboard navigation
+  // Keyboard navigation — capture 단계에서 먼저 받아 ESC를 소비(preventDefault)한다.
+  // 아래층 풀스크린 오버레이(프로필 등)는 defaultPrevented를 보고 무시 → 뷰어만 닫힘.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -74,19 +76,18 @@ export function useMediaViewerControls(
         case 'ArrowRight': goNext(); break;
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handler, { capture: true });
+    return () => window.removeEventListener('keydown', handler, { capture: true });
   }, [onClose, goPrev, goNext, isZoomed, resetView]);
 
   // Pause video on navigate
   useEffect(() => { if (videoRef.current) videoRef.current.pause(); }, [currentIndex]);
 
-  // Prevent body scroll + ESC 억제
+  // Prevent body scroll + ESC 억제 (참조 카운터 — 프로필 오버레이 등과 중첩 안전)
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    const api = (window as unknown as { electronAPI?: { setSuppressEsc?: (v: boolean) => void } }).electronAPI;
-    api?.setSuppressEsc?.(true);
-    return () => { document.body.style.overflow = ''; api?.setSuppressEsc?.(false); };
+    const release = acquireEscSuppress();
+    return () => { document.body.style.overflow = ''; release(); };
   }, []);
 
   // Wheel zoom

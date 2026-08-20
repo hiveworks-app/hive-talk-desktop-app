@@ -89,17 +89,15 @@ export function useChangeEmail() {
     }
   };
 
-  const handleVerifyAndChange = async () => {
-    if (isOffline()) return;
-    if (code.length < 6) {
-      showSnackbar({ message: '인증번호 6자리를 입력해 주세요.', state: 'error' });
-      return;
-    }
-    const trimmed = email.trim();
+  // 인증 성공 후 최종 변경 대기 — "이메일을 …(으)로 변경하시겠습니까?" 확인을 거쳐야 PUT (RN 패리티)
+  const [pendingChangeEmail, setPendingChangeEmail] = useState<string | null>(null);
+
+  const confirmChange = async () => {
+    const trimmed = pendingChangeEmail;
+    if (!trimmed) return;
+    setPendingChangeEmail(null);
     setIsVerifying(true);
     try {
-      // 검증 → 최종 변경을 순차 호출 (검증 성공 시에만 변경)
-      await apiChangeEmailVerify({ email: trimmed, code });
       await apiChangeEmail({ email: trimmed });
 
       // authStore 이메일 즉시 반영 + credential 인증시점 캐시 무효화
@@ -109,6 +107,30 @@ export function useChangeEmail() {
 
       timer.stop();
       setStep('DONE'); // 변경 완료 화면으로 전환 (X 클릭 시 계정정보로 이동)
+    } catch (err) {
+      showSnackbar({
+        message: getErrorMessage(err, '이메일 변경에 실패했습니다.'),
+        state: 'error',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const cancelChange = () => setPendingChangeEmail(null);
+
+  const handleVerifyAndChange = async () => {
+    if (isOffline()) return;
+    if (code.length < 6) {
+      showSnackbar({ message: '인증번호 6자리를 입력해 주세요.', state: 'error' });
+      return;
+    }
+    const trimmed = email.trim();
+    setIsVerifying(true);
+    try {
+      // 1) 검증 성공 시 최종 확인 다이얼로그로 위임 — 즉시 변경하지 않는다 (RN 패리티)
+      await apiChangeEmailVerify({ email: trimmed, code });
+      setPendingChangeEmail(trimmed);
     } catch (err) {
       // 인증번호 오류(CP011): payload "N/5"로 시도 횟수 분기 (스낵바 대신 인라인 에러)
       if (isApiError(err) && err.code === 'CP011') {
@@ -172,6 +194,9 @@ export function useChangeEmail() {
     handleCodeChange,
     handleSendCode,
     handleVerifyAndChange,
+    pendingChangeEmail,
+    confirmChange,
+    cancelChange,
     goBack,
     close,
     goToAccountDetail,

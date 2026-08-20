@@ -13,6 +13,8 @@ import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessa
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { ChatRoomManageOverlay, type ManageRoomEntry } from './ChatRoomManageOverlay';
+import { useDraftStore } from '@/store/chat/draftStore';
+import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 
 interface ChatRoomManageDialogProps {
   open: boolean;
@@ -45,7 +47,12 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
   });
 
   const handleLeave = (ids: string[]) => {
-    ids.forEach(roomId => send(emBuilder.buildExitMessageRoom({ channelIdOverride: roomId })));
+    ids.forEach(roomId => {
+      send(emBuilder.buildExitMessageRoom({ channelIdOverride: roomId }));
+      // 나간 방의 드래프트·실패 메시지 정리 (RN 패리티)
+      useDraftStore.getState().clearDraft(roomId);
+      useFailedMessagesStore.getState().removeRoom(roomId);
+    });
 
     // 내가 나갈 땐 WS가 목록을 갱신하지 않으므로 캐시에서 낙관적 제거
     const sel = new Set(ids);

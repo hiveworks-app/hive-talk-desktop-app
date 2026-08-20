@@ -7,6 +7,8 @@ import { cn } from '@/shared/lib/cn';
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
+  /** 타이틀 뒤 회색 보조 텍스트 — RN titleSuffix 패리티 (예: 방 이름 뒤 인원수) */
+  titleSuffix?: string;
   description?: ReactNode;
   /** 확인 버튼 라벨 (기본: 확인) */
   confirmLabel?: string;
@@ -14,6 +16,8 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   /** 위험 동작(삭제 등) — 확인 버튼을 빨강(state-error)으로 */
   destructive?: boolean;
+  /** 어두운색 강조 동작(차단 등) — 확인 버튼을 진회색(gray-700)으로 (RN neutral, Figma 3105:143335) */
+  neutral?: boolean;
   onConfirm: () => void;
   /** 취소 또는 오버레이/Esc로 닫을 때 */
   onCancel: () => void;
@@ -27,35 +31,40 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   open,
   title,
+  titleSuffix,
   description,
   confirmLabel = '확인',
   cancelLabel = '취소',
   destructive = false,
+  neutral = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={next => { if (!next) onCancel(); }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/30" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[70] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-6 shadow-xl focus:outline-none">
+        <Dialog.Overlay className="motion-dim fixed inset-0 z-[60] bg-black/30" />
+        <Dialog.Content className="motion-center-pop fixed left-1/2 top-1/2 z-[70] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-6 shadow-xl focus:outline-none">
           <div className="flex flex-col gap-3.5">
             <div className="flex flex-col gap-2">
-              <Dialog.Title className="text-[18px] font-semibold leading-[26px] tracking-[-0.18px] text-text-primary">
+              {/* RN Confirm 패리티 — 타이틀 heading-md semibold, 설명 sub-lg gray-700 */}
+              <Dialog.Title className="text-heading-md font-semibold text-text-primary">
                 {title}
+                {titleSuffix && <span className="text-gray-400"> {titleSuffix}</span>}
               </Dialog.Title>
               {description && (
-                <Dialog.Description className="text-[15px] leading-[22px] tracking-[-0.15px] text-text-secondary">
+                <Dialog.Description className="text-sub-lg text-gray-700">
                   {description}
                 </Dialog.Description>
               )}
             </div>
 
             <div className="flex items-center gap-2">
+              {/* RN Confirm 버튼 패리티 — 취소 bg-gray-100/gray-600, 확인 primary·destructive·neutral 3변형 */}
               <button
                 type="button"
                 onClick={onCancel}
-                className="h-12 flex-1 rounded-[10px] bg-surface-pressed text-[16px] font-medium text-text-secondary transition-colors hover:bg-outline"
+                className="h-9 flex-1 rounded-[10px] bg-gray-100 text-body font-medium text-gray-600 transition-colors hover:bg-gray-200 active:bg-gray-200"
               >
                 {cancelLabel}
               </button>
@@ -63,10 +72,12 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onConfirm}
                 className={cn(
-                  'h-12 flex-1 rounded-[10px] text-[16px] font-medium text-white transition-colors',
+                  'h-9 flex-1 rounded-[10px] text-body font-medium text-white transition-colors',
                   destructive
-                    ? 'bg-state-error hover:bg-state-error-pressed'
-                    : 'bg-primary text-on-primary hover:bg-[var(--color-state-primary-pressed)]',
+                    ? 'bg-state-error hover:bg-state-error-pressed active:bg-state-error-pressed'
+                    : neutral
+                      ? 'bg-gray-700 hover:bg-gray-800 active:bg-gray-800'
+                      : 'bg-primary text-on-primary hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)]',
                 )}
               >
                 {confirmLabel}

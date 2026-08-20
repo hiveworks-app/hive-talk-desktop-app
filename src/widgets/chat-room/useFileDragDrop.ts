@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
+import { MEDIA_PICKER_MAX_SELECT_CNT } from '@/shared/config/constants';
+import { useUIStore } from '@/store/uiStore';
 import type { PendingFileItem } from './FileConfirmDialog';
 
 interface UseFileDragDropOptions {
@@ -12,7 +14,13 @@ export function useFileDragDrop({ onMediaSend, onDocSend }: UseFileDragDropOptio
 
   const handleFilesSelected = useCallback((files: File[]) => {
     if (files.length === 0) return;
-    const items = files.map(file => ({
+    // 한 번에 최대 100개 (RN MediaPicker 상한 패리티) — 초과분은 잘라내고 안내
+    let selected = files;
+    if (files.length > MEDIA_PICKER_MAX_SELECT_CNT) {
+      selected = files.slice(0, MEDIA_PICKER_MAX_SELECT_CNT);
+      useUIStore.getState().showSnackbar({ message: '최대 100개까지 선택할 수 있어요.', state: 'error' });
+    }
+    const items = selected.map(file => ({
       file,
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
     }));

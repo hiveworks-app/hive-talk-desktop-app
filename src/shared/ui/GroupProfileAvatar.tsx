@@ -190,7 +190,7 @@ function AvatarImg({ user }: { user?: GroupAvatarUser }) {
   }
 
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-full bg-blue-100">
+    <div className="flex h-full w-full items-center justify-center rounded-full bg-blue-300">
       <img src="/empty-profile.png" alt={user?.name ?? ''} className="h-4/5 w-4/5 object-contain" />
     </div>
   );

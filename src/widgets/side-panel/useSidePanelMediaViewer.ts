@@ -49,6 +49,8 @@ function toViewerItem(media: MediaListType): MediaViewerItem {
     url: media.presignedUrl || media.path,
     storageKey: media.path,
     author: media.author,
+    createdAt: media.createdAt,
+    senderId: media.senderId,
     poster: media.thumbnailPresignedUrl,
   };
 }
