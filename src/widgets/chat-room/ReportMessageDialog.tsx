@@ -83,8 +83,8 @@ export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) resetAndClose(); }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-[420px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-xl focus:outline-none">
+        <Dialog.Overlay className="motion-dim fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content className="motion-center-pop fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-[420px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-xl focus:outline-none">
           {/* 헤더 */}
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
             <div className="flex items-center gap-1.5">
@@ -98,7 +98,7 @@ export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose
                   <IconChevronLeft size={20} />
                 </button>
               )}
-              <Dialog.Title className="text-base font-bold text-gray-900">신고하기</Dialog.Title>
+              <Dialog.Title className="text-heading-md font-bold text-gray-900">신고하기</Dialog.Title>
             </div>
             <button
               type="button"
@@ -139,7 +139,7 @@ export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose
           {confirming && (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/30">
               <div className="w-[300px] rounded-2xl bg-white p-5 shadow-xl">
-                <p className="text-center text-base font-bold text-gray-900">신고를 접수할까요?</p>
+                <p className="text-center text-heading-md font-bold text-gray-900">신고를 접수할까요?</p>
                 <p className="mt-2 text-center text-sm text-gray-500">접수된 신고는 취소할 수 없습니다.</p>
                 <div className="mt-5 flex gap-2">
                   <Button variant="primary-light" size="lg" fullWidth disabled={reportMutation.isPending} onClick={() => setConfirming(false)}>
@@ -199,7 +199,7 @@ function CategoryDetail({ category, content, onChangeContent, requiresDetail }: 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-bold text-gray-900">{category.name}</h3>
+        <h3 className="text-heading-md font-bold text-gray-900">{category.name}</h3>
         <ul className="flex flex-col gap-1">
           {category.descriptions.map((description) => (
             <li key={description} className="flex text-sm text-gray-800">

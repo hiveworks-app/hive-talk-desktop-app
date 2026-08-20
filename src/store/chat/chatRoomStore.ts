@@ -12,6 +12,7 @@ const initChatRoomInfo: ChatRoomInfo = {
   channelType: WS_CHANNEL_TYPE.DIRECT_MESSAGE,
   totalUserCount: 0,
   otherUserIsExit: false,
+  otherUserIsRemoved: false,
   invitedUserIds: [],
   lastMessage: null,
   initialNotReadCount: 0,

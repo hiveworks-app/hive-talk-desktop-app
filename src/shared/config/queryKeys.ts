@@ -1,8 +1,8 @@
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
 
-export const SIGNUP_TERMS_KEY = ['signupTerms'];
 export const MEMBERS_KEY = ['members'];
 export const PINNED_MEMBERS_KEY = ['pinnedMembers'];
+export const BLOCKED_MEMBERS_KEY = ['blockedMembers'];
 export const TAG_CATEGORY_KEY = ['tagCategoryList'];
 export const TAG_LIST_KEY = ['tagList'];
 export const PRESIGNED_URL = (key: string) => ['presignedImage', key];
@@ -37,6 +37,33 @@ export const ROOM_BEFORE_FILE_KEY = (
 ) => [channelType, 'file', roomId];
 export const DM_BEFORE_FILE_KEY = (roomId: string) =>
   ROOM_BEFORE_FILE_KEY(roomId, WS_CHANNEL_TYPE.DIRECT_MESSAGE);
+
+/* GET /app/chat/files/senders — 보낸사람 검색 (RN 패리티) */
+export const FILE_SENDERS_KEY = (
+  roomId: string,
+  channelType: WebSocketChannelTypes,
+  contentType: string[],
+  keyword: string,
+  from: string,
+  to: string,
+) => [channelType, 'fileSenders', roomId, contentType.join(','), keyword, from, to];
+
+/* GET /app/chat/files — senders/fileName 필터 조회 (RN 패리티) */
+export const FILES_KEY = (
+  channelType: WebSocketChannelTypes,
+  roomId: string,
+  contentType: string[],
+  senders: string[],
+  fileName: string,
+) =>
+  [
+    channelType,
+    'files',
+    roomId,
+    contentType.join(','),
+    [...senders].sort().join(','),
+    fileName,
+  ] as const;
 
 export const ROOM_PARTICIPANTS_KEY = (
   roomId: string,

@@ -1,5 +1,6 @@
 'use client';
 
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import IconArrowBack from '@assets/icons/arrow_back.svg';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { cn } from '@/shared/lib/cn';
@@ -23,6 +24,9 @@ export default function ChangeEmailPage() {
     handleCodeChange,
     handleSendCode,
     handleVerifyAndChange,
+    pendingChangeEmail,
+    confirmChange,
+    cancelChange,
     goBack,
     close,
     goToAccountDetail,
@@ -38,7 +42,7 @@ export default function ChangeEmailPage() {
   // 5회 잠금 또는 시간초과 → 코드 입력 비활성(회색). 시간초과는 타이머에서 파생.
   const codeDisabled = codeLocked || timer.isExpired;
   const codeErrorMessage =
-    codeError || (timer.isExpired ? '인증시간이 초과되었습니다. 다시 요청해주세요.' : '');
+    codeError || (timer.isExpired ? '인증시간이 만료되었습니다. 재요청 버튼을 눌러주세요.' : '');
 
   return (
     <SettingsOverlay bg="bg-background">
@@ -47,16 +51,16 @@ export default function ChangeEmailPage() {
         {step !== 'DONE' && (
           <button
             onClick={goBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
             aria-label={step === 'CODE' ? '이전 단계' : '뒤로가기'}
           >
             <IconArrowBack width={20} height={20} />
           </button>
         )}
-        <h2 className="text-heading-md font-bold text-text-primary">이메일</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">이메일</h2>
         <button
           onClick={step === 'DONE' ? goToAccountDetail : close}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />
@@ -89,7 +93,7 @@ export default function ChangeEmailPage() {
             {/* 이메일 입력 + 인라인 인증요청 + 안내멘트 */}
             <div className="flex flex-col gap-2">
               <div
-                className={`flex h-14 items-center gap-2 rounded-[10px] border bg-surface px-4 transition ${
+                className={`flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition ${
                   emailError
                     ? 'border-state-error ring-1 ring-inset ring-state-error'
                     : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary'
@@ -102,7 +106,7 @@ export default function ChangeEmailPage() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleSendCode();
                   }}
-                  placeholder="변경할 이메일을 입력하세요"
+                  placeholder="변경할 이메일을 입력해주세요."
                   autoComplete="email"
                   className="min-w-0 flex-1 bg-transparent text-body font-medium text-text-primary outline-none placeholder:font-normal placeholder:text-text-placeholder"
                 />
@@ -138,7 +142,7 @@ export default function ChangeEmailPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-14 items-center gap-2 rounded-[10px] border px-4 transition',
+                    'flex h-10 items-center gap-2 rounded-[10px] border px-4 transition',
                     codeDisabled
                       ? 'border-outline bg-disabled' // 5회 실패/시간초과: 비활성 회색(#F8F9FA, 다크모드 대응)
                       : codeError
@@ -184,13 +188,23 @@ export default function ChangeEmailPage() {
           <button
             onClick={handleVerifyAndChange}
             disabled={!canComplete}
-            className="h-14 w-full rounded-xl bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+            className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
           >
             {isVerifying ? '변경 중...' : '완료'}
           </button>
         </div>
       </div>
       )}
+      {/* 최종 변경 확인 (RN Alert 패리티) */}
+      <ConfirmDialog
+        open={pendingChangeEmail !== null}
+        title="이메일을 변경할까요?"
+        description={pendingChangeEmail ? `${pendingChangeEmail}(으)로 변경돼요.` : ''}
+        confirmLabel="변경"
+        cancelLabel="취소"
+        onConfirm={() => void confirmChange()}
+        onCancel={cancelChange}
+      />
     </SettingsOverlay>
   );
 }

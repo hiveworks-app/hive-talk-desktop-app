@@ -6,7 +6,9 @@ import { cn } from '@/shared/lib/cn';
 import { IconPlay } from '@/shared/ui/icons';
 import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
 
-const GAP_PX = 0;
+// RN chatImageGridMetrics 패리티 — 셀 간격 4px, 미리보기 최대 30장
+const GAP_PX = 4;
+const MAX_PREVIEW = 30;
 
 interface RowDef {
   length: number;
@@ -16,10 +18,8 @@ interface RowDef {
 function buildRows(count: number): RowDef[] {
   if (count === 1) return [{ length: 1, columns: 1 }];
   if (count === 2) return [{ length: 2, columns: 2 }];
-  if (count === 3) return [
-    { length: 1, columns: 1 },
-    { length: 2, columns: 2 },
-  ];
+  // RN 패리티 — 3장은 한 줄 3칸 정사각
+  if (count === 3) return [{ length: 3, columns: 3 }];
   if (count === 4) return [
     { length: 2, columns: 2 },
     { length: 2, columns: 2 },
@@ -74,7 +74,9 @@ export function ChatImageGrid({
   maxWidth = 240,
   onImageClick,
 }: ChatImageGridProps) {
-  const count = sources.length;
+  // RN 패리티 — 30장 초과는 미리보기에서 잘라낸다
+  const visibleSources = sources.slice(0, MAX_PREVIEW);
+  const count = visibleSources.length;
   if (count === 0) return null;
 
   const rows = buildRows(count);
@@ -90,19 +92,19 @@ export function ChatImageGrid({
 
   // Single image → larger, not square-cropped
   if (count === 1) {
-    const src = sources[0];
+    const src = visibleSources[0];
     return (
       <button
         type="button"
         onClick={() => onImageClick?.(0)}
-        className={cn('overflow-hidden rounded-lg', dimmed && 'opacity-50')}
+        className={cn("overflow-hidden rounded-2xl", dimmed && "opacity-50")}
         style={{ maxWidth: maxWidth }}
       >
         <div className="relative">
           <GridImg
             storageKey={src.storageKey}
             fallbackSrc={src.src}
-            className="max-h-48 max-w-full rounded-lg object-cover"
+            className="max-h-48 max-w-full rounded-2xl object-cover"
           />
           {src.isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -121,7 +123,7 @@ export function ChatImageGrid({
     <div className="overflow-hidden rounded-lg" style={{ width: maxWidth, maxWidth }}>
       {rows.map((row, rowIndex) => {
         const start = rowStartIndices[rowIndex];
-        const rowItems = sources.slice(start, start + row.length);
+        const rowItems = visibleSources.slice(start, start + row.length);
         const size = cellSize(row.columns);
 
         // 3장 레이아웃: 1행(전체 너비) 높이를 하단 셀과 맞춤

@@ -52,6 +52,8 @@ export function LockScreen() {
         deviceToken: deviceInfo.deviceId,
         deviceType: 'DESKTOP',
         deviceId: deviceInfo.deviceId,
+        // 동일 deviceId 재인증(잠금 해제)이라 중복 세션 아님 — 강제 로그인 불필요
+        force: false,
       });
 
       const { accessToken, refreshToken } = res.payload;

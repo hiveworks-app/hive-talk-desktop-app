@@ -27,8 +27,6 @@ export const useChatRoomController = () => {
   const deleteMessageById = useChatRoomRuntimeStore(s => s.deleteMessageById);
   const setLoading = useChatRoomRuntimeStore(s => s.setLoading);
   const replaceLocalWithServer = useChatRoomRuntimeStore(s => s.replaceLocalWithServer);
-  const addPendingReadEvent = useChatRoomRuntimeStore(s => s.addPendingReadEvent);
-  const clearPendingReadEvents = useChatRoomRuntimeStore(s => s.clearPendingReadEvents);
   const switchRoom = useChatRoomRuntimeStore(s => s.switchRoom);
 
   const viewStateRef = useRef<'in' | 'out' | null>(null);
@@ -65,14 +63,14 @@ export const useChatRoomController = () => {
   const { handleWsMessage } = useChatRoomWsHandlers({
     channelType, parseWsMessage: parseWsMessageRef.current,
     setMessages, replaceMessages, setLoading, deleteMessageById, replaceLocalWithServer,
-    normalizeUserId, addPendingReadEvent, participantsManager,
+    normalizeUserId, participantsManager,
     recalculateAllMessagesNotReadCount, isReconnectFetchRef, isInitialFetchRef, isMountedRef,
   });
   handleWsMessageRef.current = handleWsMessage;
 
   useRoomLifecycle({
     currentRoomId, channelType, isConnected, send, addListener, removeListener,
-    clearPendingReadEvents, participantsManager, recalculateAllMessagesNotReadCount,
+    participantsManager, recalculateAllMessagesNotReadCount,
     handleWsMessageRef, viewStateRef, isMountedRef, needsFetchAfterReconnectRef,
     isReconnectFetchRef, lastMessage, builders,
     getLastLocalMessageId: () => {

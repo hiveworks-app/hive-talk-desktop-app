@@ -121,10 +121,7 @@ app.whenReady().then(async () => {
         submenu: [
           { role: 'reload', label: '새로고침' },
           { role: 'toggleDevTools', label: '개발자 도구' },
-          { type: 'separator' },
-          { role: 'zoomIn', label: '확대' },
-          { role: 'zoomOut', label: '축소' },
-          { role: 'resetZoom', label: '원래 크기' },
+          // 확대/축소(⌘+/−) 미제공 — 네이티브 데스크톱 앱처럼 고정 배율 (카톡 PC 관례)
         ],
       },
       {

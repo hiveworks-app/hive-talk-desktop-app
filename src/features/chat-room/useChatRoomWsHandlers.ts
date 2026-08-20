@@ -31,7 +31,6 @@ interface UseChatRoomWsHandlersParams {
   deleteMessageById: (id: string) => void;
   replaceLocalWithServer: (fileId: string, serverMessage: Message) => void;
   normalizeUserId: (userId: string | number | null | undefined) => string;
-  addPendingReadEvent: (messageId: string, userId: string) => void;
   participantsManager: ParticipantsManager;
   recalculateAllMessagesNotReadCount: (participants: ParticipantItemsType[]) => void;
   isReconnectFetchRef: MutableRefObject<boolean>;
@@ -139,7 +138,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     // 신고 마스킹(REPORTED/REPORT_HIDDEN) — REPORTED엔 response.channelType이 없어 채널 필터보다 먼저 처리
     if (isReportedMessageBroadcast(data)) {
       const p = data.response.payload;
-      if (p.roomId === roomId && p.messageId) maskReportedMessage(p.messageId, p.content, WS_MESSAGE_CONTENT_TYPE.TEXT);
+      if (p.roomId === roomId && p.messageId) maskReportedMessage(p.messageId, p.content, WS_MESSAGE_CONTENT_TYPE.REPORTED_MASK);
       return;
     }
     if (isReportHiddenBroadcast(data)) {

@@ -8,6 +8,7 @@ import { IconCloseFilled } from '@/shared/ui/icons';
 import { TagIcon } from '@/shared/ui/TagIcon';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { useSelectedTagStore, useTagStore } from '@/store/tag/tagStore';
 import { useUIStore } from '@/store/uiStore';
 
@@ -19,15 +20,12 @@ interface TagSelectPanelProps {
 }
 
 /**
- * 업무태그 선택 바텀시트 (채팅 컬럼 오버레이).
+ * 업무태그 선택 패널 (채팅 컬럼 오버레이).
  *
- * 데스크톱은 멀티컬럼이라 RN 의 전체화면 바텀시트 대신 "채팅 컬럼 한정" 으로
+ * RN 은 전체화면 바텀시트지만, 데스크톱 관례에 맞게 "채팅 컬럼 한정 중앙 카드"로
  * 띄운다 — 딤은 채팅 본문(메시지+입력창)만 덮고, 헤더/사이드패널/네비는 가린다.
- * 시트는 컬럼 하단에서 슬라이드업 (Figma: 1154:16978/16979).
  *
- * 카테고리 구분 없이 전체 업무태그(20개)를 5열 그리드로 평면 노출한다
- * (정책상 바텀시트 = 전체 업무태그 목록). 최근 사용 태그 섹션은 사용기록
- * 저장소가 별도로 필요해 후속 작업으로 분리.
+ * 최근 사용 태그(최대 5) + 전체 업무태그(20개, 5열 그리드) 2섹션 구성 (RN ChatRoomBottomTag 패리티).
  */
 function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
   const { tagList: tags, isLoading } = useGetTagInfo();
@@ -35,6 +33,17 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
   const { selectedTags, toggleTag, resetSelectedTags } = useSelectedTagStore();
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const loginUserId = useAuthStore(s => s.user?.id);
+
+  // 최근 사용 태그 (최대 5개 — RN RECENT_TAG_LIMIT, title 기준 매칭)
+  const recentNames = useRecentTagUsageStore(s => s.names);
+  const recentTags = useMemo(() => {
+    if (!tags?.length || recentNames.length === 0) return [];
+    const byTitle = new Map(tags.map(t => [t.title, t]));
+    return recentNames
+      .map(name => byTitle.get(name))
+      .filter((t): t is TagListType => t !== undefined)
+      .slice(0, 5);
+  }, [tags, recentNames]);
 
   // 선택된 태그 ID Set
   const selectedIdSet = useMemo(
@@ -93,17 +102,14 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
   return (
     // 딤: 채팅 본문(메시지+입력창)만 덮음. 딤 클릭 시 선택 폐기 후 닫기.
     <div
-      className="animate-tag-dim-in absolute inset-0 z-30 flex flex-col justify-end bg-black/30"
+      className="animate-tag-dim-in absolute inset-0 z-30 flex items-center justify-center bg-black/30 p-4"
       onClick={handleClose}
     >
-      {/* 시트: 하단에서 슬라이드업 */}
+      {/* 중앙 카드 (데스크톱 관례 — RN 바텀시트 대체) */}
       <div
-        className="animate-tag-sheet-up max-h-full w-full overflow-y-auto rounded-t-[20px] bg-white px-4 pb-6 pt-2.5 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:bg-surface"
+        className="animate-pop-in max-h-full w-[400px] max-w-full overflow-y-auto rounded-2xl bg-white px-4 pb-6 pt-3 shadow-xl dark:bg-surface"
         onClick={e => e.stopPropagation()}
       >
-        {/* 핸들 */}
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-outline" />
-
         {/* 헤더: 닫기 / 타이틀 / 완료 */}
         <div className="flex items-center gap-2 py-1">
           <button
@@ -114,14 +120,14 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
           >
             <IconCloseFilled size={16} />
           </button>
-          <p className="flex-1 text-center text-[16px] tracking-[-0.16px] text-text-primary">
+          <p className="flex-1 text-center text-body text-text-primary">
             <span className="font-semibold">업무태그 </span>
             <span className="font-normal">(최대 3개)</span>
           </p>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex h-8 shrink-0 items-center justify-center rounded-xl bg-primary px-2.5 text-[16px] font-medium text-white transition-colors hover:bg-state-primary-pressed"
+            className="flex h-8 shrink-0 items-center justify-center rounded-xl bg-primary px-2.5 text-body font-medium text-white transition-colors hover:bg-state-primary-pressed"
           >
             완료
           </button>
@@ -138,8 +144,27 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
           </div>
         )}
 
+        {/* 최근 사용 태그 (RN 패리티 — 한 행, 최대 5개) */}
+        {recentTags.length > 0 && (
+          <div className="mx-auto mt-4 w-full max-w-[360px]">
+            <p className="mb-3 text-sub text-text-secondary">최근 사용 태그</p>
+            <div className="grid grid-cols-5 justify-items-center gap-x-2">
+              {recentTags.map(item => (
+                <TagIcon
+                  key={`recent-${item.tagId}`}
+                  name={item.title}
+                  selected={selectedIdSet.has(Number(item.tagId))}
+                  disabled={otherUserTagIdSet.has(Number(item.tagId))}
+                  onClick={() => handlePressTag(item)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 업무태그 그리드 (5열) */}
-        <div className="mx-auto mt-4 w-full max-w-[360px]">
+        <div className="mx-auto mt-6 w-full max-w-[360px]">
+          {recentTags.length > 0 && <p className="mb-3 text-sub text-text-secondary">전체 태그</p>}
           {isLoading ? (
             <div className="flex h-[200px] items-center justify-center">
               <span className="text-sub-sm text-text-tertiary">태그 불러오는 중...</span>

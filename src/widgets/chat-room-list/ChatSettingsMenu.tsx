@@ -24,7 +24,7 @@ export function ChatSettingsMenu({ sortType, onSortChange, onManageRooms }: Chat
           type="button"
           title="설정"
           aria-label="채팅 설정"
-          className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-colors hover:bg-gray-200 data-[state=open]:bg-gray-200"
+          className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 data-[state=open]:bg-gray-200"
         >
           <IconSettingDefault width={20} height={20} />
         </button>
@@ -33,7 +33,7 @@ export function ChatSettingsMenu({ sortType, onSortChange, onManageRooms }: Chat
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-[180px] overflow-hidden rounded-xl bg-white py-1 shadow-[0px_2px_22px_rgba(0,0,0,0.12)] focus:outline-none"
+          className="motion-menu z-50 w-[180px] overflow-hidden rounded-xl bg-white py-1 shadow-[0px_2px_22px_rgba(0,0,0,0.12)] focus:outline-none"
         >
           <DropdownMenu.Label className="px-3 py-1.5 text-sub-sm text-text-tertiary">
             정렬순
@@ -63,7 +63,7 @@ function SortItem({ label, active, onSelect }: { label: string; active: boolean;
     <DropdownMenu.Item
       onSelect={onSelect}
       className={cn(
-        "flex cursor-pointer items-center justify-between px-3 py-2.5 text-sub outline-none data-[highlighted]:bg-gray-100",
+        "flex cursor-pointer items-center justify-between px-3 py-2.5 text-body outline-none data-[highlighted]:bg-gray-100",
         active ? "font-semibold text-primary" : "text-text-primary",
       )}
     >

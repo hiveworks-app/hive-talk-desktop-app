@@ -178,7 +178,9 @@ async function ssrfSafeFetch(initialUrl: string): Promise<Response | null> {
       response = await fetch(currentUrl.toString(), {
         signal: controller.signal,
         redirect: 'manual', // 직접 따라가며 홉마다 재검증
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HiveTalkBot/1.0)' },
+        // SPA 사이트(네이버지도 등)는 알려진 스크래퍼 UA에게만 OG 태그를 SSR로 내려줌.
+        // 자체 봇 UA로는 빈 껍데기 HTML만 응답 — 카카오톡 스크래퍼와 동일한 UA 조합 사용 (RN 패리티)
+        headers: { 'User-Agent': 'facebookexternalhit/1.1;kakaotalk-scrap/1.0;' },
       });
     } finally {
       clearTimeout(timeoutId);

@@ -28,7 +28,8 @@ export default function WithdrawalPage() {
 
   // ←(이전 단계): 비밀번호 입력 → 안내. X(닫기): 개인/보안으로 나가기. 역할 분리.
   const stepBack = () => setStep('intro');
-  const close = () => router.push('/settings/personal-security');
+  // RN dismissAll 패리티 — X는 전체설정으로 복귀
+  const close = () => router.push('/settings');
 
   const handleSubmit = () => {
     if (password.length === 0 || isPending) return;
@@ -56,17 +57,17 @@ export default function WithdrawalPage() {
         {step === 'password' && (
           <button
             onClick={stepBack}
-            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+            className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
             aria-label="이전 단계"
           >
             <IconArrowBack width={20} height={20} />
           </button>
         )}
-        <h2 className="text-heading-md font-bold text-text-primary">하이브톡 탈퇴</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">하이브톡 탈퇴</h2>
         {step !== 'complete' && (
           <button
             onClick={close}
-            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
             aria-label="닫기"
           >
             <IconCloseStroke width={20} height={20} />
@@ -78,11 +79,12 @@ export default function WithdrawalPage() {
         <div className="mx-auto max-w-[400px]">
           {step === 'intro' && (
             <div className="space-y-6">
+              {/* RN AccountWithdrawalScreen 패리티 — 고지문 body(16) gray-700, 체크 라벨 heading-md medium + 24px 체크박스 */}
               <div>
                 <h3 className="text-heading-md font-medium text-text-primary">하이브톡을 탈퇴하면</h3>
                 <ul className="mt-4 space-y-4">
                   {WITHDRAWAL_NOTICES.map((notice, i) => (
-                    <li key={i} className="flex gap-2 text-sub text-text-secondary">
+                    <li key={i} className="flex gap-2 text-body text-gray-700">
                       <span aria-hidden>•</span>
                       <span className="flex-1">{notice}</span>
                     </li>
@@ -96,9 +98,9 @@ export default function WithdrawalPage() {
                 className="flex w-full items-start gap-2 text-left"
               >
                 <span className="pt-0.5">
-                  <Checkbox checked={confirmed} size="md" />
+                  <Checkbox checked={confirmed} size="lg" />
                 </span>
-                <span className="flex-1 text-sub font-medium text-text-primary">
+                <span className="flex-1 text-heading-md font-medium text-gray-900">
                   위 유의사항을 모두 확인했어요. 탈퇴를 진행할게요.
                 </span>
               </button>
@@ -107,7 +109,7 @@ export default function WithdrawalPage() {
                 type="button"
                 onClick={() => setStep('password')}
                 disabled={!confirmed}
-                className="w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled"
+                className="flex h-10 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
               >
                 하이브톡 탈퇴
               </button>
@@ -142,11 +144,12 @@ export default function WithdrawalPage() {
                 {passwordError && <p className="mt-1 text-sub-sm text-red-500">{passwordError}</p>}
               </div>
 
+              {/* RN 패리티 — 실행 버튼도 primary blue 56px, disabled gray-400 */}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={password.length === 0 || isPending}
-                className="w-full rounded-lg bg-red-500 py-2.5 text-sub font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-disabled"
+                className="flex h-10 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
               >
                 {isPending ? '처리 중...' : '인증 및 하이브톡 탈퇴하기'}
               </button>
@@ -154,18 +157,23 @@ export default function WithdrawalPage() {
           )}
 
           {step === 'complete' && (
-            <div className="flex flex-col items-center gap-4 pt-10 text-center">
-              <h3 className="text-heading-lg font-semibold text-text-primary">회원 탈퇴가 완료되었어요</h3>
-              <p className="text-sub text-text-secondary">
-                그동안 하이브톡을 이용해 주셔서 감사합니다.
-                <br />더 나은 서비스로 다시 만나뵙기를 바랍니다.
-              </p>
+            /* RN WithdrawalCompleteScreen 패리티 — 파란 체크 뱃지 + 감사 카피 */
+            <div className="flex flex-col items-center gap-5 pt-10 text-center">
+              <div className="flex size-[50px] items-center justify-center rounded-full bg-blue-100">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-heading-lg font-semibold text-text-primary">하이브톡 탈퇴 완료</h3>
+                <p className="text-sub text-text-secondary">하이브톡을 이용해 주셔서 감사합니다.</p>
+              </div>
               <button
                 type="button"
                 onClick={handleComplete}
                 className="mt-4 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary"
               >
-                확인
+                로그인 페이지로 가기
               </button>
             </div>
           )}

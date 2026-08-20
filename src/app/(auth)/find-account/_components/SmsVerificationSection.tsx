@@ -36,10 +36,10 @@ export function SmsVerificationSection({
         <Input
           value={verificationCode}
           onChange={(e) => onChangeVerificationCode(e.target.value)}
-          placeholder="인증번호 6자리"
-          maxLength={6}
+          placeholder="인증번호 5자리"
+          maxLength={5}
           inputMode="numeric"
-          className="h-11 pr-16"
+          className="h-10 pr-16"
           disabled={isMaxFailuresReached}
         />
         {timerText && (

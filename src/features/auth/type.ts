@@ -12,7 +12,12 @@ interface CommonAuthRequestProps {
 export interface LoginRequestProps extends CommonAuthRequestProps {
   email: string;
   password: string;
+  /** 강제 로그인 — 기본 false. 중복 로그인(SC009) 다이얼로그에서 '계속' 선택 시 true로 재시도(기존 기기 세션 대체) */
+  force: boolean;
 }
+
+/** 중복 로그인(SC009) — 다른 기기에 활성 세션이 있을 때 로그인 차단 응답 ("다른 기기에서 로그인되어 있습니다.") */
+export const DUPLICATE_LOGIN_ERROR_CODE = 'SC009';
 
 export interface LoginResponseProps {
   id: string;

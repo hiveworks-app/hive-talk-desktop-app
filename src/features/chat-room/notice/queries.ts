@@ -5,8 +5,10 @@ import {
   apiCreateNotice,
   apiDeleteNotice,
   apiGetNotice,
+  apiUpdateNotice,
   apiUpdateNoticeDisplay,
 } from './api';
+import { normalizeNoticeModel } from './noticeUtils';
 import type { NoticeDisplayRequest, NoticeModel, NoticeRequest } from './type';
 
 /** 공지사항 조회 (DM/GM/EM 지원 — RN 패리티) */
@@ -20,7 +22,8 @@ export const useNoticeQuery = (roomId: string, channelType: WebSocketChannelType
     queryKey: ROOM_NOTICE_KEY(roomId, channelType),
     queryFn: async () => {
       const res = await apiGetNotice(roomId, channelType);
-      return res.payload ?? null;
+      // v1(legacy) 응답 하위호환 정규화 — 마이그레이션 이전 등록 공지 대비 (RN 패리티)
+      return normalizeNoticeModel(res.payload);
     },
     enabled: !!roomId && isSupported,
   });
@@ -33,10 +36,28 @@ export const useCreateNoticeMutation = (
 ) => {
   const queryClient = useQueryClient();
 
-  return useMutation<NoticeModel, Error, NoticeRequest>({
+  return useMutation<NoticeModel | null, Error, NoticeRequest>({
     mutationFn: async body => {
       const res = await apiCreateNotice(roomId, channelType, body);
-      return res.payload;
+      return normalizeNoticeModel(res.payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ROOM_NOTICE_KEY(roomId, channelType) });
+    },
+  });
+};
+
+/** 공지사항 수정 (등록자 본인만 가능) */
+export const useUpdateNoticeMutation = (
+  roomId: string,
+  channelType: WebSocketChannelTypes,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<NoticeModel | null, Error, { noticeId: number; body: NoticeRequest }>({
+    mutationFn: async ({ noticeId, body }) => {
+      const res = await apiUpdateNotice(roomId, channelType, noticeId, body);
+      return normalizeNoticeModel(res.payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ROOM_NOTICE_KEY(roomId, channelType) });
@@ -69,7 +90,7 @@ export const useUpdateNoticeDisplayMutation = (
 ) => {
   const queryClient = useQueryClient();
 
-  return useMutation<NoticeModel, Error, { noticeId: number; body: NoticeDisplayRequest }>({
+  return useMutation<null, Error, { noticeId: number; body: NoticeDisplayRequest }>({
     mutationFn: async ({ noticeId, body }) => {
       const res = await apiUpdateNoticeDisplay(roomId, channelType, noticeId, body);
       return res.payload;

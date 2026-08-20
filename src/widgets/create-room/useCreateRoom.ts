@@ -1,5 +1,6 @@
 'use client';
 
+import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useCallback, useMemo, useState } from 'react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,9 +10,12 @@ import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import type { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useBlockedMembersStore } from '@/store/blockedMembersStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useUIStore } from '@/store';
+import { apiGetDmCheck } from '@/features/chat-room-list/api';
+import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { findExistingDMRoom } from './createRoomUtils';
 
 const MAX_TITLE = 50;
@@ -22,7 +26,7 @@ const MAX_TITLE = 50;
  * 방은 첫 메시지 전송 시 channelType에 맞는 엔드포인트(POST /app/dm/{userId} | /app/gm)로 생성된다.
  * (RN CreateChatRoomScreen 2-step 패리티)
  */
-export function useCreateRoom(onClose: () => void) {
+export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
   const router = useAppRouter();
   const queryClient = useQueryClient();
   const showSnackbar = useUIStore((state) => state.showSnackbar);
@@ -32,20 +36,28 @@ export function useCreateRoom(onClose: () => void) {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // presetMemberIds: DM 대화초대 → 기존 상대를 포함한 신규 GM 생성 진입 (RN 패리티)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(presetMemberIds ?? []));
   const [gmTitle, setGmTitleRaw] = useState('');
 
   const setGmTitle = (v: string) => setGmTitleRaw(v.slice(0, MAX_TITLE));
 
-  // 사내멤버(협력 제외, 나 제외)만 대화상대로
+  // 차단 멤버는 대화상대 선택에서 제외 (정책 block.md)
+  const blockedItems = useBlockedMembersStore(s => s.items);
+  const blockedIdSet = useMemo(
+    () => new Set(blockedItems.map((m) => String(m.userId))),
+    [blockedItems],
+  );
+
+  // 사내멤버(협력 제외, 나 제외, 차단 제외)만 대화상대로
   const companyMembers = useMemo(
-    () => members.filter((m) => m.isExternal !== true && String(m.userId) !== String(myUserId)),
-    [members, myUserId],
+    () => members.filter((m) => m.isExternal !== true && String(m.userId) !== String(myUserId) && !blockedIdSet.has(String(m.userId))),
+    [members, myUserId, blockedIdSet],
   );
   // 관심멤버도 협력멤버(isExternal)는 제외 — 사내채팅(DM/GM) 생성 대상이 아니므로 (RN CreateChatRoomStep1 패리티)
   const pinnedCompany = useMemo(
-    () => pinnedMembers.filter((m) => m.isExternal !== true && String(m.userId) !== String(myUserId)),
-    [pinnedMembers, myUserId],
+    () => pinnedMembers.filter((m) => m.isExternal !== true && String(m.userId) !== String(myUserId) && !blockedIdSet.has(String(m.userId))),
+    [pinnedMembers, myUserId, blockedIdSet],
   );
 
   const pinnedSection = useMemo(
@@ -53,7 +65,8 @@ export function useCreateRoom(onClose: () => void) {
     [pinnedCompany, search],
   );
   const companySection = useMemo(
-    () => filterByhangeulSearch(companyMembers, search, (m) => m.name),
+    // 정책 정렬 (RN CreateChatRoomStep1 패리티) — 관심멤버 섹션은 사용자 지정 순서 유지
+    () => [...filterByhangeulSearch(companyMembers, search, (m) => m.name)].sort((a, b) => comparePolicyMemberName(a.name, b.name)),
     [companyMembers, search],
   );
 
@@ -109,7 +122,7 @@ export function useCreateRoom(onClose: () => void) {
       invitedUserIds: string[] = [],
     ) => {
       useChatRoomInfo.getState().setChatRoomInfo({
-        roomId, roomName, channelType, totalUserCount, otherUserIsExit: false, invitedUserIds, lastMessage,
+        roomId, roomName, channelType, totalUserCount, otherUserIsExit: false, otherUserIsRemoved: false, invitedUserIds, lastMessage,
       });
       if (!roomId) {
         useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
@@ -120,21 +133,41 @@ export function useCreateRoom(onClose: () => void) {
     [close, router],
   );
 
-  // 1:1 (DM) — 기존 방 있으면 이동, 없으면 신규(첫 메시지 시 POST /app/dm/{userId})
-  const submitDM = () => {
+  // 1:1 (DM) — dedup 순서: ① 목록 캐시 ② 서버 dm-check(내가 나갔던 방 복귀 포함) ③ 신규 draft
+  // (RN moveToDMRoom 3단 dedup 패리티 — 방은 첫 메시지 시 POST /app/dm/{userId}로 생성)
+  const submitDM = async () => {
     const userId = [...selectedIds][0];
     const member = companyMembers.find((m) => String(m.userId) === userId);
-    const existing = findExistingDMRoom(queryClient, userId);
-    if (existing) {
+
+    const openExisting = (room: GetChatRoomListItemType) => {
+      const otherIsExit = room.roomModel.participantDetail?.isExit === true;
       navigateToRoom(
-        existing.roomModel.roomId,
-        existing.roomModel.participantDetail?.name ?? member?.name ?? '채팅방',
+        room.roomModel.roomId,
+        room.roomModel.participantDetail?.name ?? member?.name ?? '채팅방',
         WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-        existing.roomModel.participants?.length ?? 2,
-        existing.messageList[0] ?? null,
+        room.roomModel.participants?.length ?? 2,
+        room.messageList[0] ?? null,
+        // 상대가 나간 방이면 메시지 전송 시 자동 재초대 준비 (목록 행 클릭과 동일)
+        otherIsExit ? [userId] : [],
       );
       showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
+    };
+
+    const cached = findExistingDMRoom(queryClient, userId);
+    if (cached) {
+      openExisting(cached);
       return;
+    }
+
+    // 캐시에 없으면 서버 조회 — 실패 시 신규 draft로 진행 (RN과 동일한 관용 처리)
+    try {
+      const res = await apiGetDmCheck(userId);
+      if (res.payload?.roomModel?.roomId) {
+        openExisting(res.payload);
+        return;
+      }
+    } catch {
+      // 조회 실패 — 신규 방 생성(draft)으로 진행
     }
     navigateToRoom('', member?.name ?? '채팅방', WS_CHANNEL_TYPE.DIRECT_MESSAGE, 2, null, [userId]);
   };
@@ -150,14 +183,18 @@ export function useCreateRoom(onClose: () => void) {
   // Step1 확인: 1명=DM 바로 생성, 2명+=Step2(채팅방 정보 설정)로
   const handleStep1Confirm = () => {
     if (count === 0) return;
-    if (count === 1) submitDM();
+    if (count === 1) void submitDM();
     else setStep(2);
   };
   const handleStep2Confirm = () => {
     if (!canConfirmStep2) return;
     submitGM();
   };
-  const goBack = () => setStep(1);
+  // Step2 X → Step1 복귀 + 입력한 방 이름 초기화 (RN 패리티)
+  const goBack = () => {
+    setGmTitleRaw('');
+    setStep(1);
+  };
 
   return {
     step, goBack,

@@ -2,6 +2,11 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { useBlockedMembersStore } from '@/store/blockedMembersStore';
+import { useDraftStore } from '@/store/chat/draftStore';
+import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
+import { useMemberInviteStore } from '@/store/memberInviteStore';
+import { pendingReadRegistry } from '@/features/chat-room/pendingReadRegistry';
 import type { AuthState } from './type';
 
 export type { AuthSaveUserInfoTypes, DeviceInfoTypes, SetAuthProps, AuthState } from './type';
@@ -39,6 +44,12 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         set({ ...initAuthState });
         syncAuthCookie(false);
+        // 계정 데이터 잔존 방지 — 차단 목록·드래프트·실패 메시지는 계정 종속 (RN safeClear 패리티)
+        useBlockedMembersStore.getState().clear();
+        useDraftStore.setState({ drafts: {} });
+        useFailedMessagesStore.getState().clearAll();
+        useMemberInviteStore.getState().reset();
+        pendingReadRegistry.reset();
       },
     }),
     {

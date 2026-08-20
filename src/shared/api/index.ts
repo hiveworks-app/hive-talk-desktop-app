@@ -1,6 +1,7 @@
 import { AuthError } from '@/shared/api/errors';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import { useAuthStore } from '@/store/auth/authStore';
+import { DUPLICATE_LOGIN_CODE, useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -49,18 +50,40 @@ export function getErrorMessage(err: unknown, fallback: string): string {
   return isApiError(err) ? (err.message || fallback) : fallback;
 }
 
+// API 타임아웃 — 응답 없는 서버/프록시에서 요청이 영구 대기(pending)로 남아
+// 로딩 스피너 고착·mutation 미완료가 발생하는 것을 방지 (RN fetchWithTimeout 패리티)
+const REQUEST_TIMEOUT_MS = 15_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+
+function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(ms);
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+}
+
+/** 타임아웃(TimeoutError)을 사용자 친화 ApiError로 정규화 */
+function normalizeTimeoutError(err: unknown): never {
+  if (err instanceof DOMException && err.name === 'TimeoutError') {
+    throw new ApiError({ status: 0, message: '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.' });
+  }
+  throw err;
+}
+
 async function rawRequest(path: string, options: RequestOptions = {}) {
   const { method = 'GET', body, headers = {}, signal } = options;
 
-  return await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  });
+  try {
+    return await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: withTimeout(signal, REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    normalizeTimeoutError(err);
+  }
 }
 
 export async function request<TResponse>(
@@ -96,6 +119,17 @@ export async function request<TResponse>(
 
     const serverCode = parsed?.code;
     const serverMessage = parsed?.message;
+
+    // 중복 로그인(SC010) — 백그라운드 복귀 등으로 소켓 메시지를 못 받은 경우의 REST 감지 경로.
+    // 강제 종료 안내 다이얼로그를 띄우고, 로그아웃은 확인 시점에 수행 (RN 패리티)
+    if (serverCode === DUPLICATE_LOGIN_CODE) {
+      useSessionDisconnectStore.getState().showNotice();
+      throw new AuthError(
+        serverMessage || '다른 기기에서 로그인되어 로그아웃되었습니다.',
+        'TOKEN_EXPIRED',
+      );
+    }
+
     const RETRYABLE_ERROR_CODES = ['SC001', 'SC002'];
     const canRetryWithRefresh = !!serverCode && RETRYABLE_ERROR_CODES.includes(serverCode);
 
@@ -182,6 +216,8 @@ export async function uploadToPresignedUrl(
     method: 'PUT',
     headers: { 'Content-Type': contentType },
     body: fileBody,
+    // 업로드는 대용량 대비 여유 타임아웃 — 무한 pending만 방지
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
   });
 
   if (!res.ok) {

@@ -16,11 +16,13 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 interface ProfileEditModeProps {
   user: AuthSaveUserInfoTypes;
   onDone: () => void;
+  /** 저장 가능 여부(이름 공백 검증) 변경 통지 — 헤더 [완료] disabled 연동 (RN onValidityChange 패리티) */
+  onValidityChange?: (canSave: boolean) => void;
 }
 
 type ImageStatus = 'idle' | 'uploading' | 'done';
 
-export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
+export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditModeProps) {
   const { mutateAsync: updateProfile, isPending } = useMyProfileUpdate();
   const { mutateAsync: uploadImage } = useMyProfileImageUpload();
   const { showSnackbar } = useUIStore();
@@ -81,6 +83,7 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
   };
 
   const handleSave = async () => {
+    if (isPending) return;
     if (!name.trim()) {
       showSnackbar({ message: '이름을 입력해주세요.', state: 'error' });
       return;
@@ -112,26 +115,35 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
 
   const avatarSrc = removeImage ? null : (previewUrl ?? currentPresignedUrl);
 
+  // RN MyProfileEdit 패리티 — 세로 중앙 정렬, 154px 이미지, 저장(완료)은 헤더 우측 버튼이
+  // form="profile-edit-form" 속성으로 이 폼의 submit을 트리거한다 (하단 버튼 없음).
   return (
-    <div className="flex flex-col items-center px-4 pb-6 pt-7">
-      {/* 아바타 + 카메라 버튼 (Figma 2424-56565) */}
+    <form
+      id="profile-edit-form"
+      onSubmit={e => {
+        e.preventDefault();
+        void handleSave();
+      }}
+      className="flex flex-1 flex-col items-center justify-center px-4 py-6"
+    >
+      {/* 아바타 + 카메라 버튼 (RN 154px + 우하단 카메라 배지) */}
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="relative h-[120px] w-[120px] shrink-0"
+        className="relative h-[154px] w-[154px] shrink-0"
         aria-label="프로필 사진 변경"
       >
         {avatarSrc ? (
           <img src={avatarSrc} alt="" className="h-full w-full rounded-full object-cover" />
         ) : (
-          <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-100">
+          <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-300">
             <img src="/empty-profile.png" alt={user.name} className="h-full w-full rounded-full object-contain p-3" />
           </span>
         )}
 
-        {/* 카메라 버튼: 흰 라운드 사각 + 그림자 (우하단) */}
-        <span className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-text-primary shadow-[0px_2px_7.5px_rgba(0,0,0,0.15)]">
-          <IconDefaultCamera width={22} height={22} />
+        {/* 카메라 버튼: RN 패리티 — bottom-3/-right-[11px] rounded-2xl p-2, 아이콘 24px */}
+        <span className="absolute -right-[11px] bottom-3 flex items-center justify-center rounded-2xl bg-white p-2 text-text-primary shadow-[0px_2px_7.5px_rgba(0,0,0,0.15)]">
+          <IconDefaultCamera width={24} height={24} />
         </span>
 
         {/* 반영중(스피너) / 반영후(체크) — 아바타 중앙 오버레이 (Figma 2578-128231 / 128291) */}
@@ -166,24 +178,21 @@ export function ProfileEditMode({ user, onDone }: ProfileEditModeProps) {
         </button>
       )}
 
-      {/* 입력 폼: 이름 / 회사명(게스트) / 부서 / 직급 — 연락처는 정책상 미노출 */}
-      <div className="mt-7 flex w-full flex-col gap-3">
-        <ProfileInput value={name} onChange={setName} placeholder="이름" />
+      {/* 입력 폼: 이름 / 회사명(게스트) / 부서 / 직급 — 연락처는 정책상 미노출 (RN 이미지와 30px 간격) */}
+      <div className="mt-[30px] flex w-full flex-col gap-3">
+        <ProfileInput
+          value={name}
+          onChange={v => {
+            setName(v);
+            onValidityChange?.(v.trim().length > 0);
+          }}
+          placeholder="이름"
+        />
         {isGuest && <ProfileInput value={companyName} onChange={setCompanyName} placeholder="회사명" />}
         <ProfileInput value={department} onChange={setDepartment} placeholder="부서" />
         <ProfileInput value={job} onChange={setJob} placeholder="직급" />
       </div>
-
-      {/* 하단 풀폭 확정 버튼 (데스크톱 모달 컨벤션 — 확정 액션은 하단) */}
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={isPending}
-        className="mt-8 flex h-14 w-full items-center justify-center rounded-xl bg-primary text-[16px] font-semibold text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] disabled:opacity-50"
-      >
-        {isPending ? '저장 중...' : '완료'}
-      </button>
-    </div>
+    </form>
   );
 }
 
@@ -203,7 +212,7 @@ function ProfileInput({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       maxLength={PROFILE_FIELD_MAX_LENGTH}
-      className="h-14 w-full rounded-[10px] border border-gray-200 bg-surface px-4 text-[16px] leading-[22px] text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+      className="h-10 w-full rounded-[10px] border border-gray-200 bg-surface px-4 text-body text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
     />
   );
 }

@@ -16,13 +16,13 @@ interface ProfileCircleProps {
 const sizeStyles: Record<ProfileCircleSize, string> = {
   sm: 'h-9 w-9',
   md: 'h-[var(--size-avatar)] w-[var(--size-avatar)]',
-  lg: 'h-11 w-11',
+  lg: 'h-12 w-12', // RN ProfileImage medium(48px) 대응 — 멤버목록 헤더·설정 프로필
 };
 
 const noImagePadding: Record<ProfileCircleSize, string> = {
   sm: 'p-1.5',
   md: 'p-2',
-  lg: 'p-2',
+  lg: 'p-2.5', // RN medium(48px) p-2.5
 };
 
 export function ProfileCircle({ name, size = 'sm', storageKey, className }: ProfileCircleProps) {
@@ -59,7 +59,7 @@ export function ProfileCircle({ name, size = 'sm', storageKey, className }: Prof
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-blue-100',
+        'flex shrink-0 items-center justify-center rounded-full bg-blue-300',
         sizeStyles[size],
         noImagePadding[size],
         className,

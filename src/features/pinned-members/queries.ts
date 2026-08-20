@@ -9,8 +9,8 @@ import { useAuthStore } from '@/store/auth/authStore';
 
 /**
  * 고정(관심) 멤버 목록 조회.
- * 관심멤버 "등록/해제"는 각 멤버 상세 모달의 별 토글에서 지원한다.
- * 단, 목록 "순서변경·일괄 편집"은 모바일 앱 전담이다(데스크톱 미지원).
+ * 등록/해제는 멤버 상세 모달의 별 토글, 순서변경·일괄 편집은 멤버목록 편집
+ * (MemberListEditDialog — 기어 메뉴 진입)에서 지원한다 (RN 패리티).
  */
 export const useGetPinnedMembers = () => {
   const accessToken = useAuthStore(s => s.accessToken);

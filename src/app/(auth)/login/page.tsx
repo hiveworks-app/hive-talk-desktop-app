@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AccountSuspendedDialog } from "@/shared/ui/AccountSuspendedDialog";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { consumePendingSuspendedNotice, type PendingSuspendedNotice } from "@/shared/utils/pendingSuspendedNotice";
 import { useLoginForm } from "@/features/auth/useLoginForm";
 import { Button } from "@/shared/ui/Button";
@@ -14,17 +15,23 @@ import { Spinner } from "@/shared/ui/Spinner";
 
 export default function LoginPage() {
   const {
-    email, setEmail,
-    password, setPassword,
+    email, handleEmailChange,
+    password, handlePasswordChange, setPassword,
     showPassword, setShowPassword,
     isProcessing,
-    loginError, setLoginError,
+    loginError, loginErrorField, clearLoginError,
+    passwordInputRef,
     passwordFocused, setPasswordFocused,
     autoLogin, setAutoLogin,
     isFormFilled,
     accessToken,
     onLogin,
     handleKeyDown,
+    isDuplicateLoginVisible,
+    closeDuplicateLogin,
+    handleDuplicateLoginContinue,
+    suspendedInfo,
+    closeSuspendedDialog,
   } = useLoginForm();
 
   const preventBlur = (e: React.MouseEvent) => e.preventDefault();
@@ -45,32 +52,39 @@ export default function LoginPage() {
     // Electron: 로그인 화면 빈 영역을 드래그 핸들로 (입력·버튼·링크는 화이트리스트 규칙으로 자동 no-drag)
     <div className="electron-drag flex flex-1 items-center justify-center bg-white">
       <div className="flex w-full max-w-[400px] flex-col items-center px-4">
-        <Image src="/hivetalk-login-logo.png" alt="HiveTalk" width={200} height={115} priority />
-        <p className="mt-3 text-sub tracking-tight text-text-secondary">
-          대화가 데이터가 되는곳, 똑똑한 협업 플랫폼
-        </p>
+        {/* RN LoginScreen 패리티 — 로고 92px, 태그라인 없음 */}
+        <Image src="/hivetalk-login-logo.png" alt="HiveTalk" width={92} height={92} priority />
 
         <div className="mt-12 w-full space-y-5" onKeyDown={handleKeyDown}>
           <div className="space-y-2.5">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setLoginError(""); }}
-              placeholder="이메일"
-              autoComplete="email"
-              disabled={isProcessing}
-              className="h-11"
-            />
+            <div className="space-y-1.5">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                placeholder="이메일"
+                autoComplete="email"
+                disabled={isProcessing}
+                error={loginErrorField === 'email'}
+                className="h-11"
+              />
+              {/* 필드별 인라인 에러 — 해당 Input 바로 아래 (RN LoginScreen 패리티) */}
+              {loginErrorField === 'email' && loginError && (
+                <p className="text-sub-sm text-state-error">{loginError}</p>
+              )}
+            </div>
             <div className="relative">
               <Input
+                ref={passwordInputRef}
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setLoginError(""); }}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
                 placeholder="비밀번호"
                 autoComplete="current-password"
                 disabled={isProcessing}
+                error={loginErrorField === 'password'}
                 className={`h-11${passwordFocused && password.length > 0 ? " pr-16" : ""}`}
               />
               {passwordFocused && password.length > 0 && !isProcessing && (
@@ -79,7 +93,7 @@ export default function LoginPage() {
                     type="button"
                     tabIndex={-1}
                     onMouseDown={preventBlur}
-                    onClick={() => { setPassword(""); setLoginError(""); }}
+                    onClick={() => { setPassword(""); clearLoginError(); }}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <IconClearCircle />
@@ -96,7 +110,7 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
-            {loginError && (
+            {loginErrorField === 'password' && loginError && (
               <p className="text-sub-sm text-state-error">{loginError}</p>
             )}
           </div>
@@ -129,9 +143,29 @@ export default function LoginPage() {
       </div>
 
       <AccountSuspendedDialog
-        open={pendingNotice !== null}
-        info={pendingNotice?.info ?? null}
-        onClose={() => setPendingNotice(null)}
+        open={pendingNotice !== null || suspendedInfo !== undefined}
+        info={suspendedInfo !== undefined ? suspendedInfo : (pendingNotice?.info ?? null)}
+        onClose={() => {
+          setPendingNotice(null);
+          closeSuspendedDialog();
+        }}
+      />
+
+      {/* 중복 로그인(SC009) 확인 — '계속' 시 동일 deviceId + force로 재시도 (RN 패리티, Figma 3300:62628) */}
+      <ConfirmDialog
+        open={isDuplicateLoginVisible}
+        title="계속 로그인 할까요?"
+        description={
+          <>
+            다른 기기에서 이미 로그인되어 있어요.
+            <br />
+            계속하면 기존 기기에서 로그아웃돼요.
+          </>
+        }
+        confirmLabel="계속"
+        cancelLabel="취소"
+        onConfirm={handleDuplicateLoginContinue}
+        onCancel={closeDuplicateLogin}
       />
     </div>
   );

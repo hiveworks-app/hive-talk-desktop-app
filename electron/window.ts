@@ -99,6 +99,13 @@ export function createWindow(
 
   win.loadURL(serverUrl);
 
+  // 고정 배율(100%) 강제 — Electron은 setZoomFactor로 설정된 줌을 origin별로
+  // 세션 데이터에 영구 저장하므로, 과거에 저장된 배율이 남아 있어도 항상 100%로 초기화한다.
+  // (확대/축소 기능 자체를 제공하지 않는 앱 — 카톡 PC와 동일한 고정 크기 정책)
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.setZoomFactor(1);
+  });
+
   win.once('ready-to-show', () => {
     win.show();
   });

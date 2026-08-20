@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import IconIndicatorMore from '@assets/icons/indicator-more.svg';
 import {
   useGetMyTerms,
@@ -12,27 +13,44 @@ import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { Toggle } from '@/shared/ui/Toggle';
 import { useUIStore } from '@/store';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
+import {
+  ConsentChangeDialog,
+  type ConsentDialogAction,
+  type ConsentDialogType,
+} from '../_components/ConsentChangeDialog';
 
 export default function PersonalSecurityPage() {
   const router = useAppRouter();
   const { showSnackbar } = useUIStore();
 
-  const { data: terms } = useGetMyTerms();
+  const { data: terms, refetch: refetchTerms } = useGetMyTerms();
   const marketing = useToggleMarketingConsent();
   const adInfo = useToggleAdInfoConsent();
+
+  // 재진입/포커스 복귀 시 동의 상태 최신화 — 타 기기(모바일) 변경분 즉시 반영 (RN focus refetch 패리티)
+  useEffect(() => {
+    void refetchTerms();
+    const onFocus = () => void refetchTerms();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refetchTerms]);
 
   const isAgreed = (code: string) => terms?.items.find(i => i.code === code)?.isAgreed ?? false;
   const marketingAgreed = isAgreed(TERMS_CODE.MARKETING);
   const adAgreed = isAgreed(TERMS_CODE.AD_INFO);
 
+  // 동의 변경 고지 다이얼로그 — 스낵바 대신 종류×액션별 카피 + 변경일자 모달 (RN 패리티)
+  const [consentDialog, setConsentDialog] = useState<{
+    type: ConsentDialogType;
+    action: ConsentDialogAction;
+    changedAt: Date;
+  } | null>(null);
+
   const handleToggle =
-    (mutation: typeof marketing, label: string) => (next: boolean) =>
+    (mutation: typeof marketing, type: ConsentDialogType, label: string) => (next: boolean) =>
       mutation.mutate(next, {
         onSuccess: () =>
-          showSnackbar({
-            message: `${label}에 ${next ? '동의했습니다' : '동의를 철회했습니다'}.`,
-            state: 'success',
-          }),
+          setConsentDialog({ type, action: next ? 'agree' : 'revoke', changedAt: new Date() }),
         onError: () =>
           showSnackbar({ message: `${label} 변경에 실패했습니다.`, state: 'error' }),
       });
@@ -40,10 +58,10 @@ export default function PersonalSecurityPage() {
   return (
     <SettingsOverlay bg="bg-background">
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
-        <h2 className="text-heading-md font-bold text-text-primary">개인/보안</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">개인/보안</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />
@@ -70,33 +88,46 @@ export default function PersonalSecurityPage() {
               title="마케팅 목적 개인정보 이용 동의"
               checked={marketingAgreed}
               disabled={marketing.isPending}
-              onChange={handleToggle(marketing, '마케팅 목적 개인정보 이용')}
+              onChange={handleToggle(marketing, 'marketing', '마케팅 목적 개인정보 이용')}
               onViewFullText={() => router.push('/settings/policy/marketing-consent')}
             />
             <ConsentToggleRow
               title="광고성 정보 수신동의"
               checked={adAgreed}
               disabled={adInfo.isPending}
-              onChange={handleToggle(adInfo, '광고성 정보 수신')}
+              onChange={handleToggle(adInfo, 'adInfo', '광고성 정보 수신')}
               onViewFullText={() => router.push('/settings/policy/ad-consent')}
             />
           </Section>
 
           {/* 개인정보 관리 */}
           <Section label="개인정보 관리">
-            <LinkRow title="하이브톡 탈퇴" danger onClick={() => router.push('/settings/withdrawal')} />
+            <LinkRow title="하이브톡 탈퇴" onClick={() => router.push('/settings/withdrawal')} />
           </Section>
         </div>
       </div>
+
+      {/* 동의 변경 고지 (RN ConsentChangeDialog 패리티) */}
+      {consentDialog && (
+        <ConsentChangeDialog
+          open
+          consentType={consentDialog.type}
+          action={consentDialog.action}
+          changedAt={consentDialog.changedAt}
+          onClose={() => setConsentDialog(null)}
+        />
+      )}
     </SettingsOverlay>
   );
 }
 
+/* RN PersonalSecurityScreen 패리티 — 카드가 아닌 플랫 리스트 + 섹션 하단 구분선,
+   라벨 sub medium gray-600, 행 제목 body(16) medium gray-800 */
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-2 px-1 text-sub-sm font-semibold uppercase text-text-tertiary">{label}</h3>
-      <div className="overflow-hidden rounded-xl border border-divider bg-surface">{children}</div>
+    <section className="border-b border-divider pb-2 last:border-b-0">
+      <h3 className="px-1 py-2 text-sub font-medium text-gray-600">{label}</h3>
+      <div>{children}</div>
     </section>
   );
 }
@@ -104,19 +135,18 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 function LinkRow({
   title,
   onClick,
-  danger,
 }: {
   title: string;
   onClick: () => void;
-  danger?: boolean;
 }) {
+  // RN 패리티 — '하이브톡 탈퇴'도 중립색 (빨강 강조 없음)
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center justify-between border-b border-divider px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-pressed"
+      className="flex w-full items-center justify-between px-1 py-3 text-left transition-colors hover:bg-surface-pressed"
     >
-      <span className={`text-sub ${danger ? 'text-red-500' : 'text-text-primary'}`}>{title}</span>
-      <IconIndicatorMore width={16} height={16} className={danger ? 'text-red-400' : 'text-gray-400'} />
+      <span className="text-body font-medium text-gray-800">{title}</span>
+      <IconIndicatorMore width={16} height={16} className="text-gray-400" />
     </button>
   );
 }
@@ -134,15 +164,16 @@ function ConsentToggleRow({
   onChange: (next: boolean) => void;
   onViewFullText: () => void;
 }) {
+  // RN 패리티 — 제목 아래 별도 행에 밑줄 '전문보기'
   return (
-    <div className="flex items-center gap-3 border-b border-divider px-4 py-3 last:border-b-0">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate text-sub text-text-primary">{title}</span>
+    <div className="flex items-center gap-3 px-1 py-3">
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-body font-medium text-gray-800">{title}</span>
         <button
           onClick={onViewFullText}
-          className="shrink-0 text-sub-sm text-text-tertiary underline hover:text-text-secondary"
+          className="mt-0.5 text-sub-sm text-text-tertiary underline transition-opacity hover:opacity-70 active:opacity-60"
         >
-          전문
+          전문보기
         </button>
       </div>
       <Toggle checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />

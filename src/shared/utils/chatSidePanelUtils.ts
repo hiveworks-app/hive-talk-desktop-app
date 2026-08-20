@@ -1,4 +1,5 @@
 import { WebSocketPublishItem } from '@/shared/types/websocket';
+import { UNKNOWN_USER_NAME } from '@/shared/config/constants';
 import { MediaListType } from '@/shared/types/media';
 
 export const convertedMediaList = (cachedAttachments: WebSocketPublishItem[]): MediaListType[] => {
@@ -24,7 +25,8 @@ export const convertedMediaList = (cachedAttachments: WebSocketPublishItem[]): M
       thumbnailPresignedUrl: media.meta.thumbnailPresignedUrl,
       presignedUrl: media.presignedUrl,
       path: media.path,
-      author: sender?.name || '작성자',
+      author: sender?.isDeleted === true ? UNKNOWN_USER_NAME : sender?.name || '작성자',
+      senderId: sender?.userId != null ? String(sender.userId) : undefined,
       fileSize: media.meta.size,
       duration: media.meta.duration,
     }));

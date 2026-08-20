@@ -24,15 +24,15 @@ export default function AccountDetailPage() {
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
         <button
           onClick={() => router.push('/settings/account')}
-          className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute left-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="뒤로가기"
         >
           <IconArrowBack width={20} height={20} />
         </button>
-        <h2 className="text-heading-md font-bold text-text-primary">계정정보</h2>
+        <h2 className="text-heading-md font-medium text-text-primary">계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
-          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-colors hover:bg-surface-pressed"
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
           aria-label="닫기"
         >
           <IconCloseStroke width={20} height={20} />

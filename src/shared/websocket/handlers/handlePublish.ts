@@ -12,6 +12,7 @@ import type {
 } from '@/shared/types/websocket';
 import { PUSH_SETTINGS_KEY } from '@/shared/config/queryKeys';
 import type { PushSettingsResponse } from '@/features/notification-settings/type';
+import { isBlockedUser } from '@/store/blockedMembersStore';
 import type { MessageHandlerDeps } from './types';
 import { getTargetQueryKey } from './types';
 
@@ -50,6 +51,9 @@ export function handlePublish(
   };
 
   const isMySentMessage = normalizedPayload.sender?.userId === String(loginUserId);
+  // 차단 발신자 판정 — hot path라 스토어 메모리 Set(O(1), 마운트 무관) 사용 (RN 패리티)
+  const isBlockedSender =
+    !isMySentMessage && senderId != null && isBlockedUser(String(senderId));
   const listener = listenersRef.current[roomId];
   const isRoomActive = Boolean(listener) && document.hasFocus();
   if (listener) listener(envelope);
@@ -64,7 +68,7 @@ export function handlePublish(
     if (hasRoom) {
       queryClient.setQueryData<GetChatRoomListItemType[]>(
         targetQueryKey,
-        upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive }),
+        upsertChatRoomListWithMessage(list, normalizedPayload, { isRoomActive, isBlockedSender }),
       );
     } else {
       queryClient.invalidateQueries({ queryKey: targetQueryKey });
@@ -91,8 +95,9 @@ export function handlePublish(
   }
 
   // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 창에 포커스가 없을 때)
+  // 차단 발신자의 메시지는 알림 제외 (정책 block.md — 미리보기 접힘 문구로만 인지)
   const isWindowInactive = isElectronRef.current && !document.hasFocus();
-  if (!isMySentMessage && (!isRoomActive || isWindowInactive)) {
+  if (!isMySentMessage && !isBlockedSender && (!isRoomActive || isWindowInactive)) {
     sendNotification(normalizedPayload, roomId, currentChannelType, targetQueryKey, queryClient);
   }
 }

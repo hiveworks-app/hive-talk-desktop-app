@@ -36,10 +36,10 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
     r.activeTab === 'external' ? '아직 함께할 협력멤버가 없어요.' : '함께할 사내멤버가 없어요.';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={r.close} />
+    <div className="electron-no-drag fixed inset-0 z-50 flex items-center justify-center">
+      <div className="animate-fade-in-fast absolute inset-0 bg-black/40" onClick={r.close} />
 
-      <div className="relative z-10 flex h-full w-full flex-col bg-white">
+      <div className="animate-overlay-in relative z-10 flex h-full w-full flex-col bg-white">
         {/* macOS 신호등(좌상단 창 버튼) 영역 확보용 드래그 바 */}
         <div className="electron-drag h-8 w-full shrink-0" />
 
@@ -47,7 +47,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
           <>
             {/* 헤더: 대화상대 선택(좌) / X(우) — 확인은 하단 버튼으로 */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
-              <h2 className="text-base font-bold text-gray-900">대화상대 선택</h2>
+              <h2 className="text-heading-md font-bold text-gray-900">대화상대 선택</h2>
               <button onClick={r.close} aria-label="닫기" className="text-gray-900">
                 <IconCloseStroke width={20} height={20} />
               </button>
@@ -65,7 +65,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                 {r.selectedMembers.map(m => (
                   <div key={m.userId} className="flex w-[60px] shrink-0 flex-col items-center gap-1 px-1.5 pt-1">
                     <div className="relative">
-                      <ProfileCircle name={m.name} size="sm" storageKey={m.profileUrl} className="h-10 w-10" />
+                      <ProfileCircle name={m.name} size="sm" storageKey={m.profileUrl} />
                       <button
                         onClick={() => r.removeSelected(String(m.userId))}
                         aria-label={`${m.name} 제외`}
@@ -153,7 +153,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
               </button>
-              <h2 className="text-base font-bold text-gray-900">채팅방 정보 설정</h2>
+              <h2 className="text-heading-md font-bold text-gray-900">채팅방 정보 설정</h2>
               <button onClick={r.close} aria-label="닫기" className="text-gray-900">
                 <IconCloseStroke width={20} height={20} />
               </button>
@@ -176,7 +176,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                   onChange={e => r.setTitle(e.target.value)}
                   maxLength={r.maxTitle}
                   placeholder={r.namePlaceholder}
-                  className="h-12 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none transition placeholder:truncate placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+                  className="h-9 w-full rounded-lg border border-divider bg-white px-4 text-sub text-text-primary outline-none transition placeholder:truncate placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                 />
                 <span className="text-right text-sub-sm text-text-tertiary">{r.title.length}/{r.maxTitle}</span>
               </div>
@@ -191,8 +191,8 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
 
             {/* 하단 확인 버튼 */}
             <div className="shrink-0 border-t border-gray-100 p-4">
-              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep2 || r.isCreating} onClick={r.handleStep2Confirm}>
-                {r.isCreating ? '생성 중...' : '확인'}
+              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep2} onClick={r.handleStep2Confirm}>
+                확인
               </Button>
             </div>
           </>

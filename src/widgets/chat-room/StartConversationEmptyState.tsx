@@ -10,11 +10,11 @@ interface StartConversationEmptyStateProps {
  * RN StartConversationEmptyState / Figma 1039-20959 패리티.
  */
 export function StartConversationEmptyState({
-  message = '메세지 입력을 눌러\n대화를 시작하세요!',
+  message = '메시지 입력을 눌러\n대화를 시작하세요!',
 }: StartConversationEmptyStateProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-chat-bg px-2.5">
-      <div className="flex h-[205px] w-[242px] flex-col items-center justify-center gap-2.5 rounded-[10px] bg-white/70 py-5">
+      <div className="flex h-[205px] w-[242px] flex-col items-center justify-center gap-2.5 rounded-[10px] bg-gray-50 py-5">
         <img
           src="/new-message.png"
           alt="대화 시작"

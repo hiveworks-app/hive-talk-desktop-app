@@ -1,6 +1,10 @@
 'use client';
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { cn as cnHeader } from '@/shared/lib/cn';
+import { formatDotDate } from '@/shared/utils/formatTimeUtils';
+import { isBlockedUser } from '@/store/blockedMembersStore';
+import IconBlock from '@assets/icons/block.svg';
 import { useMediaViewerControls } from './useMediaViewerControls';
 
 export interface MediaViewerItem {
@@ -9,6 +13,10 @@ export interface MediaViewerItem {
   url: string;
   storageKey?: string;
   author?: string;
+  /** 전송 시각 (ISO) — 헤더 2줄째 날짜 표기 (RN ChatRoomMediaScreen 패리티) */
+  createdAt?: string;
+  /** 발신자 userId — 차단 표기 판정용 */
+  senderId?: string;
   /** 비디오 로드 전 보여줄 정지 이미지(썸네일). presigned 만료 허용. */
   poster?: string;
 }
@@ -40,21 +48,39 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose }: Med
 
   if (!item) return null;
 
+  // electron-no-drag: 아래 깔린 화면의 창 드래그 영역이 뷰어 상단 버튼 클릭을 삼키지 않도록
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+    <div className="electron-no-drag animate-fade-in-fast fixed inset-0 z-50 flex flex-col bg-black/95">
       {/* macOS 신호등(좌상단 창 버튼)·Windows 타이틀바 영역 확보용 드래그 바 (CreateRoomDialog와 동일) */}
       <div className="electron-drag h-8 w-full shrink-0" />
 
       {/* Header */}
       <div className="relative flex items-center justify-between px-4 py-3">
-        <button onClick={onClose} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+        <button onClick={onClose} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
         <div className="absolute inset-x-0 flex flex-col items-center pointer-events-none">
-          {item.author && <span className="text-sub font-medium text-white/90">{item.author}</span>}
-          {items.length > 1 && <span className="text-caption text-white/50">{currentIndex + 1} / {items.length}</span>}
+          {item.author && (
+            <span
+              className={cnHeader(
+                'flex items-center gap-1 text-sub font-medium',
+                item.senderId && isBlockedUser(item.senderId) ? 'text-white/50' : 'text-white/90',
+              )}
+            >
+              {item.senderId && isBlockedUser(item.senderId) && (
+                <IconBlock width={14} height={14} className="shrink-0" />
+              )}
+              {item.author}
+            </span>
+          )}
+          {/* 전송 날짜 + 인덱스 (RN 헤더 2줄 구성 패리티) */}
+          <span className="text-caption text-white/50">
+            {item.createdAt ? formatDotDate(item.createdAt) : ''}
+            {item.createdAt && items.length > 1 ? ' · ' : ''}
+            {items.length > 1 ? `${currentIndex + 1} / ${items.length}` : ''}
+          </span>
         </div>
-        <button onClick={handleDownload} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+        <button onClick={handleDownload} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
           </svg>

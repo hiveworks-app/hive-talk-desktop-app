@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
+import { ExternalInviteArrivalNotice } from '@/features/external-member/ExternalInviteArrivalNotice';
+import { MemberInviteConfirm } from '@/features/member-invite/MemberInviteConfirm';
+import { useGetBlockedMembers } from '@/features/block/queries';
+import { useMembersAutoRefresh } from '@/features/members/useMembersAutoRefresh';
 import { apiGetTagCategoryList, apiGetTagList } from '@/features/tag/api';
 import { TAG_CATEGORY_KEY, TAG_LIST_KEY } from '@/shared/config/queryKeys';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
@@ -16,9 +21,14 @@ const TAG_STALE_TIME = 1000 * 60 * 60 * 24; // 24시간
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
   const accessToken = useAuthStore(s => s.accessToken);
+  // 차단 목록 상시 조회 — cold start baseline 확보 + 스토어 write-through (결과 미사용, RN useMembersAutoRefresh 패리티)
+  useGetBlockedMembers();
+  // 멤버목록·관심멤버 5분 자동 갱신 (RN 패리티)
+  useMembersAutoRefresh();
 
   // Zustand persist 복원 완료 후 인증 확인 + 태그 prefetch
   useEffect(() => {
@@ -79,7 +89,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         )}
         <AppNav />
-        <div className="flex min-w-0 flex-1">{children}</div>
+        {/* 섹션(채팅↔멤버↔설정) 전환 시에만 페이드 — 같은 섹션 내 이동(방 전환 등)은 무애니메이션 */}
+        <div key={pathname.split('/')[1] ?? ''} className="animate-page-in flex min-w-0 flex-1">
+          {children}
+        </div>
+        {/* 중복 로그인 강제 종료 안내 — 화면 전환과 무관하게 확인 전까지 유지 (RN 루트 Portal 패리티) */}
+        <DuplicateLoginLogoutDialog />
+        {/* 협력멤버 초대장 도착 안내 (RN 패리티) */}
+        <ExternalInviteArrivalNotice />
+        {/* 사내(소속) 초대 수락/거절 (RN 패리티) */}
+        <MemberInviteConfirm />
       </div>
     </WebSocketProvider>
   );

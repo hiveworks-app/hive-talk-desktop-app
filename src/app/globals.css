@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Pretendard Variable — 로컬 번들 (RN은 앱에 폰트 내장; CDN 의존 시 오프라인에서 system-ui로 이탈) */
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
 /* ── Design System Colors (from hiveworks-mobile/src/theme/colors.ts) ── */
 :root {
@@ -15,8 +17,13 @@
   --color-disabled: #F8F9FA;
   --color-outline: #E5E8EB;
   --color-divider: #F8F9FA;
-  /* 채팅 영역 배경 — RN ChatRoomScreen bg-[#E7EDF3] 미러 (라이트/다크 공통) */
-  --color-chat-bg: #E7EDF3;
+  /* 채팅 영역 배경 — RN chatRoomTheme.screenBackground(#FFFFFF) 미러 (7/23 하늘색 시안 확정, 라이트/다크 공통) */
+  --color-chat-bg: #FFFFFF;
+  /* 말풍선 색 — RN chatRoomTheme.bubble 확정값 (내=하늘색 sub1-200, 상대=gray150) */
+  --color-bubble-me: #D0E8FF;
+  --color-bubble-me-pressed: #BFD4EE;
+  --color-bubble-other: #EEEFF2;
+  --color-bubble-other-pressed: #D7DBE1;
 
   /* States (RN light.states.* 동일) */
   --color-state-primary: #007AFF;
@@ -33,7 +40,7 @@
   --color-text-secondary: #6B7684;
   --color-text-tertiary: #8B95A1;
   --color-text-placeholder: #8B95A1;
-  --color-text-disabled: #D2D5D9;
+  --color-text-disabled: #D7DBE1; /* RN gray-300 정본 (7/23 정정 반영) */
   --color-text-in-bubble: #1A1F27;
   --color-text-hashtag: #007AFF;
 
@@ -135,10 +142,17 @@
 
   /* Brand Sub1 (Blue) - RN brand.sub1 */
   --color-blue-100: #E6F3FF;
-  --color-blue-300: #66B3FF;
+  --color-blue-300: #BEDDFA;
   --color-blue-500: #007AFF;
   --color-blue-700: #1263BA;
-  --color-blue-900: #004DA6;
+  --color-blue-900: #004580;
+
+  /* Brand Sub2 (Green) - RN brand.sub2 */
+  --color-green-100: #F1FBF4;
+  --color-green-300: #86E5A5;
+  --color-green-500: #03C75A;
+  --color-green-700: #00B656;
+  --color-green-900: #027A37;
 
   /* Brand Shorthand */
   --color-green: #03C75A;
@@ -158,10 +172,10 @@
   /* Gray Scale (RN gray - cool-toned) */
   --color-gray-50: #F8F9FA;
   --color-gray-100: #F3F5F8;
-  --color-gray-150: #EFF1F3;
+  --color-gray-150: #EEEFF2; /* RN 7/23 팔레트 정합 */
   --color-gray-200: #E5E8EB;
   --color-gray-250: #DCDFE2;
-  --color-gray-300: #D2D5D9;
+  --color-gray-300: #D7DBE1; /* RN 7/23 팔레트 정합 */
   --color-gray-350: #C0C5CB;
   --color-gray-400: #ADB5BD;
   --color-gray-500: #8B95A1;
@@ -182,6 +196,10 @@
   --color-divider: var(--color-divider);
   --color-disabled: var(--color-disabled);
   --color-chat-bg: var(--color-chat-bg);
+  --color-bubble-me: var(--color-bubble-me);
+  --color-bubble-me-pressed: var(--color-bubble-me-pressed);
+  --color-bubble-other: var(--color-bubble-other);
+  --color-bubble-other-pressed: var(--color-bubble-other-pressed);
 
   /* Text Colors */
   --color-text-primary: var(--color-text-primary);
@@ -211,55 +229,65 @@
   /* Fonts */
   --font-sans: "Pretendard Variable", "Pretendard", system-ui, -apple-system, sans-serif;
 
-  /* Typography Scale (from NativeWind config - RN과 동일) */
-  /* Tailwind v4: --text-* namespace → text-* 유틸리티 생성 */
+  /* Typography Scale — 데스크톱 전용 (2026-08-20)
+   * 토큰 이름·역할은 RN과 1:1 대응을 유지하되(디자인 패리티), px 값은 데스크톱
+   * 시청 환경에 맞게 축소한 독자 스케일을 쓴다. 배율(줌) 방식은 사용하지 않는다.
+   * 사다리: 20/18/16/15/14/13/12/11/10 — 각 토큰 옆 주석이 RN 원본 값.
+   * Tailwind v4: --text-* namespace → text-* 유틸리티 생성 */
 
   /* Heading */
-  --text-heading-xl: 24px;
-  --text-heading-xl--line-height: 34px;
-  --text-heading-xl--letter-spacing: -0.72px;
+  --text-heading-xl: 20px; /* RN 24/34 — 화면 타이틀(멤버목록·사내채팅 등) */
+  --text-heading-xl--line-height: 28px;
+  --text-heading-xl--letter-spacing: -0.4px;
 
-  --text-heading-lg: 22px;
-  --text-heading-lg--line-height: 28px;
-  --text-heading-lg--letter-spacing: -0.44px;
+  --text-heading-lg: 18px; /* RN 22/28 */
+  --text-heading-lg--line-height: 24px;
+  --text-heading-lg--letter-spacing: -0.36px;
 
-  --text-heading-md: 18px;
-  --text-heading-md--line-height: 26px;
-  --text-heading-md--letter-spacing: -0.36px;
+  --text-heading-md: 16px; /* RN 18/26 — 오버레이 헤더·다이얼로그 타이틀 */
+  --text-heading-md--line-height: 22px;
+  --text-heading-md--letter-spacing: -0.32px;
 
-  --text-heading-sm: 16px;
-  --text-heading-sm--line-height: 26px;
-  --text-heading-sm--letter-spacing: -0.32px;
+  --text-heading-sm: 15px; /* RN 16/26 */
+  --text-heading-sm--line-height: 20px;
+  --text-heading-sm--letter-spacing: -0.3px;
 
   /* Label */
-  --text-label: 15px;
-  --text-label--line-height: 22px;
-  --text-label--letter-spacing: -0.3px;
+  --text-label: 13px; /* RN 15/20 */
+  --text-label--line-height: 18px;
+  --text-label--letter-spacing: -0.26px;
 
   /* Body */
-  --text-body-lg: 17px;
-  --text-body-lg--line-height: 26px;
-  --text-body-lg--letter-spacing: -0.34px;
+  --text-body-lg: 15px; /* RN 17/26 */
+  --text-body-lg--line-height: 22px;
+  --text-body-lg--letter-spacing: -0.3px;
 
-  --text-body: 16px;
-  --text-body--line-height: 26px;
-  --text-body--letter-spacing: -0.32px;
+  --text-body: 14px; /* RN 16/22 — 본문·말풍선·버튼 */
+  --text-body--line-height: 20px;
+  --text-body--letter-spacing: -0.28px;
 
-  /* Sub */
-  --text-sub: 14px;
-  --text-sub--line-height: 20px;
-  --text-sub--letter-spacing: -0.14px;
+  /* Sub — sub-lg와 sub는 데스크톱에서 13px로 병합 (RN 15/14의 1px 차는 축소 시 무의미) */
+  --text-sub-lg: 13px; /* RN 15/20 */
+  --text-sub-lg--line-height: 18px;
+  --text-sub-lg--letter-spacing: -0.26px;
 
-  --text-sub-sm: 13px;
-  --text-sub-sm--line-height: 18px;
+  --text-sub: 13px; /* RN 14/20 */
+  --text-sub--line-height: 18px;
+  --text-sub--letter-spacing: -0.13px;
+
+  --text-sub-sm: 12px; /* RN 13/16 */
+  --text-sub-sm--line-height: 15px;
+
+  --text-sub-xs: 11px; /* RN 12/16 — 채팅목록 시간 등 최소 메타 */
+  --text-sub-xs--line-height: 14px;
 
   /* Caption */
-  --text-caption: 11px;
-  --text-caption--line-height: 16px;
-  --text-caption--letter-spacing: 0.22px;
+  --text-caption: 10px; /* RN 11/14 — 뱃지·최소 라벨 */
+  --text-caption--line-height: 13px;
+  --text-caption--letter-spacing: 0.2px;
 
-  --text-caption-sm: 10.5px;
-  --text-caption-sm--line-height: 14px;
+  --text-caption-sm: 10px; /* RN 10/12 — 가독성 하한이라 유지 (caption과 병합) */
+  --text-caption-sm--line-height: 12px;
   --text-caption-sm--letter-spacing: -0.21px;
 }
 
@@ -298,19 +326,25 @@ body {
   -webkit-app-region: drag;
 }
 
-/* 드래그 핸들 내부의 인터랙티브 요소는 클릭 가능하도록 no-drag로 복귀시킨다.
- * (drag 영역 위에서는 클릭/선택이 OS 창 이동에 먹히므로 반드시 되돌려야 함) */
-.electron-drag button,
-.electron-drag a,
-.electron-drag input,
-.electron-drag textarea,
-.electron-drag select,
-.electron-drag label,
-.electron-drag [role="button"],
-.electron-drag [role="link"],
-.electron-drag [role="checkbox"],
-.electron-drag [role="radio"],
-.electron-drag [contenteditable="true"],
+/* 인터랙티브 요소는 문서 내 위치와 무관하게 항상 no-drag.
+ *
+ * Chromium은 드래그 영역을 z-순서(겹침)를 무시한 문서 전체 합집합으로 계산한다.
+ * 따라서 풀스크린 오버레이가 위에 떠 있어도 아래 깔린 .electron-drag 헤더의 픽셀 대역은
+ * 여전히 창 이동 영역이고, 그 위에 그려진 오버레이의 완료/닫기 버튼 클릭이 OS 창 드래그에
+ * 먹혀 죽는다. no-drag는 같은 방식으로 "구멍"을 뚫으므로, 인터랙티브 요소를 전역 no-drag로
+ * 선언하면 어떤 겹침에서도 클릭이 항상 요소에 도달한다.
+ * (기존: .electron-drag 내부 요소만 복귀 → 포털 오버레이 상단 버튼 먹통 버그의 원인) */
+button,
+a,
+input,
+textarea,
+select,
+label,
+[role="button"],
+[role="link"],
+[role="checkbox"],
+[role="radio"],
+[contenteditable="true"],
 .electron-no-drag {
   -webkit-app-region: no-drag;
 }
@@ -364,14 +398,15 @@ html[data-electron-win] .electron-fixed-safe-top {
 }
 
 /* Toast 진입 애니메이션 */
+/* 하단 중앙 pill 스낵바 — 아래에서 떠오르며 등장 (RN 스프링 등장 대응) */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(12px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 .animate-toast-in {
@@ -414,4 +449,89 @@ html[data-electron-win] .electron-fixed-safe-top {
 }
 .animate-tag-sheet-up {
   animation: tag-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── 모션 시스템: 표면 등장/퇴장 (RN 화면 전환 대응 — 데스크톱은 짧고 절제되게 120~200ms) ──
+ * 커스텀 오버레이는 등장만(언마운트 즉시라 퇴장 불가), Radix 계열은 data-state로
+ * 등장+퇴장 모두 — Radix는 closed 애니메이션이 끝날 때까지 언마운트를 지연해준다. */
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes motion-up-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* RN push 대응 — 오른쪽에서 화면이 들어오는 느낌 (풀스크린 화면 전환용) */
+@keyframes motion-push-in {
+  from { opacity: 0; transform: translateX(48px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes motion-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* 중앙 고정(-translate-50%) 다이얼로그 전용 — translate를 keyframe에 포함해야 위치가 안 깨진다 */
+@keyframes motion-center-pop-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes motion-center-pop-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }
+}
+
+/* 풀스크린 화면(프로필·설정 상세·멤버목록 편집·채팅방 관리) — RN push처럼 우측에서 등장 */
+.animate-overlay-in {
+  animation: motion-push-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* 딤 배경·뷰어 — 페이드 등장 */
+.animate-fade-in-fast {
+  animation: motion-fade-in 0.15s ease-out;
+}
+/* 중앙 카드(비 Radix, flex 센터링) — 페이드+스케일 등장 */
+.animate-pop-in {
+  animation: motion-pop-in 0.15s ease-out;
+}
+/* 섹션(채팅↔멤버↔설정) 전환 — 미묘한 페이드 */
+.animate-page-in {
+  animation: motion-fade-in 0.12s ease-out;
+}
+
+/* Radix data-state 연동 (Dialog Overlay/Content, DropdownMenu Content) */
+.motion-dim[data-state='open'] {
+  animation: motion-fade-in 0.15s ease-out;
+}
+.motion-dim[data-state='closed'] {
+  animation: motion-fade-out 0.12s ease-in;
+}
+.motion-center-pop[data-state='open'] {
+  animation: motion-center-pop-in 0.15s ease-out;
+}
+.motion-center-pop[data-state='closed'] {
+  animation: motion-center-pop-out 0.12s ease-in;
+}
+.motion-menu[data-state='open'] {
+  animation: motion-pop-in 0.12s ease-out;
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin, top right);
+}
+.motion-menu[data-state='closed'] {
+  animation: motion-fade-out 0.1s ease-in;
+}
+
+/* 모션 최소화 선호(OS 접근성 설정) 시 전부 즉시 표시 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-in,
+  .animate-fade-in-fast,
+  .animate-pop-in,
+  .animate-page-in,
+  .motion-dim[data-state],
+  .motion-center-pop[data-state],
+  .motion-menu[data-state] {
+    animation: none;
+  }
 }

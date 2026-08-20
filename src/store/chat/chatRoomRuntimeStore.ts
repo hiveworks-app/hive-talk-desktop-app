@@ -23,7 +23,6 @@ const initState = {
     hasMoreBefore: true,
     hasMoreAfter: true,
   },
-  pendingReadEvents: new Map<string, Set<string>>(),
   roomMessageCache: new Map<string, ChatMessageUI[]>(),
   nextMyTags: null as WebSocketReceiveTagProps[] | null,
   searchKeyword: '',
@@ -76,27 +75,6 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
   setIsSearching: searching => set({ isSearching: searching }),
   setFocusedMessageId: id => set({ focusedMessageId: id }),
   setCurrentSearchIndex: index => set({ currentSearchIndex: index }),
-  addPendingReadEvent: (messageId, userId) =>
-    set(state => {
-      const nextMap = new Map(state.pendingReadEvents);
-      const userSet = nextMap.get(messageId) ?? new Set();
-      userSet.add(userId);
-      nextMap.set(messageId, userSet);
-      return { pendingReadEvents: nextMap };
-    }),
-  removePendingReadEvents: messageIds =>
-    set(state => {
-      const nextMap = new Map(state.pendingReadEvents);
-      let changed = false;
-      for (const messageId of messageIds) {
-        if (nextMap.has(messageId)) {
-          nextMap.delete(messageId);
-          changed = true;
-        }
-      }
-      return changed ? { pendingReadEvents: nextMap } : {};
-    }),
-  clearPendingReadEvents: () => set({ pendingReadEvents: new Map() }),
   addLocalMessage: msg =>
     set(state => {
       if (msg.fileId) {
@@ -187,5 +165,5 @@ export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) =
   requestScrollToBottom: () =>
     set(state => ({ scrollToBottomTrigger: state.scrollToBottomTrigger + 1 })),
   setPendingRemoveTagMessageId: id => set({ pendingRemoveTagMessageId: id }),
-  reset: () => set({ ...initState, pendingReadEvents: new Map(), roomMessageCache: new Map() }),
+  reset: () => set({ ...initState, roomMessageCache: new Map() }),
 }));
