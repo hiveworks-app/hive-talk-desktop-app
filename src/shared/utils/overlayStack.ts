@@ -19,3 +19,8 @@ export function pushOverlay() {
     },
   };
 }
+
+/** 열린 풀스크린 오버레이 존재 여부 — 전역 단축키(⌘F 등)가 오버레이 위에서 발동하지 않도록 가드 */
+export function hasOpenOverlay() {
+  return stack.length > 0;
+}

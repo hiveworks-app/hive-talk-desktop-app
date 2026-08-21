@@ -2,17 +2,15 @@
 
 import { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useAppRouter } from '@/shared/hooks/useAppRouter';
-import { useQueryClient } from '@tanstack/react-query';
-import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
-import { DM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { StartEMTitleDialog } from '@/features/chat-room/StartEMTitleDialog';
+import { useStartMemberChat } from '@/features/chat-room/useStartMemberChat';
 import { useDeleteExternalContact, useInviteExternalByEmail } from '@/features/external-member/queries';
+import { getInviteErrorMessage } from '@/features/external-member/useExternalInvite';
+import { isApiError } from '@/shared/api';
 import { BLOCK_MESSAGES } from '@/features/block/blockedMessage';
 import { isBlockableMember } from '@/features/block/isBlockable';
 import { useBlockMember, useGetBlockedMembers, useUnblockMember } from '@/features/block/queries';
-import { useCheckDuplicateEM } from '@/features/external-chat/queries';
 import { useTogglePinnedMember } from '@/features/pinned-members/useTogglePinnedMember';
-import { EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { UNKNOWN_USER_NAME } from '@/shared/config/constants';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { cn } from '@/shared/lib/cn';
@@ -20,11 +18,8 @@ import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDi
 import { ProfileDialogShell } from './ProfileDialogShell';
 import { ProfileInfoSection } from './ProfileInfoSection';
 import { MemberItem, USER_ROLE } from '@/shared/types/user';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
-import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
-import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useUIStore } from '@/store/uiStore';
 import IconBlock from '@assets/icons/block.svg';
 import IconChat from '@assets/icons/bottom-chat-default.svg';
@@ -53,8 +48,6 @@ interface UserProfileDialogProps {
  */
 export function UserProfileDialog({ isOpen, onClose, member, unregistered = false, disableDirectChat = false }: UserProfileDialogProps) {
   useDimmed(isOpen);
-  const router = useAppRouter();
-  const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
   const viewerRole = useAuthStore(s => s.user?.role);
   const viewerCompanyId = useAuthStore(s => s.user?.companyId);
@@ -71,9 +64,8 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
   // 미등록 사용자 멤버초대 — RN 패리티: 즉시 컨펌 후 이메일 초대 (이메일 없으면 검색 다이얼로그 폴백)
   const [isInviteConfirmOpen, setInviteConfirmOpen] = useState(false);
   const { mutateAsync: inviteByEmail } = useInviteExternalByEmail();
-  // 협력멤버 1:1 EM 생성 — 방 제목 입력 단계 (RN 제목 입력 화면 대응)
-  const [emTitleDraft, setEmTitleDraft] = useState<string | null>(null);
-  const { mutateAsync: checkDuplicateEM, isPending: isCheckingEM } = useCheckDuplicateEM();
+  // 1:1 채팅 시작 — 프로필 버튼·우클릭 메뉴·행 더블클릭 공용 훅 (이동 직전 프로필 닫힘)
+  const startMemberChat = useStartMemberChat({ onBeforeNavigate: onClose });
 
   if (!isOpen || !member) return null;
 
@@ -94,106 +86,6 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
     ? [member.companyName, member.department, member.job]
     : [member.department, member.job];
 
-  const navigateToRoom = (
-    roomId: string,
-    lastMessage: import('@/shared/types/websocket').WebSocketPublishItem | null = null,
-    invitedUserIds: string[] = [],
-  ) => {
-    useChatRoomInfo.getState().setChatRoomInfo({
-      roomId,
-      roomName: member.name,
-      channelType: WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-      totalUserCount: 2,
-      otherUserIsExit: false,
-      otherUserIsRemoved: false,
-      lastMessage,
-      invitedUserIds,
-    });
-    if (!roomId) {
-      useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
-    }
-    onClose();
-    router.push(roomId ? `/chat/${roomId}` : '/chat/new');
-  };
-
-  const findExistingRoom = () => {
-    const dmRooms = queryClient.getQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY) ?? [];
-    return dmRooms.find(room => {
-      const uid = String(member.userId);
-      if (String(room.roomModel.participantDetail?.userId) === uid) return true;
-      return room.roomModel.participants?.some(p => String(p.userId) === uid) ?? false;
-    });
-  };
-
-  const handleStartDM = () => {
-    if (isMe) return;
-
-    // 캐시에서 기존 방 확인
-    const existing = findExistingRoom();
-    if (existing) {
-      navigateToRoom(existing.roomModel.roomId, existing.messageList[0] ?? null);
-      return;
-    }
-
-    // 기존 방 없음 → roomId 없이 채팅방 진입 (메시지 전송 시 생성)
-    navigateToRoom('', null, [member.userId]);
-  };
-
-  // 협력멤버 1:1 — DM이 아닌 EM 플로우 (정책 em.md, RN C1 패리티): 중복검사 → 기존 방 이동 / 새 방 제목 입력
-  const enterEMRoom = (roomId: string, title: string) => {
-    useChatRoomInfo.getState().setChatRoomInfo({
-      roomId,
-      roomName: title || member.name,
-      channelType: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE,
-      totalUserCount: 2,
-      otherUserIsExit: false,
-      otherUserIsRemoved: false,
-      lastMessage: null,
-      invitedUserIds: [],
-    });
-    onClose();
-    router.push(`/external-chat/${roomId}`);
-  };
-
-  const handleStartEMChat = async () => {
-    if (isMe || isCheckingEM) return;
-    try {
-      const res = await checkDuplicateEM([String(member.userId), String(myUserId)].filter(Boolean));
-      const { exists, roomIds } = res.payload;
-      if (exists && roomIds[0]) {
-        // 기존 협력방으로 이동 — 캐시에서 제목 조회
-        const cached = queryClient.getQueryData<GetChatRoomListItemType[]>(EM_ROOM_LIST_KEY) ?? [];
-        const found = cached.find(r => r.roomModel.roomId === roomIds[0]);
-        enterEMRoom(roomIds[0], found?.roomModel.title ?? member.name);
-        return;
-      }
-    } catch {
-      // 검사 실패는 생성 시 서버가 재검증 (RN §7-C-6 정책) — 제목 입력으로 진행
-    }
-    setEmTitleDraft(member.name);
-  };
-
-  // 방을 즉시 만들지 않고 draft로 진입 — 첫 메시지 전송 시 POST /app/em (RN 패리티, 취소 시 빈 방 잔존 방지)
-  const handleCreateEMConfirm = () => {
-    const title = (emTitleDraft ?? '').trim();
-    if (!title) return;
-    setEmTitleDraft(null);
-    useChatRoomInfo.getState().setChatRoomInfo({
-      roomId: '',
-      roomName: title,
-      channelType: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE,
-      totalUserCount: 2,
-      otherUserIsExit: false,
-      otherUserIsRemoved: false,
-      invitedUserIds: [String(member.userId)],
-      lastMessage: null,
-      initialNotReadCount: 0,
-    });
-    useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
-    onClose();
-    router.push('/external-chat/new');
-  };
-
   // 협력멤버 삭제 — 확인 다이얼로그에서 '삭제' 시 실행. 데스크톱 API(useDeleteExternalContact) 사용.
   const handleDeleteConfirm = () => {
     deleteContact(String(member.userId));
@@ -201,13 +93,13 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
     onClose();
   };
 
-  // 차단 — 사내멤버는 '차단되었어요.', 협력/비관계는 관리 화면 힌트 (RN 토스트 정책 패리티)
+  // 차단 — 프로필 경유 차단은 항상 관리 화면 힌트 (RN useBlockConfirm 패리티).
+  // RN은 사내멤버만 "멤버목록 복귀 시점"으로 노출을 미루지만, 데스크톱은 다이얼로그가
+  // 즉시 닫혀 이미 멤버목록 위이므로 시점 분기 없이 즉시 표시.
   const handleBlockConfirm = () => {
     blockMember(member, {
       onSuccess: () => {
-        showSnackbar({
-          message: isExternal ? BLOCK_MESSAGES.blockManageHint : BLOCK_MESSAGES.blocked,
-        });
+        showSnackbar({ message: BLOCK_MESSAGES.blockManageHint });
       },
     });
     setBlockConfirmOpen(false);
@@ -403,8 +295,8 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
                 </button>
               ) : (
                 <button
-                  onClick={isExternal ? handleStartEMChat : handleStartDM}
-                  disabled={disableDirectChat || isCheckingEM}
+                  onClick={() => startMemberChat.startChat(member)}
+                  disabled={disableDirectChat || startMemberChat.isCheckingEM}
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-primary bg-surface text-body font-medium text-primary transition-colors hover:bg-state-primary-highlighted disabled:cursor-default disabled:border-outline disabled:text-text-tertiary disabled:hover:bg-surface"
                 >
                   <IconChat width={20} height={20} />
@@ -427,7 +319,7 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
             <>
               삭제하면 상대방의 멤버 목록에서도 삭제돼요.
               <br />
-              채팅 기록은 유지돼요.
+              채팅기록은 유지돼요.
             </>
           }
           confirmLabel="삭제"
@@ -451,25 +343,12 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
       />
 
       {/* 협력멤버 1:1 EM 생성 — 방 제목 입력 (RN 제목 입력 화면 대응) */}
-      {emTitleDraft !== null && (
-        <ConfirmDialog
-          open
-          title="협력채팅 방 제목"
-          description={
-            <input
-              type="text"
-              value={emTitleDraft}
-              onChange={e => setEmTitleDraft(e.target.value.slice(0, 50))}
-              placeholder="방 제목을 입력해주세요 (1~50자)"
-              className="mt-1 h-10 w-full rounded-lg border border-outline px-3 text-sub text-text-primary outline-none focus:border-primary"
-            />
-          }
-          confirmLabel="만들기"
-          cancelLabel="취소"
-          onConfirm={handleCreateEMConfirm}
-          onCancel={() => setEmTitleDraft(null)}
-        />
-      )}
+      <StartEMTitleDialog
+        draft={startMemberChat.emTitleDraft}
+        onChangeTitle={startMemberChat.setEmDraftTitle}
+        onConfirm={startMemberChat.confirmEmDraft}
+        onCancel={startMemberChat.cancelEmDraft}
+      />
 
       {/* 미등록 사용자 멤버초대 — 즉시 컨펌 (RN 패리티) */}
       <ConfirmDialog
@@ -482,7 +361,15 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
           if (!member.email) return;
           void inviteByEmail(member.email)
             .then(() => showSnackbar({ message: '멤버로 초대되었어요.', state: 'success' }))
-            .catch(() => showSnackbar({ message: '멤버 초대에 실패했습니다.', state: 'error' }));
+            .catch(err =>
+              showSnackbar({
+                message: getInviteErrorMessage(
+                  isApiError(err) ? err.code : undefined,
+                  '초대에 실패했어요. 잠시 후 다시 시도해주세요.',
+                ),
+                state: 'error',
+              }),
+            );
         }}
         onCancel={() => setInviteConfirmOpen(false)}
       />

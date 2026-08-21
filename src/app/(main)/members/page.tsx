@@ -1,7 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import type { MemberItem } from '@/shared/types/user';
+import { useEffect, useRef, useState } from 'react';
+import { StartEMTitleDialog } from '@/features/chat-room/StartEMTitleDialog';
+import { useStartMemberChat } from '@/features/chat-room/useStartMemberChat';
+import { USER_ROLE, type MemberItem } from '@/shared/types/user';
+import { useAuthStore } from '@/store/auth/authStore';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconAddMemberDefault from '@assets/icons/static/add-member-default.svg';
 import IconEnvelope from '@assets/icons/envelope.svg';
@@ -38,6 +41,43 @@ export default function MembersPage() {
     const member = findMemberByRowId(id);
     if (member) setMemberMenu({ x: e.clientX, y: e.clientY, member });
   };
+
+  // 행 더블클릭 = 1:1 채팅 (데스크톱 관례). 싱글클릭 프로필은 250ms 지연해 더블클릭과 구분 —
+  // 채팅 시작이 불가능한 행(본인·게스트 뷰어)은 지연 없이 즉시 프로필을 연다.
+  const myUserId = useAuthStore(s => s.user?.id);
+  const isViewerGuest = useAuthStore(s => s.user?.role) === USER_ROLE.GUEST;
+  const startMemberChat = useStartMemberChat();
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canStartChat = (member: MemberItem) =>
+    !isViewerGuest && String(member.userId) !== String(myUserId);
+  const handleRowClick = (id: string) => {
+    const member = findMemberByRowId(id);
+    if (!member) return;
+    if (!canStartChat(member)) {
+      setSelectedMember(member);
+      return;
+    }
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      setSelectedMember(member);
+    }, 250);
+  };
+  const handleRowDoubleClick = (id: string) => {
+    const member = findMemberByRowId(id);
+    if (!member || !canStartChat(member)) return;
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    startMemberChat.startChat(member);
+  };
+  useEffect(
+    () => () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    },
+    [],
+  );
 
   // 인덱스 룰러 점프용 스크롤 컨테이너 (30명 이상일 때만 룰러 노출 — RN 패리티)
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -142,7 +182,7 @@ export default function MembersPage() {
                   {/* 관심멤버 순서변경·일괄 편집은 기어 메뉴 > 멤버목록 편집에서 (RN 패리티) */}
                   <div className="mt-1 flex flex-col">
                     {pinnedDisplay.map(item => (
-                      <MemberListItem key={item.id} member={item} onClick={() => handleMemberPress(item.id)} onContextMenu={handleRowContextMenu(item.id)} />
+                      <MemberListItem key={item.id} member={item} onClick={() => handleRowClick(item.id)} onDoubleClick={() => handleRowDoubleClick(item.id)} onContextMenu={handleRowContextMenu(item.id)} />
                     ))}
                   </div>
                 </div>
@@ -157,7 +197,8 @@ export default function MembersPage() {
                   <div key={item.id} data-ruler-index={index}>
                     <MemberListItem
                       member={item}
-                      onClick={() => handleMemberPress(item.id)}
+                      onClick={() => handleRowClick(item.id)}
+                      onDoubleClick={() => handleRowDoubleClick(item.id)}
                       onContextMenu={handleRowContextMenu(item.id)}
                     />
                   </div>
@@ -181,6 +222,13 @@ export default function MembersPage() {
         />
       )}
       <UserProfileDialog isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} member={selectedMember} />
+      {/* 행 더블클릭 EM 신규 채팅 — 방 제목 입력 */}
+      <StartEMTitleDialog
+        draft={startMemberChat.emTitleDraft}
+        onChangeTitle={startMemberChat.setEmDraftTitle}
+        onConfirm={startMemberChat.confirmEmDraft}
+        onCancel={startMemberChat.cancelEmDraft}
+      />
       <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
       <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
       <InviteStatusDialog open={isStatusOpen} onClose={() => setIsStatusOpen(false)} />

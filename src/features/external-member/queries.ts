@@ -168,7 +168,8 @@ export const useRespondInvite = () => {
         queryClient.invalidateQueries({ queryKey: PINNED_MEMBERS_KEY });
         showSnackbar({ message: '멤버목록에 추가됐어요.', state: 'success' });
       } else {
-        showSnackbar({ message: '거절한 초대가 목록에서 삭제됐어요.', state: 'info' });
+        // state error = X 아이콘 표기용 (RN 패리티 — 거절/삭제류 안내는 X 아이콘, 배경은 동일 다크 pill)
+        showSnackbar({ message: '거절한 초대가 목록에서 삭제됐어요.', state: 'error' });
       }
     },
     onError: (err: unknown) => {
@@ -206,10 +207,11 @@ export const useDeleteExternalContact = () => {
       );
       queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
       queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
-      showSnackbar({ message: '외부 멤버를 삭제했습니다.', state: 'info' });
+      // state error = X 아이콘 표기용 (RN 패리티 — 삭제 완료 안내는 X 아이콘)
+      showSnackbar({ message: '멤버목록에서 삭제되었어요.', state: 'error' });
     },
     onError: (err: unknown) => {
-      showSnackbar({ message: getErrorMessage(err, '삭제에 실패했습니다.'), state: 'error' });
+      showSnackbar({ message: getErrorMessage(err, '멤버 삭제에 실패했어요.'), state: 'error' });
     },
   });
 };

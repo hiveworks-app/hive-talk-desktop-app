@@ -7,6 +7,7 @@ import { useGetMembers } from '@/features/members/queries';
 import { getMemberNewSince, selectNewMembers } from '@/features/members/newMember';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { NEW_MEMBER_WINDOW_MS } from '@/shared/config/constants';
+import { hasOpenOverlay } from '@/shared/utils/overlayStack';
 import { useReceivedInvites } from '@/features/external-member/queries';
 import { MemberItem, USER_TYPE } from '@/shared/types/user';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -67,6 +68,19 @@ export function useMembersPage() {
   // 편지봉투 빨간 dot 배지용 — 받은(대기 중) 초대 개수 (RN externalReceivedCount 패리티)
   const { data: receivedInvites = [] } = useReceivedInvites();
   const receivedInviteCount = receivedInvites.length;
+
+  // ⌘F/Ctrl+F = 멤버 검색 열기 (데스크톱 관례). 프로필·초대 등 오버레이가 열려 있으면 무시
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        if (hasOpenOverlay()) return;
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // 초대장 도착 모달 '확인하기' → 멤버목록 진입 시 초대현황 자동 오픈 (1회 소비, RN 패리티)
   useEffect(() => {
@@ -132,9 +146,16 @@ export function useMembersPage() {
 
   const hasContent = pinnedDisplay.length > 0 || displayMembers.length > 0;
 
-  // 활성 칩별 섹션 헤더 라벨 (협력 칩 → '협력멤버', 사내 칩 → '사내멤버')
-  const memberSectionLabel =
-    activeChip === 'company' ? '사내멤버' : activeChip === 'external' ? '협력멤버' : '전체멤버';
+  // 활성 칩별 섹션 헤더 라벨 (협력 칩 → '협력멤버', 사내 칩 → '사내멤버').
+  // 게스트는 칩 UI가 없고 데이터도 협력멤버뿐이라 '협력멤버' 고정 (RN external 고정 패리티) —
+  // 소속 계정이 남긴 모듈 칩 상태(lastActiveChip)가 게스트 세션 라벨에 새는 것도 함께 차단
+  const memberSectionLabel = !isOrgMember
+    ? '협력멤버'
+    : activeChip === 'company'
+      ? '사내멤버'
+      : activeChip === 'external'
+        ? '협력멤버'
+        : '전체멤버';
 
   /** 행 id(prefix 포함) → 원본 MemberItem — 프로필 열기·우클릭 메뉴 공용 */
   const findMemberByRowId = useCallback(

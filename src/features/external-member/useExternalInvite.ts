@@ -21,8 +21,9 @@ const INVITE_ERROR_MESSAGES: Record<string, string> = {
   EXS005: '사내 멤버는 초대할 수 없어요.',
 };
 
-const getInviteErrorMessage = (code?: string) =>
-  (code && INVITE_ERROR_MESSAGES[code]) || '입력하신 정보와 일치하는 사용자가 없어요.';
+/** 폴백은 단계별로 다름 — 검색 실패는 EXS001 문구, 초대 실패는 '초대에 실패했습니다.' (RN useMemberInvite 동일) */
+export const getInviteErrorMessage = (code: string | undefined, fallback = INVITE_ERROR_MESSAGES.EXS001) =>
+  (code && INVITE_ERROR_MESSAGES[code]) || fallback;
 
 interface UseExternalInviteOptions {
   /** 미등록 프로필 진입 — 대상 이메일 프리셋 (이메일 탭 + 값 채움, RN 패리티) */
@@ -131,7 +132,7 @@ export function useExternalInvite({ presetEmail }: UseExternalInviteOptions = {}
       setInviteSuccess({ name: target.userName, company: target.company, profileUrl: target.profileUrl });
     } catch (inviteErr) {
       const code = isApiError(inviteErr) ? inviteErr.code : undefined;
-      showSnackbar({ message: getInviteErrorMessage(code), state: 'error' });
+      showSnackbar({ message: getInviteErrorMessage(code, '초대에 실패했습니다.'), state: 'error' });
     } finally {
       hideLoadingOverlay();
     }
