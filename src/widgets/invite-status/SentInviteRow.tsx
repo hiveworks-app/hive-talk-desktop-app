@@ -10,7 +10,8 @@ function getRelativeTime(dateStr: string): string {
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr);
   target.setHours(0, 0, 0, 0);
-  const days = Math.round((today.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+  // 서버·기기 시계가 어긋나 미래로 계산되면 음수('-1일전') 대신 '오늘'로 클램프
+  const days = Math.max(0, Math.round((today.getTime() - target.getTime()) / (1000 * 60 * 60 * 24)));
   if (days === 0) return '오늘';
   return `${days}일전`;
 }

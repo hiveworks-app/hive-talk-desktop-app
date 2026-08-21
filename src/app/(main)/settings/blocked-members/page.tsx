@@ -9,6 +9,7 @@ import { useGetMembers } from '@/features/members/queries';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import type { MemberItem } from '@/shared/types/user';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import { useUIStore } from '@/store';
@@ -99,19 +100,21 @@ export default function BlockedMembersPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="멤버 검색"
-            className="h-11 rounded-xl bg-surface px-4 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:ring-2 focus:ring-primary/40"
+            className="h-10 rounded-xl bg-surface px-4 text-sub text-text-primary outline-none placeholder:text-text-tertiary focus:ring-2 focus:ring-primary/40"
           />
 
           {isEmpty ? (
-            <p className="py-16 text-center text-sub text-text-secondary">
-              {isSearching ? '찾으시는 멤버가 없어요.' : '멤버가 없어요.'}
-            </p>
+            <EmptyState
+              message={isSearching ? '찾으시는 멤버가 없어요.' : '멤버가 없어요.'}
+              variant={isSearching ? 'search' : 'sad'}
+              className="h-auto py-16"
+            />
           ) : (
             <>
               {blockedDisplay.length > 0 && (
                 <section>
                   <h3 className="mb-1 px-1 text-sub-sm font-medium text-text-secondary">
-                    차단 멤버 {blockedDisplay.length}
+                    차단 멤버 ({blockedDisplay.length})
                   </h3>
                   {blockedDisplay.map(m => (
                     <BlockedRow key={m.userId} member={m} onUnblock={handleUnblock} />
@@ -121,7 +124,7 @@ export default function BlockedMembersPage() {
               {memberDisplay.length > 0 && (
                 <section>
                   <h3 className="mb-1 px-1 text-sub-sm font-medium text-text-secondary">
-                    멤버 {memberDisplay.length}
+                    멤버 ({memberDisplay.length})
                   </h3>
                   {memberDisplay.map(m => (
                     <BlockableRow

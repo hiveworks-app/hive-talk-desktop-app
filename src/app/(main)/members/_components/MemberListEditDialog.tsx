@@ -7,8 +7,10 @@ import { useMemberListEditController } from '@/features/pinned-members/useMember
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { cn } from '@/shared/lib/cn';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
+import { pushOverlay } from '@/shared/utils/overlayStack';
 import type { MemberItem } from '@/shared/types/user';
 import { Checkbox } from '@/shared/ui/Checkbox';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { useUIStore } from '@/store/uiStore';
 import IconDragHandle from '@assets/icons/drag-handle.svg';
@@ -103,14 +105,17 @@ export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProp
   // 위에 뜬 뷰어 등이 소비한(preventDefault) ESC는 무시한다.
   useEffect(() => {
     if (!open) return;
+    // 오버레이 스택 편입 — ESC 최상단 판별 + 전역 단축키(⌘F) 가드(hasOpenOverlay)에 포함
+    const overlay = pushOverlay();
     const release = acquireEscSuppress();
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) void handleDone();
+      if (e.key === 'Escape' && !e.defaultPrevented && overlay.isTop()) void handleDone();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       release();
+      overlay.release();
     };
   }, [open, saveOrder]);
 
@@ -156,6 +161,8 @@ export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProp
           <div className="flex flex-1 items-center justify-center">
             <span className="text-sub text-text-tertiary">로딩 중...</span>
           </div>
+        ) : pinnedCount === 0 && totalCount === 0 ? (
+          <EmptyState message="아직 함께할 멤버가 없어요." className="flex-1" />
         ) : (
           <div className="scrollbar-thin flex-1 overflow-y-auto pb-24">
             {/* ─── 관심멤버 섹션 (있을 때만) ─── */}

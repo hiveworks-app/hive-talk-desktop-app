@@ -15,16 +15,19 @@ interface NormalizedMember {
 interface MemberListItemProps {
   member: NormalizedMember;
   onClick: () => void;
+  /** 더블클릭 = 1:1 채팅 (데스크톱 관례) — 미지정 시 동작 없음 */
+  onDoubleClick?: () => void;
   /** 우클릭 컨텍스트 메뉴 (데스크톱 관례) — 미지정 시 브라우저 기본 동작 */
   onContextMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export type { NormalizedMember };
 
-export function MemberListItem({ member, onClick, onContextMenu }: MemberListItemProps) {
+export function MemberListItem({ member, onClick, onDoubleClick, onContextMenu }: MemberListItemProps) {
   return (
     <button
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
       className="flex w-full items-center gap-2.5 px-4 py-1.5 text-left transition-colors hover:bg-gray-50"
     >

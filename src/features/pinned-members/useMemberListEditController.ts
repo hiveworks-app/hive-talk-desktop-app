@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useGetBlockedMembers } from '@/features/block/queries';
 import { useGetMembers } from '@/features/members/queries';
 import {
   useDeletePinnedMember,
@@ -24,8 +25,17 @@ export function useMemberListEditController() {
   const { data: serverPinnedMembers, isLoading: isPinnedLoading } = useGetPinnedMembers();
   const { data: allMembersData } = useGetMembers();
   const allMembers = useMemo(() => allMembersData ?? [], [allMembersData]);
+  const { data: blockedMembers = [] } = useGetBlockedMembers();
   const replaceMutation = useReplacePinnedMembers();
   const deleteMutation = useDeletePinnedMember();
+
+  // 전체멤버 섹션 노출용 — 차단 멤버 제외. 노출되면 관심멤버로 새로 등록할 수 있는데
+  // 멤버목록에서는 차단 필터로 숨겨져 "등록했는데 안 보이는" 유령 상태가 된다.
+  // 관심멤버 매핑·캐시 쓰기는 서버 진실(allMembers 원본)을 유지한다. (RN은 미필터 — 데스크톱 정책)
+  const selectableMembers = useMemo(() => {
+    const blockedIdSet = new Set(blockedMembers.map(m => String(m.userId)));
+    return allMembers.filter(m => !blockedIdSet.has(String(m.userId)));
+  }, [allMembers, blockedMembers]);
 
   const [initialized, setInitialized] = useState(false);
   const [pinnedOrder, setPinnedOrder] = useState<string[]>([]);
@@ -138,7 +148,7 @@ export function useMemberListEditController() {
   return {
     isLoading: isPinnedLoading,
     pinnedMembers,
-    allMembers,
+    allMembers: selectableMembers,
     isChecked,
     isPinned,
     toggleNewSelection,
@@ -150,7 +160,7 @@ export function useMemberListEditController() {
     save,
     isSaving: replaceMutation.isPending || deleteMutation.isPending,
     pinnedCount: pinnedOrder.length,
-    totalCount: allMembers.length,
+    totalCount: selectableMembers.length,
     newSelectionCount: newSelectedIds.length,
     hasNewSelections: newSelectedIds.length > 0,
   };
