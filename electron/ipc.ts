@@ -2,13 +2,16 @@ import { app, BrowserWindow, ipcMain, nativeImage, Tray } from 'electron';
 import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
-import { setEscSuppressed, resizeWindowForChat } from './window';
+import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows } from './window';
 
-export function setupIpcHandlers(deps: {
-  getMainWindow: () => BrowserWindow | null;
-  getTray: () => Tray | null;
-  setIsQuitting: (v: boolean) => void;
-}) {
+export function setupIpcHandlers(
+  deps: {
+    getMainWindow: () => BrowserWindow | null;
+    getTray: () => Tray | null;
+    setIsQuitting: (v: boolean) => void;
+  },
+  serverUrl: string,
+) {
   ipcMain.handle('show-notification', async (_event, data: NotificationData) => {
     if (process.platform === 'win32') {
       showCustomNotification(data, deps);
@@ -103,9 +106,45 @@ export function setupIpcHandlers(deps: {
     setEscSuppressed(suppress);
   });
 
-  // 채팅방 진입/이탈에 따라 창 폭을 좁게↔넓게 조절 (목록·설정=좁게, 채팅방=넓게)
-  ipcMain.handle('set-chat-room-active', (_event, active: boolean) => {
-    resizeWindowForChat(deps.getMainWindow(), active);
+  // 멀티 채팅창 — 채팅 목록 우클릭 '새 창에서 열기' (프로토타입 2026-08-21)
+  ipcMain.handle('open-chat-window', (_event, data: { path?: string; roomId?: string }) => {
+    if (!data?.roomId || typeof data.path !== 'string' || !data.path.startsWith('/')) return;
+    openChatWindow(serverUrl, data.path, data.roomId);
+  });
+
+  /* ─── WebSocket 중계 (멀티 채팅창) ───────────────────────────────
+     서버는 한 계정당 최신 소켓 하나에만 브로드캐스트한다. 창마다 소켓을 열면
+     나중에 연 창이 수신을 독점하고 먼저 열린 창은 자기가 보낸 메시지의 에코조차 못 받아
+     "전송 실패"로 오판한다(실제로는 서버에 저장됨). 그래서 소켓은 메인 창만 갖고,
+     팝업은 아래 채널로 송신을 위임하고 수신을 중계받는다. 메인 프로세스는 배선만 한다. */
+
+  // 팝업 → 메인 창: 보낼 메시지 위임
+  ipcMain.on('ws-relay:send', (_event, data: unknown) => {
+    const mainWindow = deps.getMainWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('ws-relay:outbound', data);
+  });
+
+  // 메인 창 → 팝업들: 수신 원문 중계
+  ipcMain.on('ws-relay:inbound', (_event, raw: string) => {
+    broadcastToChatWindows('ws-relay:message', raw);
+  });
+
+  // 메인 창 → 팝업들: 연결 상태 전파
+  ipcMain.on('ws-relay:status', (_event, connected: boolean) => {
+    broadcastToChatWindows('ws-relay:status-changed', connected);
+  });
+
+  // 팝업 마운트 직후 현재 상태 조회 (상태 변화 이벤트를 놓친 채 열릴 수 있으므로)
+  ipcMain.on('ws-relay:request-status', () => {
+    const mainWindow = deps.getMainWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('ws-relay:status-request');
+  });
+
+  // 로그아웃/세션 종료 — 허브가 사라지면 팝업은 아무것도 못 하므로 함께 닫는다
+  ipcMain.on('ws-relay:shutdown', () => {
+    closeAllChatWindows();
   });
 
   ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {

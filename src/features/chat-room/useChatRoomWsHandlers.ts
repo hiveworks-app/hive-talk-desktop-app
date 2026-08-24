@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { createWsMessageParser } from '@/features/chat-room/createWsMessageParser';
+import { consumeDraftBackfill } from '@/features/chat-room/draftBackfill';
+import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { ParticipantsManager } from '@/features/chat-room/domain';
 import { useChatRoomWsFetchHandlers } from '@/features/chat-room/useChatRoomWsFetchHandlers';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
@@ -36,12 +38,16 @@ interface UseChatRoomWsHandlersParams {
   isReconnectFetchRef: MutableRefObject<boolean>;
   isInitialFetchRef: MutableRefObject<boolean>;
   isMountedRef: MutableRefObject<boolean>;
+  /** draft 백필용 — 첫 PUB 수신 시 FETCH_BEFORE 1회 발행 */
+  send: (msg: unknown) => void;
+  buildFetchBeforeMessage: (opts: { currentMessage: string; isInclusive: boolean; channelIdOverride: string }) => unknown;
 }
 
 export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
   const {
     channelType, parseWsMessage, setMessages, deleteMessageById,
     replaceLocalWithServer, participantsManager, recalculateAllMessagesNotReadCount, isMountedRef,
+    send, buildFetchBeforeMessage,
   } = params;
   const queryClient = useQueryClient();
   const router = useAppRouter();
@@ -54,6 +60,9 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     queryClient.setQueryData<GetChatRoomListItemType[]>(roomListKey, oldData =>
       oldData ? oldData.filter(item => item.roomModel.roomId !== roomId) : [],
     );
+    // 다른 창/기기에서 이 방을 나가면 팝업에도 같은 브로드캐스트가 온다 —
+    // 팝업은 목록으로 가지 않고 창을 닫는다
+    if (closeIfPopup()) return;
     router.push('/chat');
   }, [channelType, queryClient, router]);
 
@@ -86,6 +95,16 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
   }, [participantsManager, channelType, recalculateAllMessagesNotReadCount, isMountedRef]);
 
   const handlePublishMessage = useCallback((payload: WebSocketPublishItem, roomId: string) => {
+    // draft 생성 직후 첫 PUB — 생성 트랜잭션과 함께 발행된 시스템 메시지(초대 공지)는
+    // SUB 전이라 broadcast로 못 받는다 → 이 메시지를 앵커로 1회 BEFORE 회수 (RN 패리티)
+    if (consumeDraftBackfill(roomId) && payload.message?.id) {
+      send(buildFetchBeforeMessage({
+        currentMessage: payload.message.id,
+        isInclusive: false,
+        channelIdOverride: roomId,
+      }));
+    }
+
     const m = parseWsMessage({ item: payload });
     if (!m) return;
 
@@ -120,7 +139,7 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     } else if (payload.message.messageContentType === WS_MESSAGE_CONTENT_TYPE.SUBMIT_INVITE) {
       handleParticipantChange('INVITE', roomId);
     }
-  }, [parseWsMessage, replaceLocalWithServer, setMessages, handleParticipantChange]);
+  }, [parseWsMessage, replaceLocalWithServer, setMessages, handleParticipantChange, send, buildFetchBeforeMessage]);
 
   const extractTagTarget = (payload: { items: TagListType[] } & Record<string, unknown>) =>
     payload.items[0]?.messageId ?? (payload.messageId as string | undefined);
@@ -155,7 +174,12 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     if (isPublish(data)) {
       const p = data.response.payload;
       // RN useChatRoomController 패리티: 비정상 envelope(message 누락) 방어
-      if (p?.message?.roomId === roomId) handlePublishMessage(p, roomId);
+      if (p?.message?.roomId === roomId) {
+        handlePublishMessage(p, roomId);
+      } else if (p?.message?.roomId != null) {
+        // 에코가 여기서 조용히 버려지면 5초 타임아웃 실패가 된다 — 타입 불일치 추적용
+        console.warn('[WS] PUB 무시 — roomId 불일치:', p.message.roomId, '(현재:', roomId, ')');
+      }
       return;
     }
     if (isExitMessageRoomBroadcast(data)) {

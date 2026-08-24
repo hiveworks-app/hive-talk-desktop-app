@@ -7,33 +7,75 @@ export function setEscSuppressed(value: boolean) {
   escSuppressed = value;
 }
 
-/** 평상시(목록·멤버·설정) 단일 컬럼 폭 */
-export const WINDOW_WIDTH_NARROW = 480;
-/** 채팅방(목록 + 대화) 멀티컬럼 폭 — md(768) 이상이라 사이드바+대화가 함께 보인다 */
-export const WINDOW_WIDTH_CHAT = 960;
+/** 기본 창 폭 — 창 크기는 앱이 임의로 바꾸지 않는다.
+ *  채팅방 진입/이탈 자동 폭 조절(480↔960)은 제거됨 (사용자 결정 2026-08-21).
+ *  시작 폭은 자동 조절 도입 이전의 원래 값(480)을 유지한다 — 임의 변경 금지. */
+export const WINDOW_WIDTH_DEFAULT = 480;
 
-/**
- * 채팅방 진입/이탈에 따라 창 폭을 동적으로 조절한다.
- * 진입 시 우측으로 확장(좌측 고정, 화면 오른쪽을 넘으면 좌측으로 슬라이드), 이탈 시 좁게 복귀.
- * 최대화·전체화면 상태에서는 건드리지 않는다.
- */
-export function resizeWindowForChat(win: BrowserWindow | null, chatActive: boolean) {
-  if (!win || win.isDestroyed() || win.isMaximized() || win.isFullScreen()) return;
+// ─── 멀티 채팅창 (프로토타입 2026-08-21) ───
+// 방별 팝업 창 레지스트리 — 같은 방은 새 창 대신 기존 창 포커스
+const chatWindows = new Map<string, BrowserWindow>();
 
-  const { workArea } = screen.getDisplayMatching(win.getBounds());
-  const target = chatActive ? WINDOW_WIDTH_CHAT : WINDOW_WIDTH_NARROW;
-  const width = Math.min(target, workArea.width);
-
-  const bounds = win.getBounds();
-  if (bounds.width === width) return;
-
-  let x = bounds.x;
-  if (x + width > workArea.x + workArea.width) {
-    x = Math.max(workArea.x, workArea.x + workArea.width - width);
+/** 채팅 목록 우클릭 '새 창에서 열기' — 대화 단독 팝업 창.
+ *  경로는 팝업 전용 라우트(/chat-popup/{roomId}) — (main) 셸(네비·전역 안내·자동 업데이트)을 타지 않는다. */
+export function openChatWindow(serverUrl: string, path: string, roomId: string) {
+  const existing = chatWindows.get(roomId);
+  if (existing && !existing.isDestroyed()) {
+    if (existing.isMinimized()) existing.restore();
+    existing.focus();
+    return;
   }
 
-  // 두 번째 인자(animate)는 macOS에서만 동작 — 부드러운 슬라이드 확장
-  win.setBounds({ x, y: bounds.y, width, height: bounds.height }, true);
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const win = new BrowserWindow({
+    width: Math.min(520, screenWidth),
+    height: Math.min(720, screenHeight),
+    minWidth: Math.min(400, screenWidth),
+    minHeight: Math.min(480, screenHeight),
+    title: 'HiveTalk',
+    icon: getIconPath(),
+    // 콘텐츠 준비 전 빈 창이 깜빡이지 않도록 숨겨서 만들고 ready-to-show에서 표시 (메인 창과 동일 패턴).
+    // backgroundColor는 첫 페인트 전 기본 흰 배경 대신 앱 배경색을 쓰게 한다.
+    show: false,
+    backgroundColor: '#FFFFFF',
+    // 팝업은 OS 기본 타이틀바 사용 (메인 창의 hiddenInset·드래그 바 체계와 분리)
+    webPreferences: {
+      preload: getPreloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
+  // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
+  const showFallback = setTimeout(() => {
+    if (!win.isDestroyed() && !win.isVisible()) win.show();
+  }, 1200);
+  win.once('ready-to-show', () => {
+    clearTimeout(showFallback);
+    win.show();
+  });
+  // 팝업은 트레이 최소화 없이 그냥 닫힘 (메인 창 전용 동작 미적용)
+  win.on('closed', () => {
+    clearTimeout(showFallback);
+    chatWindows.delete(roomId);
+  });
+  void win.loadURL(`${serverUrl}${path}`);
+  chatWindows.set(roomId, win);
+}
+
+/** 열려 있는 모든 팝업 창에 IPC 이벤트를 보낸다 (WS 중계용) */
+export function broadcastToChatWindows(channel: string, payload: unknown) {
+  chatWindows.forEach(win => {
+    if (!win.isDestroyed()) win.webContents.send(channel, payload);
+  });
+}
+
+/** 앱 종료/로그아웃 시 팝업 정리 — 팝업은 허브(메인 창)의 소켓에 의존하므로 혼자 남으면 죽은 창이 된다 */
+export function closeAllChatWindows() {
+  chatWindows.forEach(win => {
+    if (!win.isDestroyed()) win.close();
+  });
+  chatWindows.clear();
 }
 
 export function createWindow(
@@ -43,9 +85,8 @@ export function createWindow(
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
   const win = new BrowserWindow({
-    // 평상시(목록·멤버·설정)는 좁은 단일 컬럼으로 연다. 채팅방 진입 시 우측으로 확장한다(resizeWindowForChat).
     // 작은 디스플레이에서 화면보다 커지지 않도록 작업영역으로 클램프.
-    width: Math.min(WINDOW_WIDTH_NARROW, screenWidth),
+    width: Math.min(WINDOW_WIDTH_DEFAULT, screenWidth),
     height: Math.min(800, screenHeight),
     minWidth: Math.min(440, screenWidth),
     minHeight: Math.min(600, screenHeight),

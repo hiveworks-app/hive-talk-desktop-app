@@ -17,9 +17,15 @@ interface WebSocketCoreConfig {
   loginUserId: string | number | undefined;
   queryClient: QueryClient;
   buildSubscribeMessage: (opts: { channelIdOverride?: string }) => unknown;
+  /** 인바운드 원문 훅 — 허브(메인 창)가 멀티 채팅창으로 중계할 때 사용 (PONG 제외) */
+  onRawMessage?: (raw: string) => void;
+  /** 데스크톱 알림 억제 — 팝업은 허브가 이미 띄우므로 중복 방지 */
+  suppressNotification?: boolean;
 }
 
-export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscribeMessage }: WebSocketCoreConfig) {
+export function useWebSocketCore({
+  WS_URL, loginUserId, queryClient, buildSubscribeMessage, onRawMessage, suppressNotification,
+}: WebSocketCoreConfig) {
   const wsRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Record<string, Listener>>({});
   const isConnectingRef = useRef(false);
@@ -43,6 +49,21 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
     });
   }
   const [isConnected, setIsConnected] = useState(false);
+
+  /* 라우팅/중계 훅은 렌더마다 정체성이 바뀌므로 ref 경유로 고정한다 —
+     connectWebSocket의 deps에 넣으면 소켓이 불필요하게 재생성된다. */
+  const onRawMessageRef = useRef(onRawMessage);
+  const routeRawMessageRef = useRef<(raw: string) => void>(() => {});
+
+  /** 원문 1건을 라우팅한다. 소켓에서 온 것과 IPC 중계로 온 것이 같은 경로를 타도록 분리했다. */
+  const routeRawMessage = useCallback((raw: string) => {
+    routeMessage(raw, {
+      queryClient, listenersRef, processedReadEventsRef, pendingReadCallbacksRef,
+      sendRef, isElectronRef, buildSubscribeMessage,
+      loginUserId: useAuthStore.getState().user?.id,
+      suppressNotification,
+    });
+  }, [queryClient, buildSubscribeMessage, suppressNotification]);
 
   const disconnectWebSocket = useCallback(() => {
     heartbeatRef.current?.stop();
@@ -92,6 +113,11 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
       try { parsed = JSON.parse(event.data); } catch { /* 비 JSON은 그대로 라우팅 */ }
       if (isPongMessage(parsed)) return;
 
+      // 멀티 채팅창(팝업)으로 원문 중계.
+      // 서버는 한 계정당 최신 소켓 하나에만 브로드캐스트하므로 창마다 소켓을 열 수 없다 —
+      // 소켓은 이 창(허브)만 갖고, 나머지 창은 여기서 넘긴 원문으로 같은 라우팅을 돈다.
+      onRawMessageRef.current?.(event.data);
+
       // 🔌 SESSION/DISCONNECT (중복 로그인 SC010) → 소켓 종료 + 강제 종료 안내 다이얼로그.
       // 로그아웃은 다이얼로그 확인 시점에 수행 — 유예 구간 자동 동작은 noticeVisible 가드가 차단
       if (parsed !== null && typeof parsed === 'object' && isSessionDisconnect(parsed as WebSocketEnvelope)) {
@@ -102,11 +128,7 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
         return;
       }
 
-      routeMessage(event.data, {
-        queryClient, listenersRef, processedReadEventsRef, pendingReadCallbacksRef,
-        sendRef, isElectronRef, buildSubscribeMessage,
-        loginUserId: useAuthStore.getState().user?.id,
-      });
+      routeRawMessageRef.current(event.data);
     };
 
     ws.onerror = (err) => { console.warn('[WS] ⚠️ 연결 실패:', err); isConnectingRef.current = false; };
@@ -213,10 +235,15 @@ export function useWebSocketCore({ WS_URL, loginUserId, queryClient, buildSubscr
     catch (error) { console.error('[WS] send 에러:', error); }
   }, []);
 
-  useEffect(() => { connectWebSocketRef.current = connectWebSocket; sendRef.current = send; });
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+    sendRef.current = send;
+    onRawMessageRef.current = onRawMessage;
+    routeRawMessageRef.current = routeRawMessage;
+  });
 
   return {
-    send, isConnected, connectWebSocket, disconnectWebSocket,
+    send, isConnected, connectWebSocket, disconnectWebSocket, routeRawMessage,
     listenersRef, sendRef, pendingReadCallbacksRef, isElectronRef, removePendingPublish,
   };
 }

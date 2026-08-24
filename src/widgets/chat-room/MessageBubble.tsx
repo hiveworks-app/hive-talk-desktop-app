@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { IconArrowDown, IconBlock, IconBubbleMe, IconBubbleYou, IconCaution, IconDownload, IconSend } from '@assets/icons';
+import { IconArrowDown, IconBlock, IconBubbleMe, IconBubbleYou, IconCaution, IconDownload } from '@assets/icons';
 import { getBlockedFoldText } from '@/features/block/blockedMessage';
 import { composeContextMenuTags } from '@/features/tag/quickTags';
 import { IS_DELETE_MESSAGE_COMMENTS, MESSAGE_DELETE_WINDOW_MS } from '@/shared/config/constants';
@@ -251,10 +251,20 @@ export function MessageBubble({
                     onRetry={() => onRetryMessage?.(message.id)}
                     onDelete={() => onRemoveFailedMessage?.(message.id)}
                   />
+                ) : isMediaType ? (
+                  /* 업로드 중 미디어/파일 — 썸네일 위 딤 오버레이의 진행률+X(취소)가 이미 상태를 알린다.
+                     여기에 스피너까지 그리면 한 메시지에 로딩 표시가 둘이 된다 (RN MeBubble: 업로드 중 좌측 컬럼 null) */
+                  null
                 ) : (
-                  /* RN 패리티 — 전송중은 스피너 대신 정적 send 아이콘 + 시간 */
+                  /* 전송중 = 회전 스피너 — RN은 정적 재전송 모양 아이콘(IconMessageResend)이지만
+                     실패 상태의 재전송 버튼과 혼동됨 → 데스크톱은 스피너 (사용자 결정 2026-08-21) */
                   <>
-                    <IconSend width={16} height={16} className="text-gray-600" />
+                    {/* 12px + 1.5px 선 — 링은 글리프보다 무겁게 읽혀 메타(11px) 스케일에 맞춰 축소 (사용자 조정 2026-08-21) */}
+                    <span
+                      role="status"
+                      aria-label="전송 중"
+                      className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-gray-300 border-t-gray-600"
+                    />
                     {showTime && <span className="text-[11px] leading-[14px] text-gray-600">{message.time}</span>}
                   </>
                 )

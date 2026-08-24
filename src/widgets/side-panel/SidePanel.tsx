@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
@@ -164,6 +165,8 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
     useDraftStore.getState().clearDraft(roomId);
     useFailedMessagesStore.getState().removeRoom(roomId);
     pendingReadRegistry.removeRoom(roomId);
+    // 팝업(멀티 채팅창)은 돌아갈 목록이 없다 — 목록으로 라우팅하면 팝업이 앱 전체 창으로 바뀐다
+    if (closeIfPopup()) return;
     const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
     router.push(routePrefix);
     onClose();
