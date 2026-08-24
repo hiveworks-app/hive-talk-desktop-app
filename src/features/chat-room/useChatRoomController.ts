@@ -65,6 +65,8 @@ export const useChatRoomController = () => {
     setMessages, replaceMessages, setLoading, deleteMessageById, replaceLocalWithServer,
     normalizeUserId, participantsManager,
     recalculateAllMessagesNotReadCount, isReconnectFetchRef, isInitialFetchRef, isMountedRef,
+    // draft 백필용 — 첫 PUB 수신 시 생성 트랜잭션의 시스템 메시지(초대 공지) 1회 회수
+    send, buildFetchBeforeMessage: builders.buildFetchBeforeMessage,
   });
   handleWsMessageRef.current = handleWsMessage;
 

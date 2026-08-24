@@ -54,11 +54,14 @@ const SidePanel = dynamic(
 interface ChatRoomViewProps {
   routePrefix: '/chat' | '/external-chat';
   showNextMessage?: boolean;
+  /** 멀티 채팅창(팝업) — 목록이 없는 단독 창이라 뒤로가기·목록 복귀 대신 방 메타를 직접 부트스트랩 */
+  isPopup?: boolean;
 }
 
-export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomViewProps) {
+export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = false }: ChatRoomViewProps) {
   const params = useParams();
   const router = useAppRouter();
+  const queryClient = useQueryClient();
   const urlRoomId = params?.roomId as string | undefined;
 
   const storeRoomId = useChatRoomInfo(s => s.roomId);
@@ -66,7 +69,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const isNewRoom = !storeRoomId && invitedUserIds.length > 0;
 
   useEffect(() => {
-    if (!storeRoomId && !isNewRoom && urlRoomId) router.replace(routePrefix);
+    // 팝업은 페이지가 방 메타를 채운 뒤 마운트하므로 목록 복귀 대상이 아니다
+    if (!storeRoomId && !isNewRoom && urlRoomId && !isPopup) router.replace(routePrefix);
   }, [storeRoomId, isNewRoom, urlRoomId]);
 
   useChatRoomController();
@@ -80,10 +84,14 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
   const scrollToBottomTrigger = useChatRoomRuntimeStore(s => s.scrollToBottomTrigger);
   const isRoomTransitioning = !isNewRoom && storeRoomId !== runtimeRoomId;
   const { roomName, totalUserCount, channelType, lastMessage, initialNotReadCount } = useChatRoomInfo();
+
+  // 팝업 창 제목을 방 이름으로 — 창 전환(⌘`)·미션컨트롤에서 방 구분
+  useEffect(() => {
+    if (isPopup && roomName) document.title = roomName;
+  }, [isPopup, roomName]);
   const effectiveRoomId = isNewRoom ? '' : (storeRoomId || runtimeRoomId || '');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
   // 공지 교체 확인 — 기존 공지가 있을 때만 (RN showConfirm 패리티)
   const [noticeReplaceConfirm, setNoticeReplaceConfirm] = useState<{ run: () => void } | null>(null);
   // 장문 전체보기 다이얼로그 (RN ChatRoomFullMessageScreen 대응)
@@ -174,7 +182,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
       removeTagFromMessage({ messageId: message.id, taggingIdList: [String(existing.taggingId)] });
     } else {
       if ((message.tags?.length ?? 0) >= 3) {
-        showSnackbar({ message: '태그는 최대 3개까지 선택 가능해요.', state: 'error' });
+        showSnackbar({ message: '태그는 최대 3개까지 선택 가능해요.', state: 'warning' });
         return;
       }
       const tag = tagList?.find(t => t.title === tagName);
@@ -294,6 +302,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
           isExternalRoom={channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE}
           totalUserCount={totalUserCount}
           onBack={() => router.push(routePrefix)}
+          isPopup={isPopup}
           search={search}
           searchInputRef={searchInputRef}
           isSidePanelOpen={isSidePanelOpen}
@@ -398,9 +407,10 @@ export function ChatRoomView({ routePrefix, showNextMessage = false }: ChatRoomV
               </button>
             )
           )}
-          <SelectedTagOverlay />
         </div>
 
+          {/* 선택한 업무태그 — 대화 영역이 아니라 입력창 바로 위 (RN 패리티) */}
+          <SelectedTagOverlay />
           <ChatInput onSend={handleSendWithTags} onFilesSelected={handleFilesSelected} onEditTag={handleOpenAddTag} />
 
           {/* 공지 교체 확인 (RN 정책 카피) */}

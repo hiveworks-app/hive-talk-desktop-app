@@ -19,6 +19,8 @@ interface ChatRoomHeaderProps {
   /** EM(협력채팅) 방 여부 — 타이틀 옆 ∞ 심볼 표기 (RN 패리티) */
   isExternalRoom?: boolean;
   onBack: () => void;
+  /** 멀티 채팅창(팝업) — 돌아갈 목록이 없어 뒤로가기 미노출 */
+  isPopup?: boolean;
   search: UseChatRoomSearchReturn;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   isSidePanelOpen: boolean;
@@ -33,6 +35,7 @@ export function ChatRoomHeader({
   totalUserCount,
   isExternalRoom,
   onBack,
+  isPopup = false,
   search,
   searchInputRef,
   isSidePanelOpen,
@@ -43,6 +46,8 @@ export function ChatRoomHeader({
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   // 메시지 0건이면 검색 버튼 비활성 (RN 패리티)
   const hasMessages = useChatRoomRuntimeStore(s => s.messages.length > 0);
+  // 인원수는 GM/EM만 — DM 헤더는 상대 이름 단독 (RN 패리티)
+  const isDM = useChatRoomInfo(s => s.channelType) === WS_CHANNEL_TYPE.DIRECT_MESSAGE;
   // 대화가 있는 날짜만 달력에서 활성화 (RN activeDates 패리티) — null = 조회 실패·미조회(게이팅 없음)
   const [activeDates, setActiveDates] = useState<Set<string> | null>(null);
 
@@ -84,20 +89,25 @@ export function ChatRoomHeader({
     <header className="electron-drag bg-chat-bg">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            onClick={onBack}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 md:hidden"
-          >
-            <IconChevronLeft />
-          </button>
+          {/* 팝업(멀티 채팅창)은 대화 단독 창 — 목록으로 나가는 뒤로가기 숨김 */}
+          {!isPopup && (
+            <button
+              onClick={onBack}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 md:hidden"
+            >
+              <IconChevronLeft />
+            </button>
+          )}
           {/* RN 패리티 — 타이틀 heading-md(18) medium + 인원수 text-body(16) semibold 인라인 */}
-          <div className="flex min-w-0 items-center gap-1.5">
+          {/* gap-1 = RN 각 요소의 ml-1(4px) */}
+          <div className="flex min-w-0 items-center gap-1">
             <h2 className="truncate text-heading-md font-medium leading-tight text-gray-900">{roomName || '채팅방'}</h2>
+            {/* RN ChatRoomScreen 순서 — 제목 → 인원수 → ∞ (심볼이 뒤). 색도 RN과 동일한 text.primary */}
+            {!isDM && totalUserCount > 0 && (
+              <span className="shrink-0 text-body font-semibold text-gray-900">{totalUserCount}</span>
+            )}
             {/* EM(협력채팅) 구분 심볼 (RN 패리티) */}
             {isExternalRoom && <IconExternalSymbol width={18} height={10} className="shrink-0 text-gray-400" />}
-            {totalUserCount > 0 && (
-              <span className="shrink-0 text-body font-semibold text-gray-600">{totalUserCount}</span>
-            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">

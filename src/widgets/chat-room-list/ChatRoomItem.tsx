@@ -34,6 +34,7 @@ import { CursorMenu } from "@/shared/ui/CursorMenu";
 import { LEAVE_CONFIRM_DESCRIPTION } from "@/shared/config/constants";
 import IconLeave from "@assets/icons/leave.svg";
 import IconBottomChatDefault from "@assets/icons/bottom-chat-default.svg";
+import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import IconStarFilled from "@assets/icons/star-filled.svg";
 import { IconCaution, IconChatDraft } from "@assets/icons";
 
@@ -94,6 +95,10 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
   const hasPinned = showFavoriteStar && isPinnedRoom;
 
   const isActive = params?.roomId === roomModel.roomId;
+  // 멀티 채팅창(새 창에서 열기)은 Electron 전용
+  const isElectron =
+    typeof window !== 'undefined' &&
+    Boolean((window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron);
 
   // 개별 나가기 (hover 액션 — RN 스와이프 나가기 대응)
   const { leaveRoom } = useLeaveRoom();
@@ -229,6 +234,16 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
         y={menuPos.y}
         items={[
           { label: '채팅방 열기', icon: <IconBottomChatDefault width={20} height={20} className="text-gray-600" />, onSelect: () => { setMenuPos(null); void handleClick(); } },
+          // 멀티 채팅창 — Electron에서만 (웹 브라우저에선 미노출)
+          ...(isElectron ? [{
+            label: '새 창에서 열기',
+            icon: <IconCreateChatFilled width={20} height={20} className="text-gray-600" />,
+            onSelect: () => {
+              setMenuPos(null);
+              (window as unknown as { electronAPI?: { openChatWindow?: (d: { path: string; roomId: string }) => void } })
+                .electronAPI?.openChatWindow?.({ path: `/chat-popup/${roomModel.roomId}`, roomId: roomModel.roomId });
+            },
+          }] : []),
           { label: '나가기', icon: <IconLeave width={20} height={20} />, danger: true, onSelect: () => { setMenuPos(null); setLeaveConfirmOpen(true); } },
         ]}
         onClose={() => setMenuPos(null)}

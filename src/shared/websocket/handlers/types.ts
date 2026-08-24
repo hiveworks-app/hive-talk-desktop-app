@@ -13,6 +13,8 @@ export interface MessageHandlerDeps {
   sendRef: MutableRefObject<(data: unknown) => void>;
   isElectronRef: MutableRefObject<boolean>;
   loginUserId: string | undefined;
+  /** 데스크톱 알림 억제 — 멀티 채팅창(팝업)은 허브(메인 창)가 이미 알림을 띄우므로 중복 방지 */
+  suppressNotification?: boolean;
   buildSubscribeMessage: (opts: {
     channelIdOverride?: string;
     channelTypeOverride?: string;

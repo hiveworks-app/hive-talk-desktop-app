@@ -14,7 +14,6 @@ import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useAutoUpdate } from '@/shared/hooks/useAutoUpdate';
-import { useChatWindowResize } from '@/shared/hooks/useChatWindowResize';
 import { OfflineBanner } from '@/shared/ui/OfflineBanner';
 
 const TAG_STALE_TIME = 1000 * 60 * 60 * 24; // 24시간
@@ -67,9 +66,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }, [authChecked, accessToken]);
 
   const { updateReady, installUpdate } = useAutoUpdate();
-
-  // 채팅방 진입/이탈에 따라 창 폭 동적 조절 (Electron)
-  useChatWindowResize();
 
   if (!authChecked) return null;
 

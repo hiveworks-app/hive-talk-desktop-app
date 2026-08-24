@@ -23,6 +23,7 @@ import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
 import { useFailedMessagesStore } from "@/store/chat/failedMessagesStore";
 import { useUIStore } from "@/store/uiStore";
 import { useLeaveRoom } from "@/features/chat-room-list/useLeaveRoom";
+import { markDraftBackfill } from "@/features/chat-room/draftBackfill";
 
 type ChatScrollDirection = "before" | "after";
 
@@ -139,10 +140,16 @@ export const useChatRoomActions = () => {
     }
 
     if (!newRoomId) return null;
+    // 서버가 roomId를 숫자로 내려줘도 WS 에코 필터(p.message.roomId === currentRoomId, strict ===)가
+    // 어긋나지 않게 문자열로 정규화 — 어긋나면 에코가 조용히 버려져 5초 타임아웃 실패가 된다
+    newRoomId = String(newRoomId);
 
     // 상태 업데이트
     useChatRoomInfo.getState().setChatRoomInfo({ roomId: newRoomId });
     useChatRoomRuntimeStore.getState().setRoomId(newRoomId);
+
+    // 생성 트랜잭션의 시스템 메시지(초대 공지)는 SUB 전 발행 — 첫 PUB 수신 시 1회 BEFORE 회수 (RN 패리티)
+    markDraftBackfill(newRoomId);
 
     // WebSocket 구독 + 초대 (EM은 서버가 초대 시스템 메시지를 자동 발행 — 클라이언트 invite 스킵, RN FR-26)
     send(buildSubscribeMessage({ channelIdOverride: newRoomId }));
@@ -223,6 +230,11 @@ export const useChatRoomActions = () => {
           if (msg.retryPayload?.content) {
             removePendingPublish(msg.retryPayload.content);
           }
+          // 에코 미스 진단 — 발생 시 방/메시지 식별자로 원인 추적 (RN reportEchoMiss 대응)
+          console.warn('[SEND] 5초 내 서버 에코 없음 → 실패 처리:', {
+            localId,
+            roomId: msg.retryPayload?.roomId || currentRoomId,
+          });
           patchMessageById(localId, { localStatus: "failed" });
           // 실패 메시지 영속화 — 방 이탈/재실행 후 복원 + 목록 느낌표 판정 소스 (RN 패리티)
           const failedRoomId = msg.retryPayload?.roomId || currentRoomId;

@@ -13,14 +13,17 @@ interface UseElectronNotificationDeps {
   routerRef: MutableRefObject<AppRouterInstance>;
   sendRef: MutableRefObject<(data: unknown) => void>;
   pendingReadCallbacksRef: MutableRefObject<Map<string, () => void>>;
+  /** 멀티 채팅창(팝업)에서는 끈다 — 알림 클릭 시 팝업이 다른 방으로 이동해버리고, 허브가 이미 처리한다 */
+  enabled?: boolean;
 }
 
 export function useElectronNotification(deps: UseElectronNotificationDeps) {
   const queryClient = useQueryClient();
-  const { routerRef, sendRef, pendingReadCallbacksRef } = deps;
+  const { routerRef, sendRef, pendingReadCallbacksRef, enabled = true } = deps;
 
   // 알림 클릭 → 해당 채팅방으로 이동
   useEffect(() => {
+    if (!enabled) return;
     const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
       | {
           isElectron?: boolean;
@@ -93,10 +96,11 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
     });
 
     return cleanup;
-  }, [queryClient, routerRef]);
+  }, [queryClient, routerRef, enabled]);
 
   // 알림 "읽음" 버튼 → 해당 채팅방 읽음 처리
   useEffect(() => {
+    if (!enabled) return;
     const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
       | {
           isElectron?: boolean;
@@ -145,5 +149,5 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
     });
 
     return cleanup;
-  }, [sendRef, pendingReadCallbacksRef]);
+  }, [sendRef, pendingReadCallbacksRef, enabled]);
 }

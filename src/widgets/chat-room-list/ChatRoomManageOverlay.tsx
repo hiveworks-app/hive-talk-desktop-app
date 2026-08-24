@@ -121,20 +121,22 @@ export function ChatRoomManageOverlay({ open, onClose, rooms, onLeave, leaveNoti
         )}
       </div>
 
-      {/* 하단 CTA: 채팅방 나가기 */}
-      <div className="border-t border-divider px-4 py-3">
-        <button
-          onClick={handleLeave}
-          disabled={count === 0}
-          className={cn(
-            'flex h-10 w-full items-center justify-center gap-2.5 rounded-[10px] text-body font-medium text-white transition-opacity',
-            count > 0 ? 'bg-state-error hover:opacity-90' : 'cursor-default bg-gray-400',
-          )}
-        >
-          <IconLeave width={20} height={20} />
-          채팅방 나가기
-        </button>
-      </div>
+      {/* 하단 CTA: 채팅방 나가기 — 방이 하나도 없으면 미노출 (RN 패리티) */}
+      {rooms.length > 0 && (
+        <div className="border-t border-divider px-4 py-3">
+          <button
+            onClick={handleLeave}
+            disabled={count === 0}
+            className={cn(
+              'flex h-10 w-full items-center justify-center gap-2.5 rounded-[10px] text-body font-medium text-white transition-opacity',
+              count > 0 ? 'bg-state-error hover:opacity-90' : 'cursor-default bg-gray-400',
+            )}
+          >
+            <IconLeave width={20} height={20} />
+            채팅방 나가기
+          </button>
+        </div>
+      )}
 
       {/* 일괄 나가기 확인 (RN showConfirm 패리티) */}
       <ConfirmDialog

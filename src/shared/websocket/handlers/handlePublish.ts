@@ -21,7 +21,7 @@ export function handlePublish(
   globalChannelType: WebSocketChannelTypes | undefined,
   deps: MessageHandlerDeps,
 ) {
-  const { queryClient, listenersRef, isElectronRef, loginUserId } = deps;
+  const { queryClient, listenersRef, isElectronRef, loginUserId, suppressNotification } = deps;
   const pubPayload = envelope.response.payload as WebSocketSingleMessagePayload;
   const roomId = pubPayload.message.roomId;
   const currentChannelType = globalChannelType || (envelope.response as { channelType?: WebSocketChannelTypes }).channelType;
@@ -97,7 +97,7 @@ export function handlePublish(
   // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 창에 포커스가 없을 때)
   // 차단 발신자의 메시지는 알림 제외 (정책 block.md — 미리보기 접힘 문구로만 인지)
   const isWindowInactive = isElectronRef.current && !document.hasFocus();
-  if (!isMySentMessage && !isBlockedSender && (!isRoomActive || isWindowInactive)) {
+  if (!suppressNotification && !isMySentMessage && !isBlockedSender && (!isRoomActive || isWindowInactive)) {
     sendNotification(normalizedPayload, roomId, currentChannelType, targetQueryKey, queryClient);
   }
 }

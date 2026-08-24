@@ -1,5 +1,8 @@
-// contextIsolation 환경에서 렌더러→메인 Sentry IPC 브릿지 설정 (가장 먼저)
-import '@sentry/electron/preload';
+// 주의: 여기서 '@sentry/electron/preload'를 import하지 말 것.
+// 샌드박스 preload(Electron 20+ 기본)는 node_modules를 require할 수 없어 첫 줄에서 스크립트가
+// 통째로 죽고 아래 contextBridge(electronAPI)까지 사라진다 (2026-08-21 사고).
+// Sentry 렌더러↔메인 통신은 SDK 내장 프로토콜 폴백이 처리하고, DSN 설정 시 메인 SDK가
+// registerPreloadScript로 자체 preload를 스스로 주입한다 — 수동 import 불필요.
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -10,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     meta?: { roomId?: string; channelType?: string; senderName?: string; navigate?: string };
   }) => ipcRenderer.invoke('show-notification', data),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  // 멀티 채팅창 — 채팅 목록 우클릭 '새 창에서 열기' (프로토타입)
+  openChatWindow: (data: { path: string; roomId: string }) => ipcRenderer.invoke('open-chat-window', data),
   setBadgeCount: (count: number) => ipcRenderer.invoke('set-badge-count', count),
   isElectron: true,
   platform: process.platform,
@@ -49,5 +54,44 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   setSuppressEsc: (suppress: boolean) => ipcRenderer.invoke('set-suppress-esc', suppress),
-  setChatRoomActive: (active: boolean) => ipcRenderer.invoke('set-chat-room-active', active),
+
+  /* WebSocket 중계 — 소켓은 메인 창(허브)만 갖고 팝업은 여기에 얹는다.
+     서버가 한 계정당 최신 소켓 하나에만 브로드캐스트하기 때문 (ipc.ts 주석 참조). */
+  wsRelay: {
+    /** 팝업 → 허브: 전송 위임 */
+    send: (data: unknown) => ipcRenderer.send('ws-relay:send', data),
+    /** 허브 → 팝업: 수신 원문 중계 */
+    publishInbound: (raw: string) => ipcRenderer.send('ws-relay:inbound', raw),
+    /** 허브 → 팝업: 연결 상태 전파 */
+    publishStatus: (connected: boolean) => ipcRenderer.send('ws-relay:status', connected),
+    /** 팝업: 현재 연결 상태 조회 요청 */
+    requestStatus: () => ipcRenderer.send('ws-relay:request-status'),
+    /** 허브: 팝업 일괄 종료 요청 (로그아웃/세션 종료) */
+    shutdown: () => ipcRenderer.send('ws-relay:shutdown'),
+
+    /** 허브 구독 — 팝업이 위임한 전송 */
+    onOutbound: (callback: (data: unknown) => void) => {
+      const handler = (_e: unknown, data: unknown) => callback(data);
+      ipcRenderer.on('ws-relay:outbound', handler);
+      return () => { ipcRenderer.removeListener('ws-relay:outbound', handler); };
+    },
+    /** 허브 구독 — 팝업의 상태 조회 요청 */
+    onStatusRequest: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('ws-relay:status-request', handler);
+      return () => { ipcRenderer.removeListener('ws-relay:status-request', handler); };
+    },
+    /** 팝업 구독 — 중계된 수신 원문 */
+    onMessage: (callback: (raw: string) => void) => {
+      const handler = (_e: unknown, raw: string) => callback(raw);
+      ipcRenderer.on('ws-relay:message', handler);
+      return () => { ipcRenderer.removeListener('ws-relay:message', handler); };
+    },
+    /** 팝업 구독 — 연결 상태 변화 */
+    onStatusChanged: (callback: (connected: boolean) => void) => {
+      const handler = (_e: unknown, connected: boolean) => callback(connected);
+      ipcRenderer.on('ws-relay:status-changed', handler);
+      return () => { ipcRenderer.removeListener('ws-relay:status-changed', handler); };
+    },
+  },
 });

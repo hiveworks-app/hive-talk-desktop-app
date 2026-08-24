@@ -143,7 +143,7 @@ app.whenReady().then(async () => {
     const serverUrl = await startNextServer();
     mainWindow = createWindow(serverUrl, deps);
     tray = createTray(deps);
-    setupIpcHandlers(deps);
+    setupIpcHandlers(deps, serverUrl);
 
     mainWindow.on('closed', () => { mainWindow = null; });
 
