@@ -27,6 +27,8 @@ interface MediaViewerProps {
   currentIndex: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  /** 헤더 우측(다운로드 왼쪽) 텍스트 액션 — RN ProfileImageViewerScreen '프로필 수정' pill 대응 */
+  headerAction?: { label: string; onClick: () => void };
 }
 
 /** Outer shell: dimmed 관리 + visible 가드 */
@@ -36,7 +38,7 @@ export function MediaViewer(props: MediaViewerProps) {
   return <MediaViewerContent {...props} />;
 }
 
-function MediaViewerContent({ items, currentIndex, onIndexChange, onClose }: MediaViewerProps) {
+function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, headerAction }: MediaViewerProps) {
   const {
     videoRef, contentRef,
     view, isLoading, setIsLoading, hasError, isFetchingUrl,
@@ -80,11 +82,22 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose }: Med
             {items.length > 1 ? `${currentIndex + 1} / ${items.length}` : ''}
           </span>
         </div>
-        <button onClick={handleDownload} className="z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
+        <div className="z-10 flex items-center gap-2">
+          {headerAction && (
+            /* RN 패리티 — h-38 rounded-lg bg-white/70 px-2.5, 어두운 배경 위 흰 pill */
+            <button
+              onClick={headerAction.onClick}
+              className="flex h-[38px] items-center justify-center rounded-lg bg-white/70 px-2.5 text-body font-medium text-gray-900 transition-opacity hover:opacity-80 active:opacity-60"
+            >
+              {headerAction.label}
+            </button>
+          )}
+          <button onClick={handleDownload} className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Content */}

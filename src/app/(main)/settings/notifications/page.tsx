@@ -25,8 +25,8 @@ export default function NotificationSettingsPage() {
   const onError = () => showSnackbar({ message: '알림 설정 변경에 실패했습니다.', state: 'error' });
 
   return (
-    <SettingsOverlay bg="bg-background">
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+    <SettingsOverlay bg="bg-gray-50">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">알림 설정</h2>
         <button
           onClick={() => router.push('/settings')}
@@ -38,7 +38,7 @@ export default function NotificationSettingsPage() {
       </header>
 
       {/* RN NotificationSettingsScreen 패리티 — 섹션 헤더 없음, 카피 정본 */}
-      <div className="scrollbar-thin flex-1 overflow-y-auto">
+      <div className="scrollbar-thin flex-1 overflow-y-auto rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         <section className="py-2">
           <SettingToggleRow
             title="채팅 알림"

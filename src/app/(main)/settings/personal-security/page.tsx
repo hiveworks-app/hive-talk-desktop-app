@@ -56,8 +56,8 @@ export default function PersonalSecurityPage() {
       });
 
   return (
-    <SettingsOverlay bg="bg-background">
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+    <SettingsOverlay bg="bg-gray-50">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">개인/보안</h2>
         <button
           onClick={() => router.push('/settings')}
@@ -68,7 +68,7 @@ export default function PersonalSecurityPage() {
         </button>
       </header>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-4">
+      <div className="scrollbar-thin flex-1 overflow-y-auto p-4 rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         <div className="mx-auto max-w-[480px] space-y-6">
           {/* 동의 정보 (필수) */}
           <Section label="동의 정보 (필수)">

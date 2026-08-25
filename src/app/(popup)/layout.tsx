@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useGetBlockedMembers } from '@/features/block/queries';
+import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
 import { useGetMembers } from '@/features/members/queries';
+import { OfflineBanner } from '@/shared/ui/OfflineBanner';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { useAuthStore } from '@/store/auth/authStore';
 
@@ -61,7 +63,14 @@ export default function PopupLayout({ children }: { children: React.ReactNode })
   return (
     <WebSocketProvider>
       <PopupDataBootstrap />
-      <div className="flex h-full overflow-hidden">{children}</div>
+      <div className="relative flex h-full overflow-hidden">
+        {/* 오프라인 배너 — 메인 창과 동일 (헤더 아래 32px 띠) */}
+        <OfflineBanner />
+        {children}
+        {/* 중복 로그인 강제 종료 안내 — 허브가 중계한 SC010 프레임을 스포크 수신부가 감지해 띄운다.
+            확인 시 handleForceLogout → authStore.logout → wsRelay.shutdown으로 모든 팝업이 함께 닫힌다. */}
+        <DuplicateLoginLogoutDialog />
+      </div>
     </WebSocketProvider>
   );
 }

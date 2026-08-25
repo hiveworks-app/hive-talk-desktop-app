@@ -4,12 +4,18 @@ import { useEffect, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getFilesInfiniteQuery, getSidePanelBeforeFileQuery } from '@/features/chat-room-side-panel/queries';
 import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
-import { Checkbox } from '@/shared/ui/Checkbox';
-import { IconDownload, IconSearch } from '@/shared/ui/icons';
+import { cn } from '@/shared/lib/cn';
+import { IconDownload } from '@/shared/ui/icons';
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatBytes } from '@/shared/utils/fileUtils';
-import { SenderFilterDropdown } from './SenderFilterDropdown';
+import { FileTypeIcon } from '@/shared/ui/FileTypeIcon';
+import { isBlockedUser } from '@/store/blockedMembersStore';
+import { formatSizeParts, groupByDate } from '@/shared/utils/chatSidePanelUtils';
+import IconBlock from '@assets/icons/block.svg';
+import { IconCheck } from '@assets/icons';
+import { SenderSearchBar } from './SenderSearchBar';
 import type { MediaListType } from '@/shared/types/media';
+import type { FileSenderItem } from '@/features/chat-room-side-panel/type';
 import type { WebSocketChannelTypes } from '@/shared/types/websocket';
 
 interface FilesTabProps {
@@ -23,15 +29,20 @@ const fileNameOf = (file: MediaListType) => file.path.split('/').pop() || '파�
 export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [senderIds, setSenderIds] = useState<string[]>([]);
+  // 보낸사람 필터 — RN처럼 단일 선택(칩 1개). 칩과 키워드는 공존하지 않는다
+  // (타이핑 시작 시 SenderSearchBar가 칩을 제거 — RN 동일)
+  const [selectedSender, setSelectedSender] = useState<FileSenderItem | null>(null);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250); // RN KEYWORD_DEBOUNCE_MS 동일
     return () => clearTimeout(t);
   }, [query]);
 
   // 파일명/보낸사람 필터는 서버(GET /app/chat/files)에서 처리 (RN 패리티) —
   // 필터가 없으면 base 캐시(사이드패널 진입 시 목록)를 그대로 사용.
-  const isFilterMode = senderIds.length > 0 || debouncedQuery.length > 0;
+  // 키워드는 칩이 없을 때만 파일명 필터로 작동 (RN — 칩이 주된 필터)
+  const senderIds = selectedSender ? [String(selectedSender.userId)] : [];
+  const effectiveFileName = selectedSender ? '' : debouncedQuery;
+  const isFilterMode = senderIds.length > 0 || effectiveFileName.length > 0;
   const baseQuery = useInfiniteQuery({
     ...getSidePanelBeforeFileQuery(roomId, lastMessageId, channelType),
     enabled: !isFilterMode,
@@ -42,7 +53,7 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
       channelType,
       contentType: ['FILE'],
       senders: senderIds,
-      fileName: debouncedQuery,
+      fileName: effectiveFileName,
     }),
     enabled: isFilterMode,
   });
@@ -55,13 +66,12 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const allFiles: MediaListType[] = data?.pages.flatMap(p => p.items) ?? [];
-  const q = debouncedQuery.toLowerCase();
+  const q = effectiveFileName.toLowerCase(); // 파일명 하이라이트는 실제 필터 중일 때만
   const filtered = allFiles;
   // 서버가 dataset 전체 totals를 매 페이지 반환 — "총 N개 · 용량" 헤더 (RN 패리티)
   const totalItems = data?.pages[0]?.pagination.totalItems ?? 0;
   const totalFileSize = data?.pages[0]?.totalFileSize ?? 0;
 
-  const allSelected = filtered.length > 0 && filtered.every(f => selected.has(f.id));
   const toggle = (id: string) =>
     setSelected(prev => {
       const next = new Set(prev);
@@ -69,15 +79,14 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
       else next.add(id);
       return next;
     });
-  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map(f => f.id)));
-  const exitSelect = () => {
-    setSelectMode(false);
+  const toggleSelectMode = () => {
+    setSelectMode(prev => !prev);
     setSelected(new Set());
   };
   const handleBulkDownload = () => {
     const items = filtered
       .filter(f => selected.has(f.id))
-      .map(f => ({ url: f.presignedUrl ?? f.path, filename: fileNameOf(f) }));
+      .map(f => ({ url: f.presignedUrl, storageKey: f.path, filename: fileNameOf(f) }));
     downloadMany(items);
   };
 
@@ -91,95 +100,118 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
 
   return (
     <div className="flex h-full flex-col">
-      {/* 헤더: 검색 / 선택 모드 툴바 */}
-      {selectMode ? (
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-divider bg-background px-3 py-2">
-          <button type="button" onClick={exitSelect} className="text-sub-sm text-text-secondary hover:text-text-primary">
-            취소
-          </button>
-          <span className="text-sub-sm text-text-tertiary">{selected.size}개 선택</span>
-          <button type="button" onClick={toggleAll} className="text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
-            {allSelected ? '선택 해제' : '전체 선택'}
-          </button>
-        </div>
-      ) : (
-        <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-divider bg-background px-3 py-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-100 px-2.5 py-1.5">
-            <IconSearch size={14} className="text-text-tertiary" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="파일명 검색"
-              className="min-w-0 flex-1 bg-transparent text-sub-sm text-text-primary outline-none placeholder:text-text-tertiary"
-            />
-          </div>
-          <SenderFilterDropdown
-            roomId={roomId}
-            channelType={channelType}
-            contentType={['FILE']}
-            selectedIds={senderIds}
-            onChange={setSenderIds}
-          />
-          <button type="button" onClick={() => setSelectMode(true)} className="shrink-0 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60">
-            선택
-          </button>
-        </div>
-      )}
+      {/* 보낸사람·파일명 통합 검색 줄 (RN 검색 모드 패리티 — 드롭다운 + 칩 + 파일명 안내 행) */}
+      <div className="sticky top-0 z-10">
+        <SenderSearchBar
+          roomId={roomId}
+          channelType={channelType}
+          contentType={['FILE']}
+          selectedSender={selectedSender}
+          onChange={setSelectedSender}
+          placeholder="보낸사람 · 파일명 검색"
+          keyword={query}
+          onKeywordChange={setQuery}
+          showFilenameOption
+        />
+      </div>
 
-      {/* 총 개수 · 총 용량 (서버 dataset totals — RN SidePanelSelectItemTitle 패리티) */}
-      {totalItems > 0 && (
-        <div className="flex items-center gap-1.5 px-4 pb-1 pt-2 text-sub-sm text-text-secondary">
-          <span>총 {totalItems}개</span>
-          {totalFileSize > 0 && <span className="text-text-tertiary">{formatBytes(totalFileSize, { fallback: '' })}</span>}
+      {/* 총 N개 · 용량 · [선택/선택해제] (RN SidePanelSelectItemTitle 패리티) */}
+      <div className="flex items-center gap-2 px-4 py-2">
+        <div className="flex items-center gap-1 text-sub text-gray-700">
+          <span>총</span>
+          <span className="font-medium text-black">{totalItems}</span>
+          <span>개</span>
         </div>
-      )}
+        <div className="flex flex-1 items-center text-sub">
+          <span className="font-medium text-text-secondary">{formatSizeParts(totalFileSize).value}</span>
+          <span className="text-text-tertiary">{formatSizeParts(totalFileSize).unit}</span>
+        </div>
+        <button
+          type="button"
+          onClick={toggleSelectMode}
+          disabled={filtered.length === 0}
+          className={cn(
+            'flex h-8 items-center justify-center gap-0.5 rounded-md border bg-white px-2 text-sub font-medium',
+            filtered.length === 0
+              ? 'border-gray-200 text-gray-400 opacity-50'
+              : selectMode
+                ? 'border-gray-200 text-text-primary'
+                : 'border-primary text-primary',
+          )}
+        >
+          {!selectMode && <IconCheck width={16} height={11} />}
+          {selectMode ? (selected.size > 0 ? `${selected.size} 선택해제` : '선택해제') : '선택'}
+        </button>
+      </div>
 
       <div className="flex-1 py-1">
-        {q && filtered.length === 0 && (
+        {isFilterMode && filtered.length === 0 && (
           <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">찾는 파일이 없어요.</div>
         )}
-        {filtered.map(file => {
-          const fileName = fileNameOf(file);
-          const isDownloading = downloadingId === file.id;
-          const isChecked = selected.has(file.id);
-          return (
-            <div
-              key={file.id}
-              className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
-              onClick={selectMode ? () => toggle(file.id) : undefined}
-              role={selectMode ? 'button' : undefined}
-            >
-              {selectMode && (
-                <span className="shrink-0">
-                  <Checkbox checked={isChecked} size="md" />
-                </span>
-              )}
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 text-sub-sm text-text-tertiary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sub text-text-primary">{fileName}</div>
-                <div className="truncate text-sub-sm text-text-tertiary">
-                  {file.author}{file.fileSize ? ` · ${(file.fileSize / 1024).toFixed(1)}KB` : ''}
-                </div>
-              </div>
-              {!selectMode && (
-                <button
-                  type="button"
-                  onClick={() => download(file.id, file.presignedUrl ?? file.path, fileName)}
-                  disabled={isDownloading}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
-                  aria-label="다운로드"
-                >
-                  {isDownloading ? <Spinner /> : <IconDownload size={16} />}
-                </button>
-              )}
+        {/* RN SidePanelSelectItemFile 패리티 — 날짜 헤더 + 카드형 행 */}
+        {groupByDate(filtered).map(group => (
+          <div key={group.date} className="mb-2.5">
+            <p className="mb-2.5 px-4 text-sub text-text-primary">{group.date}</p>
+            <div className="flex flex-col gap-2.5 px-2.5">
+              {group.items.map(file => {
+                const fileName = fileNameOf(file);
+                const isDownloading = downloadingId === file.id;
+                const isChecked = selected.has(file.id);
+                const isBlocked = !!file.senderId && isBlockedUser(String(file.senderId));
+                return (
+                  <div
+                    key={file.id}
+                    className="flex items-start gap-3 overflow-hidden rounded-xl border border-gray-200 bg-white px-2.5 py-4"
+                    onClick={selectMode ? () => toggle(file.id) : undefined}
+                    role={selectMode ? 'button' : undefined}
+                  >
+                    {/* 56px 미리보기 — 썸네일 없으면 확장자 아이콘. 차단 발신자는 미리보기만 가림
+                        (RN Figma 3170:59084 — 파일명/용량/다운로드는 그대로) */}
+                    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gray-50">
+                      {file.thumbnailPresignedUrl ? (
+                        <img src={file.thumbnailPresignedUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <FileTypeIcon fileName={fileName} size={42} />
+                      )}
+                      {isBlocked && (
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70">
+                          <IconBlock width={18} height={18} className="text-gray-500" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <HighlightedFileName name={fileName} keyword={q} />
+                      <div className="flex items-center gap-1.5 text-sub text-text-primary">
+                        <span>용량</span>
+                        <span>{formatBytes(file.fileSize, { fallback: '-' })}</span>
+                      </div>
+                    </div>
+                    {selectMode ? (
+                      <span
+                        className={cn(
+                          'flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md border',
+                          isChecked ? 'border-primary bg-primary' : 'border-gray-300 bg-white',
+                        )}
+                      >
+                        {isChecked && <IconCheck width={16} height={11} className="text-on-primary" />}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => download(file.id, file.presignedUrl, fileName, file.path)}
+                        disabled={isDownloading}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center self-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
+                        aria-label="다운로드"
+                      >
+                        {isDownloading ? <Spinner /> : <IconDownload size={16} />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
         {hasNextPage && (
           <button
             onClick={() => fetchNextPage()}
@@ -191,19 +223,56 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
         )}
       </div>
 
-      {/* 선택 모드 하단 일괄 다운로드 바 */}
-      {selectMode && selected.size > 0 && (
+      {/* 선택 모드 하단 일괄 다운로드 바 — 0개면 회색 비활성 (RN SidePanelSelectItemDownload 패리티) */}
+      {selectMode && (
         <div className="sticky bottom-0 border-t border-divider bg-background p-3">
           <button
             type="button"
             onClick={handleBulkDownload}
-            disabled={bulkDownloading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary disabled:bg-disabled"
+            disabled={bulkDownloading || selected.size === 0}
+            className={cn(
+              'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-body font-medium text-white',
+              selected.size === 0 ? 'bg-gray-400' : 'bg-primary',
+            )}
           >
             {bulkDownloading ? <Spinner /> : <IconDownload size={16} />}
             {bulkDownloading ? '다운로드 중...' : '파일 다운로드'}
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** 파일명 2줄 + 검색어 하이라이트 (RN HighlightedFileName 패리티 — brand-sub1-300 = blue-300) */
+function HighlightedFileName({ name, keyword }: { name: string; keyword: string }) {
+  const base = 'line-clamp-2 break-all text-body text-text-primary';
+  const key = keyword.trim().toLowerCase();
+  if (!key) return <div className={base}>{name}</div>;
+
+  const lower = name.toLowerCase();
+  const parts: { text: string; match: boolean }[] = [];
+  let cursor = 0;
+  while (cursor < name.length) {
+    const idx = lower.indexOf(key, cursor);
+    if (idx === -1) {
+      parts.push({ text: name.slice(cursor), match: false });
+      break;
+    }
+    if (idx > cursor) parts.push({ text: name.slice(cursor, idx), match: false });
+    parts.push({ text: name.slice(idx, idx + key.length), match: true });
+    cursor = idx + key.length;
+  }
+  return (
+    <div className={base}>
+      {parts.map((part, i) =>
+        part.match ? (
+          <mark key={i} className="rounded-sm bg-blue-300 text-inherit">
+            {part.text}
+          </mark>
+        ) : (
+          part.text
+        ),
       )}
     </div>
   );

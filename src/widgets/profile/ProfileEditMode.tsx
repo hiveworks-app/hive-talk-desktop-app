@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useMyProfileUpdate, useMyProfileImageUpload } from '@/features/profile/queries';
+import { prepareProfileImage } from '@/features/profile/prepareProfileImage';
 import { getErrorMessage } from '@/shared/api';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
@@ -36,6 +37,7 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
   const [job, setJob] = useState(user.job ?? '');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [newProfileKey, setNewProfileKey] = useState<string | null>(null);
+  const [newThumbKey, setNewThumbKey] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [imageStatus, setImageStatus] = useState<ImageStatus>('idle');
   const { data: currentPresignedUrl } = usePresignedUrl(user.profileUrl);
@@ -64,11 +66,18 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
     setImageStatus('uploading');
 
     try {
-      const result = await uploadImage({ file });
+      // RN MyProfileEdit 패리티 — 원본 압축(1MB 초과) + 128px 썸네일(0.4MB 이상) 생성 후 각각 업로드
+      const { original, thumbnail } = await prepareProfileImage(file);
+      const result = await uploadImage({ file: original });
+      const thumbResult = thumbnail ? await uploadImage({ file: thumbnail }) : null;
       setNewProfileKey(result.fileKey);
+      setNewThumbKey(thumbResult?.fileKey ?? result.fileKey);
       flashDone();
     } catch (err) {
+      // 부분 성공(원본만 업로드)도 전체 실패로 취급 — 이전 선택까지 폐기해 미리보기·저장 값 불일치를 막는다
       setPreviewUrl(null);
+      setNewProfileKey(null);
+      setNewThumbKey(null);
       setImageStatus('idle');
       showSnackbar({ message: getErrorMessage(err, '이미지 업로드에 실패했습니다.'), state: 'error' });
     }
@@ -78,6 +87,7 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
   const handleUseDefault = () => {
     setPreviewUrl(null);
     setNewProfileKey(null);
+    setNewThumbKey(null);
     setRemoveImage(true);
     flashDone();
   };
@@ -91,7 +101,7 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
     if (isOffline()) return;
 
     const profileKey = removeImage ? null : (newProfileKey ?? user.profileUrl ?? null);
-    const thumbKey = removeImage ? null : (newProfileKey ?? user.thumbnailProfileUrl ?? null);
+    const thumbKey = removeImage ? null : (newThumbKey ?? user.thumbnailProfileUrl ?? null);
 
     try {
       await updateProfile({

@@ -26,3 +26,8 @@ export function acquireEscSuppress(): () => void {
     sync();
   };
 }
+
+/** 현재 이 창에서 ESC 억제 오버레이가 열려 있는지 — 렌더러(창)별 카운터라 창마다 독립 판정 */
+export function isEscSuppressed(): boolean {
+  return suppressCount > 0;
+}

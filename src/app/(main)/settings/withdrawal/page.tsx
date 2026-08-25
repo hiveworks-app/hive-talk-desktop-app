@@ -52,8 +52,8 @@ export default function WithdrawalPage() {
   };
 
   return (
-    <SettingsOverlay bg="bg-background">
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+    <SettingsOverlay bg="bg-gray-50">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         {step === 'password' && (
           <button
             onClick={stepBack}
@@ -75,7 +75,7 @@ export default function WithdrawalPage() {
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         <div className="mx-auto max-w-[400px]">
           {step === 'intro' && (
             <div className="space-y-6">

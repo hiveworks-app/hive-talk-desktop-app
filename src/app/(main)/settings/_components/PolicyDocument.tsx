@@ -18,8 +18,8 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
   const router = useAppRouter();
 
   return (
-    <SettingsOverlay bg="bg-background">
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+    <SettingsOverlay bg="bg-gray-50">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="max-w-[calc(100%-5.5rem)] truncate text-heading-md font-medium text-text-primary">
           {title}
         </h2>
@@ -32,7 +32,7 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
         </button>
       </header>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto px-4 py-5">
+      <div className="scrollbar-thin flex-1 overflow-y-auto px-4 py-5 rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         <div className="mx-auto max-w-[640px] space-y-4">
           {sections.map((section, index) => (
             <section key={index}>

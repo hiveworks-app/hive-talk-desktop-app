@@ -23,6 +23,7 @@ export function ProfileViewMode({ user, onEdit }: ProfileViewModeProps) {
           storageKey={user.profileUrl}
           lines={lines}
           showMeBadge
+          onEditProfile={onEdit}
         />
         {/* RN Button outlined/dark 패리티 — 흰 배경 + gray-200 테두리 + gray-900 텍스트, 연필 24px */}
         <button

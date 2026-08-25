@@ -21,6 +21,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useCalendarDateJump } from '@/features/chat-room/useCalendarDateJump';
 import { useGetTagInfo } from '@/features/tag/queries';
 import { isOffline } from '@/shared/utils/offlineGuard';
+import { isEscSuppressed } from '@/shared/utils/escSuppress';
+import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { cn } from '@/shared/lib/cn';
 import { ChatMessageUI, WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
@@ -277,14 +279,21 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
         return;
       }
       if (e.key === 'Escape') {
+        // 위 레이어가 이미 소비한 ESC는 무시 — Radix 레이어는 capture 단계에서 preventDefault,
+        // 전역 오버레이(미디어 뷰어·프로필·커서 메뉴)는 escSuppress를 잡는다. IME 조합 취소도 제외.
+        if (e.defaultPrevented || e.isComposing || isEscSuppressed()) return;
         if (viewerVisible) return;
+        if (pendingItems.length > 0) return; // 파일 전송 확인 다이얼로그가 자체적으로 ESC=취소 처리
         if (search.isSearchMode) search.exitSearchMode();
         else if (isSidePanelOpen) setIsSidePanelOpen(false);
+        // 모든 레이어를 벗겨낸 뒤의 ESC — 팝업 창은 창 자체를 닫는다 (메인 창에선 no-op.
+        // 메인 창의 ESC=트레이 숨김은 Electron main의 before-input-event가 담당)
+        else closeIfPopup();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [search, isSidePanelOpen, viewerVisible]);
+  }, [search, isSidePanelOpen, viewerVisible, pendingItems]);
 
   if (!storeRoomId && !isNewRoom) return <div className="flex-1 bg-background" />;
 

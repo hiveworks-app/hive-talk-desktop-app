@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     meta?: { roomId?: string; channelType?: string; senderName?: string; navigate?: string };
   }) => ipcRenderer.invoke('show-notification', data),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  // 일괄 다운로드 — main downloadURL 경로 (연쇄 <a download>는 크로미엄이 첫 건 이후 차단)
+  downloadFile: (data: { url: string; filename: string; directory?: string }) => ipcRenderer.invoke('download-url', data),
+  chooseDownloadDirectory: () => ipcRenderer.invoke('choose-download-directory'),
   // 멀티 채팅창 — 채팅 목록 우클릭 '새 창에서 열기' (프로토타입)
   openChatWindow: (data: { path: string; roomId: string }) => ipcRenderer.invoke('open-chat-window', data),
   setBadgeCount: (count: number) => ipcRenderer.invoke('set-badge-count', count),

@@ -12,7 +12,10 @@ import { GroupProfileAvatar, type GroupAvatarUser } from '@/shared/ui/GroupProfi
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
-import { IconChevronLeft, IconChevronRight, IconImage, IconDescription, IconAdd, IconLogout } from '@/shared/ui/icons';
+import { IconChevronLeft, IconChevronRight, IconAdd, IconLogout } from '@/shared/ui/icons';
+import { IconUploadImage, IconFileDefault } from '@assets/icons';
+import { MediaViewer } from '@/shared/ui/MediaViewer';
+import { useSidePanelMediaViewer } from './useSidePanelMediaViewer';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { isOffline } from '@/shared/utils/offlineGuard';
@@ -117,7 +120,10 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
     ...getSidePanelBeforeAttachmentQuery(roomId, lastMessageId, channelType),
     enabled: isOpen && !!roomId && !!lastMessageId,
   });
-  const previewMedia = attachmentData?.pages.flatMap(p => p.items).slice(0, 4) ?? []; // RN 패리티 — 패널 폭 기준 한 줄(4개)만
+  const previewAll = attachmentData?.pages.flatMap(p => p.items) ?? [];
+  const previewMedia = previewAll.slice(0, 4); // RN 패리티 — 패널 폭 기준 한 줄(4개)만
+  // 미리보기 썸네일 클릭 → 그 사진부터 뷰어 (RN onPressPicture 패리티 — 보관함 목록이 아니라 뷰어)
+  const previewViewer = useSidePanelMediaViewer(previewAll);
 
   // 멤버목록 병합용 — 서버 /participants의 isExternal·부서·직급 누락을 멤버 캐시로 보강 (RN 패리티)
   const { data: membersData } = useGetMembers();
@@ -222,7 +228,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   };
 
   const panelContent = (
-    <div className="flex h-full w-[300px] flex-col rounded-l-2xl border-l border-divider bg-background md:w-[320px]">
+    <div className="flex h-full w-full flex-col rounded-l-2xl border-l border-divider bg-background">
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b border-divider px-4 py-3">
         <div className="flex items-center gap-2">
@@ -231,10 +237,11 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               onClick={handleBack}
               className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-opacity hover:opacity-70 active:opacity-60"
             >
-              <IconChevronLeft size={16} />
+              <IconChevronLeft size={20} />
             </button>
           )}
-          <h3 className="text-sub font-bold text-text-primary">
+          {/* 채팅방 헤더 타이틀(text-heading-md medium)과 동일 스타일 (사용자 결정 2026-08-25) */}
+          <h3 className="text-heading-md font-medium text-text-primary">
             {view === 'main' ? '채팅방 정보' : view === 'media' ? '사진/동영상' : '파일'}
           </h3>
         </div>
@@ -334,7 +341,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
 
             {/* 보관함 섹션 라벨 (RN SidePanelTopMenu 패리티) */}
             <div className="px-4 pb-1 pt-4">
-              <span className="text-sub font-bold text-text-primary">보관함</span>
+              <span className="text-sub text-gray-600">보관함</span>
             </div>
 
             {/* 사진/동영상 섹션 */}
@@ -342,28 +349,40 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               onClick={() => setView('media')}
               className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
             >
-              <div className="flex items-center gap-2">
-                <IconImage size={22} className="text-text-primary" />
-                <span className="text-sub font-medium text-text-primary">사진/동영상</span>
+              <div className="flex items-center gap-3">
+                {/* RN SidePanelTopMenu 패리티 — 32px gray-100 박스 + 컬러 아이콘 (입력 툴바와 동일 색) */}
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100">
+                  <IconUploadImage width={20} height={20} className="text-state-success" />
+                </span>
+                <span className="text-body font-medium text-text-primary">사진/동영상</span>
               </div>
               <IconChevronRight size={16} className="text-text-tertiary" />
             </button>
             {previewMedia.length > 0 && (
               <div className="grid grid-cols-4 gap-2 px-4 pb-3">
-                {previewMedia.map(media => (
-                  <button
-                    key={media.id}
-                    onClick={() => setView('media')}
-                    className="aspect-square overflow-hidden rounded bg-gray-100"
-                  >
-                    <img
-                      src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
+                {previewMedia.map((media, idx) => {
+                  const isBlocked = !!media.senderId && isBlockedUser(String(media.senderId));
+                  return (
+                    <button
+                      key={media.id}
+                      onClick={() => previewViewer.open(idx)}
+                      className="relative aspect-square overflow-hidden rounded bg-gray-100"
+                    >
+                      <img
+                        src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                      {/* 차단 발신자 리소스 가림 (RN Figma 3145:66586) */}
+                      {isBlocked && (
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70">
+                          <IconBlock width={18} height={18} className="text-gray-500" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -372,16 +391,18 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               onClick={() => setView('files')}
               className="flex items-center justify-between border-b border-divider px-4 py-3 hover:bg-gray-50"
             >
-              <div className="flex items-center gap-2">
-                <IconDescription size={22} className="text-text-primary" />
-                <span className="text-sub font-medium text-text-primary">파일</span>
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100">
+                  <IconFileDefault width={20} height={20} className="text-state-error" />
+                </span>
+                <span className="text-body font-medium text-text-primary">파일</span>
               </div>
               <IconChevronRight size={16} className="text-text-tertiary" />
             </button>
 
             {/* 대화상대 섹션 — 인원수 병기 (RN "대화상대 (N)" 패리티) */}
             <div className="px-4 pb-2 pt-4">
-              <span className="text-sub font-bold text-text-primary">대화상대 ({sortedParticipants.length})</span>
+              <span className="text-sub text-gray-600">대화상대 ({sortedParticipants.length})</span>
             </div>
 
             {/* 대화상대 초대 — GM/EM만. DM은 상단 [대화초대](신규 GM 생성)만 제공 (RN 패리티) */}
@@ -477,27 +498,23 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
 
   return (
     <>
-      {/* 모바일 오버레이 배경 (fade) */}
+      {/* 오버레이 배경 (fade) — 창 폭 무관 단일 모드 (사용자 결정 2026-08-25). 이전의 768px 이중
+          모드(미만 오버레이/이상 인라인)는 닫힌 채 창 폭이 경계를 넘나들 때 두 모드의 translate·width
+          차이가 transition에 걸려 패널이 화면을 지나가는 애니메이션이 재생되는 문제가 있었다. */}
       <div
         className={cn(
-          'fixed inset-0 z-30 bg-black/30 transition-opacity duration-300 md:hidden',
+          'fixed inset-0 z-30 bg-black/30 transition-opacity duration-300',
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         onClick={onClose}
       />
 
-      {/* 패널 — 모바일: slide-in, 데스크톱: width expand */}
+      {/* 패널 — 오른쪽 슬라이드 오버레이. 기본 창 폭(480px)에서 인라인 320px는 대화 영역이
+          남지 않으므로 오버레이가 모든 폭에서 성립하는 유일한 방식이다. */}
       <div
         className={cn(
-          'shrink-0',
-          // 모바일: 오른쪽에서 슬라이드
-          'fixed inset-y-0 right-0 z-40 w-[300px] transition-transform duration-300 ease-out',
+          'fixed inset-y-0 right-0 z-40 w-[320px] transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full',
-          // 데스크톱: width 애니메이션으로 공간 확보
-          'md:relative md:inset-auto md:z-auto md:w-auto md:translate-x-0 md:overflow-hidden md:transition-[width] md:duration-300 md:ease-out',
-          isOpen ? 'md:w-[320px]' : 'md:w-0',
-          // 닫혔을 때 데스크톱에서 pointer-events 복원
-          isOpen && 'md:pointer-events-auto',
         )}
       >
         {panelContent}
@@ -510,6 +527,15 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
         presetMemberIds={participants
           .filter(p => String(p.userId) !== String(currentUserId))
           .map(p => String(p.userId))}
+      />
+
+      {/* 메인 뷰 미리보기 썸네일 → 전체화면 뷰어 (보관함 탭 뷰어와 동일 컴포넌트) */}
+      <MediaViewer
+        visible={previewViewer.visible}
+        items={previewViewer.items}
+        currentIndex={previewViewer.index}
+        onIndexChange={previewViewer.setIndex}
+        onClose={previewViewer.close}
       />
 
       <InviteMemberDialog
