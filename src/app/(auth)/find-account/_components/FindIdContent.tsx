@@ -113,10 +113,10 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
             onClick={handleSendCode}
             disabled={!canSendCode}
             className={cn(
-              'absolute right-1.5 top-1/2 -translate-y-1/2 h-8 rounded-md px-3 text-sub-sm font-medium transition-colors',
+              'absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
               canSendCode
-                ? 'bg-[#E6F3FF] text-primary'
-                : 'bg-[#ADB5BD] text-white',
+                ? 'bg-blue-100 text-primary active:bg-blue-300'
+                : 'bg-gray-100 text-gray-600',
             )}
           >
             {isSending ? '발송 중...' : isCodeSent ? '재발송' : '인증요청'}

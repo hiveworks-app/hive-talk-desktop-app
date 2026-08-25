@@ -93,7 +93,7 @@ export function ChatRoomHeader({
           {!isPopup && (
             <button
               onClick={onBack}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 md:hidden"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
             >
               <IconChevronLeft />
             </button>

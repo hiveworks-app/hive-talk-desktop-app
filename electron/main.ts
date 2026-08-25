@@ -4,7 +4,7 @@ import { startNextServer, killNextServer } from './server';
 import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
-import { initializeAutoUpdater } from './autoUpdater';
+import { initializeAutoUpdater, registerUpdateIpc } from './autoUpdater';
 
 // Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
 initMainSentry();
@@ -147,6 +147,8 @@ app.whenReady().then(async () => {
 
     mainWindow.on('closed', () => { mainWindow = null; });
 
+    // 수동 업데이트 확인 IPC는 항상 등록 (개발 실행에서도 '최신' 응답으로 정상 동작)
+    registerUpdateIpc(deps);
     // 자동 업데이트 (프로덕션에서만)
     if (app.isPackaged) {
       initializeAutoUpdater(deps);

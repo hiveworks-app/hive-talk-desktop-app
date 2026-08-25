@@ -47,7 +47,7 @@ export default function ChangePasswordPage() {
   return (
     <SettingsOverlay bg="bg-background">
       {/* TopBar — ←(이전 단계/상세) / 중앙 타이틀 / X. 완료(DONE) 화면은 ← 제거, X→계정정보 */}
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         {step !== 'DONE' && (
           <button
             onClick={goBack}
@@ -107,7 +107,7 @@ export default function ChangePasswordPage() {
                   onClick={handleSendCode}
                   disabled={!canRequestCode}
                   className={cn(
-                    'flex min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 py-2.5 text-sub font-medium transition-colors',
+                    'flex h-7 min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
                     isSending
                       ? 'bg-blue-100 text-blue-500' // 진행중: blue 100 배경 + 스피너
                       : canRequestCode

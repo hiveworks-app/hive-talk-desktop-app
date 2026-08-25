@@ -23,6 +23,8 @@ interface ProfileInfoSectionProps {
   isBlocked?: boolean;
   /** 탈퇴 사용자 — 이름 회색 (RN 패리티) */
   isUnknownUser?: boolean;
+  /** 내 프로필 전용 — 이미지 뷰어 헤더에 '프로필 수정' 노출, 클릭 시 뷰어 닫고 편집 진입 (RN ProfileImageViewerScreen) */
+  onEditProfile?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function ProfileInfoSection({
   isBlocked = false,
   isUnknownUser = false,
   compactGap = false,
+  onEditProfile,
 }: ProfileInfoSectionProps) {
   const infoLines = (lines ?? []).filter((l): l is string => !!l && l.trim().length > 0);
 
@@ -80,6 +83,17 @@ export function ProfileInfoSection({
           currentIndex={0}
           onIndexChange={() => {}}
           onClose={() => setViewerOpen(false)}
+          headerAction={
+            onEditProfile
+              ? {
+                  label: '프로필 수정',
+                  onClick: () => {
+                    setViewerOpen(false);
+                    onEditProfile();
+                  },
+                }
+              : undefined
+          }
         />
       )}
 

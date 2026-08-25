@@ -1,8 +1,31 @@
-import { app, BrowserWindow, ipcMain, nativeImage, Tray } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, session, Tray } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
 import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows } from './window';
+
+/* ─── 일괄 다운로드 (사이드패널 보관함) ─────────────────────────────
+   렌더러의 <a download> 연쇄 클릭은 크로미엄 DownloadRequestLimiter가 '자동 다운로드'로
+   판정해 첫 건 이후를 조용히 버린다(에러도 없음). 일괄은 main이 downloadURL로 받아
+   OS 다운로드 폴더에 조용히 저장한다. pendingDownloads에 등록된 URL만 여기서 처리하고
+   단건 <a download>는 기존 동작(저장 다이얼로그)을 유지한다. */
+const pendingDownloads = new Map<
+  string,
+  { filename: string; directory?: string; resolve: (ok: boolean) => void }
+>();
+
+/** "이름 (1).ext" 식으로 중복을 피한 저장 경로 */
+function uniqueSavePath(dir: string, filename: string): string {
+  const ext = path.extname(filename);
+  const base = path.basename(filename, ext);
+  let candidate = path.join(dir, filename);
+  for (let i = 1; fs.existsSync(candidate); i++) {
+    candidate = path.join(dir, `${base} (${i})${ext}`);
+  }
+  return candidate;
+}
 
 export function setupIpcHandlers(
   deps: {
@@ -35,6 +58,48 @@ export function setupIpcHandlers(
   });
 
   ipcMain.handle('get-app-version', () => app.getVersion());
+
+  session.defaultSession.on('will-download', (_event, item) => {
+    const key = item.getURLChain()[0] ?? item.getURL();
+    const pending = pendingDownloads.get(key);
+    if (!pending) return; // 일반 다운로드(단건 <a download>)는 기본 동작 그대로
+    pendingDownloads.delete(key);
+    item.setSavePath(uniqueSavePath(pending.directory ?? app.getPath('downloads'), pending.filename));
+    item.once('done', (_e, state) => pending.resolve(state === 'completed'));
+  });
+
+  // 일괄 다운로드 저장 폴더 선택 — 데스크톱 관례상 조용히 저장하지 않고 먼저 묻는다 (사용자 결정 2026-08-25)
+  ipcMain.handle('choose-download-directory', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+    const result = await dialog.showOpenDialog(win, {
+      title: '저장할 폴더 선택',
+      defaultPath: app.getPath('downloads'),
+      buttonLabel: '저장',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+
+  ipcMain.handle('download-url', (event, data: { url?: string; filename?: string; directory?: string }) => {
+    if (typeof data?.url !== 'string' || !/^https?:\/\//i.test(data.url) || typeof data?.filename !== 'string') {
+      return false;
+    }
+    // directory는 위 choose-download-directory가 돌려준 절대 경로만 신뢰
+    const directory =
+      typeof data.directory === 'string' && path.isAbsolute(data.directory) ? data.directory : undefined;
+    const url = data.url;
+    // 경로 구분자 제거 — 저장 파일명이 다운로드 폴더를 벗어나지 못하게
+    const filename = data.filename.replace(/[/\\]/g, '_') || 'download';
+    return new Promise<boolean>(resolve => {
+      pendingDownloads.set(url, { filename, directory, resolve });
+      event.sender.downloadURL(url);
+      // will-download가 아예 오지 않는 경우(차단·즉시 실패) 안전망
+      setTimeout(() => {
+        if (pendingDownloads.delete(url)) resolve(false);
+      }, 30_000);
+    });
+  });
 
   ipcMain.handle('set-badge-count', (_event, count: number) => {
     const tray = deps.getTray();

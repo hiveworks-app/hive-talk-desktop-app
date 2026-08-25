@@ -54,6 +54,10 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
     clearTimeout(showFallback);
     win.show();
   });
+  // 고정 배율(100%) 강제 — 줌은 origin별로 세션에 영구 저장되므로(createWindow와 동일 이유) 팝업도 항상 초기화
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.setZoomFactor(1);
+  });
   // 팝업은 트레이 최소화 없이 그냥 닫힘 (메인 창 전용 동작 미적용)
   win.on('closed', () => {
     clearTimeout(showFallback);

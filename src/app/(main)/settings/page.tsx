@@ -68,6 +68,9 @@ export default function SettingsPage() {
         // 일시적 실패(네트워크 등)만 안내 (RN 정책 패리티)
         showSnackbar({ message: '업데이트 확인에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
       }
+    } catch {
+      // IPC 자체 실패(핸들러 미등록·구버전 preload 등)도 같은 안내로 수습 — 콘솔로 새지 않게
+      showSnackbar({ message: '업데이트 확인에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -114,7 +117,7 @@ export default function SettingsPage() {
   const department = user?.organization?.departmentName ?? user?.department ?? '';
   const job = user?.job ?? '';
   const subtitle = [department, job].filter(Boolean).join(' · ') || (user?.companyName ?? '');
-  const versionText = appVersion ?? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0';
+  const versionText = `v${appVersion ?? process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'}`;
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-gray-50">
@@ -214,7 +217,7 @@ function SettingRow({
     <>
       <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>
       <span className="min-w-0 flex-1 truncate text-body font-medium text-text-primary">{title}</span>
-      {right && <span className="shrink-0 text-sub text-text-secondary">{right}</span>}
+      {right && <span className="shrink-0 text-sub tracking-normal text-text-secondary">{right}</span>}
     </>
   );
 

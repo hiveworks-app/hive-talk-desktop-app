@@ -31,7 +31,8 @@ export default function AccountInfoPage() {
   return (
     <SettingsOverlay bg="bg-gray-50">
       {/* TopBar — 가운데 정렬 타이틀 + 우상단 닫기 */}
-      <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
+      {/* 헤더 구분선 없음 — 아래 흰 라운드 패널이 분리를 담당 (RN 설정 공통 패턴) */}
+      <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">하이브톡 계정정보</h2>
         <button
           onClick={() => router.push('/settings')}
@@ -42,6 +43,8 @@ export default function AccountInfoPage() {
         </button>
       </header>
 
+      {/* RN 패리티 — 회색 상단 아래 본문 전체가 흰 라운드 패널 (설정 메인·채팅 목록과 동일 구조) */}
+      <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
       <div className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-5 pb-8">
         <div className="mx-auto flex max-w-[560px] flex-col gap-3.5">
           {/* 계정 정보 — RN 패리티: 카드 전체가 클릭 영역 */}
@@ -50,7 +53,7 @@ export default function AccountInfoPage() {
             tabIndex={0}
             onClick={() => router.push('/settings/account/detail')}
             onKeyDown={e => { if (e.key === 'Enter') router.push('/settings/account/detail'); }}
-            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-colors hover:bg-surface-pressed/40"
+            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-[box-shadow,border-color] hover:border-gray-300 hover:shadow-[0px_2px_11px_rgba(0,0,0,0.08)] active:shadow-none"
           >
             <CardHeader icon={<IconCardAccount className="h-5 w-5" />} title="계정 정보" />
             <InfoRow label="이메일" value={user?.email || '-'} />
@@ -68,7 +71,7 @@ export default function AccountInfoPage() {
             tabIndex={0}
             onClick={() => setShowProfile(true)}
             onKeyDown={e => { if (e.key === 'Enter') setShowProfile(true); }}
-            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-colors hover:bg-surface-pressed/40"
+            className="cursor-pointer overflow-hidden rounded-xl border border-outline bg-surface transition-[box-shadow,border-color] hover:border-gray-300 hover:shadow-[0px_2px_11px_rgba(0,0,0,0.08)] active:shadow-none"
           >
             <CardHeader icon={<IconCardProfile className="h-5 w-5" />} title="프로필 정보" />
             <div className="flex items-center px-4 py-3.5">
@@ -81,6 +84,7 @@ export default function AccountInfoPage() {
             <InfoRow label="직급" value={job || '-'} />
           </section>
         </div>
+      </div>
       </div>
 
       <MyProfileDialog isOpen={showProfile} onClose={() => setShowProfile(false)} />

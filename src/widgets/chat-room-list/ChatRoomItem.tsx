@@ -234,8 +234,8 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
         y={menuPos.y}
         items={[
           { label: '채팅방 열기', icon: <IconBottomChatDefault width={20} height={20} className="text-gray-600" />, onSelect: () => { setMenuPos(null); void handleClick(); } },
-          // 멀티 채팅창 — Electron에서만 (웹 브라우저에선 미노출)
-          ...(isElectron ? [{
+          // 멀티 채팅창 — Electron에서만, 보고 있는 방은 제외 (같은 방이 메인 창+팝업으로 이중 표시되는 것 방지. 이미 연 팝업은 main의 openChatWindow가 기존 창 포커스로 중복 방지)
+          ...(isElectron && !isActive ? [{
             label: '새 창에서 열기',
             icon: <IconCreateChatFilled width={20} height={20} className="text-gray-600" />,
             onSelect: () => {

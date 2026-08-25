@@ -35,10 +35,16 @@ export function initializeAutoUpdater(deps: {
   });
 
   autoUpdater.checkForUpdatesAndNotify();
+}
 
-  // IPC: 수동 업데이트 확인 (설정 > 앱 버전 행) — RN AppVersionScreen의 스토어 버전 조회 대응
+/** IPC: 수동 업데이트 확인 (설정 > 앱 버전 행) — RN AppVersionScreen의 스토어 버전 조회 대응.
+ *  initializeAutoUpdater는 패키징 빌드에서만 돌지만 렌더러는 항상 invoke할 수 있으므로
+ *  핸들러는 무조건 등록한다 (미등록 시 'No handler registered' 에러가 콘솔로 샌다). */
+export function registerUpdateIpc(deps: { setIsQuitting: (v: boolean) => void }) {
   ipcMain.handle('check-for-updates', async (): Promise<{ status: 'available' | 'up-to-date' | 'error'; version?: string }> => {
-    if (!autoUpdater) return { status: 'error' };
+    // 개발 실행(비패키징)은 업데이트 채널이 없다 — 에러가 아니라 '최신'으로 안내.
+    // 패키징인데 updater가 없으면(모듈 로드 실패) 실제 오류로 취급.
+    if (!autoUpdater) return app.isPackaged ? { status: 'error' } : { status: 'up-to-date' };
     try {
       const result = await autoUpdater.checkForUpdates();
       const latest: string | undefined = result?.updateInfo?.version;

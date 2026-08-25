@@ -5,7 +5,9 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
-import { WS_CHANNEL_TYPE, WS_OPERATION } from '@/shared/types/websocket';
+import { WS_CHANNEL_TYPE, WS_OPERATION, isSessionDisconnect } from '@/shared/types/websocket';
+import type { WebSocketEnvelope } from '@/shared/types/websocket';
+import { useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
 import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
 import { useAuthStore } from '@/store/auth/authStore';
 import { isPopupWindow } from '@/shared/utils/popupWindow';
@@ -77,7 +79,20 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   // ── 스포크: 중계된 원문을 허브와 동일한 경로로 라우팅 ──
   useEffect(() => {
     if (!isRelayMode) return;
-    const offMessage = wsRelay.onMessage(routeRawMessage);
+    const offMessage = wsRelay.onMessage(raw => {
+      // 허브 ws.onmessage의 SC010 분기와 동일 — 중계 프레임은 그 분기를 거치지 않으므로
+      // 여기서 걸러야 팝업도 강제 종료 안내를 띄운다 (스토어는 창마다 독립)
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed !== null && typeof parsed === 'object' && isSessionDisconnect(parsed as WebSocketEnvelope)) {
+          useSessionDisconnectStore.getState().showNotice();
+          return;
+        }
+      } catch {
+        // JSON 아님 — 라우터가 처리
+      }
+      routeRawMessage(raw);
+    });
     const offStatus = wsRelay.onStatusChanged(setRelayConnected);
     // 창이 열리는 사이에 상태 변화 이벤트를 놓쳤을 수 있으므로 현재 값을 한 번 물어본다
     wsRelay.requestStatus();
