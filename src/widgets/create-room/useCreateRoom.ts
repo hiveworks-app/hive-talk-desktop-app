@@ -8,6 +8,7 @@ import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import type { MemberItem } from '@/shared/types/user';
+import { countDMTotalUsers } from '@/shared/utils/roomUserCount';
 import { WS_CHANNEL_TYPE, WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useBlockedMembersStore } from '@/store/blockedMembersStore';
@@ -85,7 +86,12 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
 
   const isMember = (m: MemberItem) => selectedIds.has(String(m.userId));
 
+  // DM 대화초대 preset(기존 상대)은 해제 불가 — 빠지면 기존 상대 없는 방이 생성된다 (RN disabled 패리티)
+  const presetIdSet = useMemo(() => new Set(presetMemberIds ?? []), [presetMemberIds]);
+  const isPreset = (userId: string) => presetIdSet.has(userId);
+
   const toggleSelect = (userId: string) => {
+    if (presetIdSet.has(userId)) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(userId)) next.delete(userId);
@@ -94,6 +100,7 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
     });
   };
   const removeSelected = (userId: string) => {
+    if (presetIdSet.has(userId)) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(userId);
@@ -120,9 +127,16 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
       totalUserCount: number,
       lastMessage: WebSocketPublishItem | null = null,
       invitedUserIds: string[] = [],
+      // 기존 DM 재입장 시 방 스코프 플래그 정확 전달 (RN 패리티 — false 하드코딩은 탈퇴 상대
+      // DM에서 입력창 비활성 정책이 풀리는 원인)
+      extra?: { otherUserIsExit?: boolean; otherUserIsRemoved?: boolean; initialNotReadCount?: number },
     ) => {
       useChatRoomInfo.getState().setChatRoomInfo({
-        roomId, roomName, channelType, totalUserCount, otherUserIsExit: false, otherUserIsRemoved: false, invitedUserIds, lastMessage,
+        roomId, roomName, channelType, totalUserCount,
+        otherUserIsExit: extra?.otherUserIsExit ?? false,
+        otherUserIsRemoved: extra?.otherUserIsRemoved ?? false,
+        invitedUserIds, lastMessage,
+        ...(extra?.initialNotReadCount != null ? { initialNotReadCount: extra.initialNotReadCount } : {}),
       });
       if (!roomId) {
         useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
@@ -145,10 +159,15 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
         room.roomModel.roomId,
         room.roomModel.participantDetail?.name ?? member?.name ?? '채팅방',
         WS_CHANNEL_TYPE.DIRECT_MESSAGE,
-        room.roomModel.participants?.length ?? 2,
+        countDMTotalUsers(otherIsExit),
         room.messageList[0] ?? null,
         // 상대가 나간 방이면 메시지 전송 시 자동 재초대 준비 (목록 행 클릭과 동일)
         otherIsExit ? [userId] : [],
+        {
+          otherUserIsExit: otherIsExit,
+          otherUserIsRemoved: room.roomModel.participantDetail?.isRemoved ?? false,
+          initialNotReadCount: room.notReadCount ?? 0,
+        },
       );
       showSnackbar({ message: '기존 채팅방으로 이동합니다.', state: 'info' });
     };
@@ -199,7 +218,7 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
   return {
     step, goBack,
     search, setSearch,
-    selectedIds, toggleSelect, removeSelected, isMember,
+    selectedIds, toggleSelect, removeSelected, isMember, isPreset,
     selectedMembers, namePlaceholder,
     gmTitle, setGmTitle, maxTitle: MAX_TITLE,
     pinnedSection, companySection,

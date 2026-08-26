@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiGetMembersList } from '@/features/members/api';
+import { isApiError } from '@/shared/api';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
 import {
   DM_ROOM_LIST_KEY,
@@ -78,8 +79,11 @@ export function MemberInviteConfirm() {
 
         showSnackbar({ message: `${payload.companyModel.companyName}에 합류되었어요!`, state: 'success' });
         router.push('/members');
-      } catch {
-        handleInviteError();
+      } catch (err) {
+        // API 거절(만료/취소)만 만료 모달 — 네트워크 오류를 "만료된 초대"로 오안내하면
+        // 재시도 가능한 상황에서 초대를 잃은 것처럼 보인다 (RN 분기 패리티)
+        if (isApiError(err)) handleInviteError();
+        else showSnackbar({ message: '오류가 발생했습니다. 다시 시도해주세요.', state: 'error' });
       } finally {
         useUIStore.getState().hideLoadingOverlay();
         setIsProcessing(false);
@@ -95,14 +99,23 @@ export function MemberInviteConfirm() {
       try {
         await apiRejectMemberInvite(payload.inviteId);
         showSnackbar({ message: '초대를 거절했어요.', state: 'error' });
-      } catch {
-        handleInviteError();
+      } catch (err) {
+        if (isApiError(err)) handleInviteError();
+        else showSnackbar({ message: '오류가 발생했습니다. 다시 시도해주세요.', state: 'error' });
       }
     },
     [showSnackbar, handleInviteError],
   );
 
-  if (!pendingInvite && !isExpiredModalOpen) return null;
+  // CANCELLED 브로드캐스트(WS)發 만료 안내 요청 — 로컬 만료 모달과 동일 UI로 표시 (RN 패리티)
+  const expiredNoticeRequested = useMemberInviteStore(s => s.expiredNoticeRequested);
+  const isExpiredVisible = isExpiredModalOpen || expiredNoticeRequested;
+  const closeExpired = () => {
+    setExpiredModalOpen(false);
+    useMemberInviteStore.getState().clearExpiredNotice();
+  };
+
+  if (!pendingInvite && !isExpiredVisible) return null;
 
   return (
     <>
@@ -115,14 +128,16 @@ export function MemberInviteConfirm() {
           confirmLabel="수락"
           onConfirm={() => void handleAccept(pendingInvite)}
           onCancel={() => void handleReject(pendingInvite)}
+          // 딤/ESC가 곧 '거절' API가 되면 회피 불가 오조작 — 버튼 응답만 허용 (RN·정책 member-invite.md)
+          dismissible={false}
         />
       )}
 
       {/* 만료된 초대 안내 (RN showModal 패리티) */}
-      {isExpiredModalOpen && (
+      {isExpiredVisible && (
         <div
           className="electron-no-drag animate-fade-in-fast fixed inset-0 z-[70] flex items-center justify-center bg-black/30"
-          onClick={() => setExpiredModalOpen(false)}
+          onClick={closeExpired}
         >
           <div
             className="animate-pop-in w-[320px] rounded-xl bg-white p-6"
@@ -136,7 +151,7 @@ export function MemberInviteConfirm() {
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                onClick={() => setExpiredModalOpen(false)}
+                onClick={closeExpired}
                 className="text-body font-medium text-primary hover:underline"
               >
                 확인

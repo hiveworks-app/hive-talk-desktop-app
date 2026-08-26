@@ -6,10 +6,8 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useGetEMRoomList } from '@/features/chat-room-list/queries';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { getLastMessagePreview } from '@/shared/utils/chatUtils';
-import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
-import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
+import { apiBatchExitRooms } from '@/features/chat-room-list/api';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { ChatRoomManageOverlay, type ManageRoomEntry } from './ChatRoomManageOverlay';
@@ -31,10 +29,13 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
   const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
-  const { send } = useAppWebSocket();
-  const emBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.EXTERNAL_MESSAGE, channelId: '' });
 
-  const rooms: ManageRoomEntry[] = emRooms.map(room => {
+  // 최신순 정렬 (RN ChatRoomManagementScreen 패리티 — 사내 방 관리와 동일 기준: sortAt 우선)
+  const lastActivityMs = (room: (typeof emRooms)[number]) =>
+    Date.parse(room.sortAt ?? room.messageList[0]?.message.createdAt ?? room.roomModel.createdAt ?? '') || 0;
+  const rooms: ManageRoomEntry[] = [...emRooms]
+    .sort((a, b) => lastActivityMs(b) - lastActivityMs(a))
+    .map(room => {
     const others = (room.roomModel.participants ?? [])
       .filter(p => String(p.userId) !== String(myUserId))
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -48,10 +49,12 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
 
   const handleLeave = (ids: string[]) => {
     ids.forEach(roomId => {
-      send(emBuilder.buildExitMessageRoom({ channelIdOverride: roomId }));
       // 나간 방의 드래프트·실패 메시지 정리 (RN 패리티)
       useDraftStore.getState().clearDraft(roomId);
       useFailedMessagesStore.getState().removeRoom(roomId);
+      // REST 나가기는 WS EXIT ack가 없어 팝업 닫기 체인이 끊긴다 — 명시적으로 해당 방 팝업 닫기
+      (window as unknown as { electronAPI?: { closeChatWindow?: (id: string) => void } })
+        .electronAPI?.closeChatWindow?.(roomId);
     });
 
     // 내가 나갈 땐 WS가 목록을 갱신하지 않으므로 캐시에서 낙관적 제거
@@ -60,6 +63,12 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
       EM_ROOM_LIST_KEY,
       prev => prev?.filter(r => !sel.has(r.roomModel.roomId)) ?? [],
     );
+
+    // 일괄 나가기는 전용 REST (RN 패리티) — 실패 시 invalidate 롤백
+    void apiBatchExitRooms({ dmRoomIds: [], gmRoomIds: [], emRoomIds: ids }).catch(err => {
+      console.warn('[ChatRoomMgmt] EM 일괄 나가기 API 실패 → 목록 재조회 롤백:', err);
+      queryClient.invalidateQueries({ queryKey: EM_ROOM_LIST_KEY });
+    });
 
     const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
     if (openRoomId && sel.has(openRoomId)) router.push('/external-chat');

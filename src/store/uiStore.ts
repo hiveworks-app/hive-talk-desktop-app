@@ -20,7 +20,9 @@ export const useUIStore = create<UIState>((set) => ({
   removeToast: id => set(state => ({ toasts: state.toasts.filter(t => t.id !== id) })),
   showSnackbar: ({ message, state: toastState }) => {
     const id = crypto.randomUUID();
-    set(s => ({ toasts: [...s.toasts, { id, message, state: toastState ?? 'info' }] }));
+    // 단일 표시 정책 (RN 패리티) — 기존 스낵바를 모두 걷어내고 새 것만 표시. 연속 액션에서
+    // 토스트가 무제한 쌓여 화면을 덮는 것 방지
+    set(s => ({ toasts: [...s.toasts.filter(t => t.sticky), { id, message, state: toastState ?? 'info' }] }));
     setTimeout(() => {
       set(s => ({ toasts: s.toasts.filter(t => t.id !== id) }));
     }, 3000);

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useGetBlockedMembers } from '@/features/block/queries';
 import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
 import { useGetMembers } from '@/features/members/queries';
+import { useConnectivityMonitor } from '@/shared/network/connectivityMonitor';
 import { OfflineBanner } from '@/shared/ui/OfflineBanner';
 import { WebSocketProvider } from '@/shared/websocket/WebSocketContext';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -23,6 +24,8 @@ import { useAuthStore } from '@/store/auth/authStore';
 export default function PopupLayout({ children }: { children: React.ReactNode }) {
   const [authChecked, setAuthChecked] = useState(false);
   const [noSession, setNoSession] = useState(false);
+  // 오프라인 3상 판정 — 스토어가 창별 독립이라 팝업에도 모니터 필요 (없으면 배너/입력 가드가 영원히 online)
+  useConnectivityMonitor();
 
   useEffect(() => {
     void (async () => {
@@ -45,6 +48,7 @@ export default function PopupLayout({ children }: { children: React.ReactNode })
   if (noSession) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 bg-background px-6 text-center">
+        <img src="/hivetalk-sad.png" alt="" className="mb-2 h-[130px] w-[130px] object-contain" />
         <span className="text-body font-medium text-text-primary">채팅방을 열지 못했어요.</span>
         <span className="text-sub-sm text-text-secondary">로그인 정보를 찾을 수 없어요.</span>
       </div>

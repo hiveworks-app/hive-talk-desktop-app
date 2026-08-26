@@ -13,6 +13,9 @@ export type ChatRoomRuntimeState = {
   loading: LoadingState;
   roomMessageCache: Map<string, ChatMessageUI[]>;
   setRoomId: (roomId: string | null) => void;
+  /** 방 화면 실제 마운트 여부 — "보고 있는 방" 판정용 (currentRoomId는 목록 복귀 후에도 잔존) */
+  isRoomViewActive: boolean;
+  setRoomViewActive: (active: boolean) => void;
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   replaceMessages: (next: Message[]) => void;
   deleteMessageById: (id: string | null) => void;

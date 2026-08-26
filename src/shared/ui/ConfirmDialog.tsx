@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,6 +22,9 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   /** 취소 또는 오버레이/Esc로 닫을 때 */
   onCancel: () => void;
+  /** false면 딤/ESC로 닫히지 않는다 — 버튼 응답 강제 (RN closeOnBackdropPress:false 대응.
+      예: 사내 초대 수락/거절 — 딤 클릭이 곧 거절 API가 되면 회피 불가 오조작이 된다) */
+  dismissible?: boolean;
 }
 
 /**
@@ -39,9 +43,12 @@ export function ConfirmDialog({
   neutral = false,
   onConfirm,
   onCancel,
+  dismissible = true,
 }: ConfirmDialogProps) {
+  // 열려 있는 동안 Electron ESC→창 숨김 억제 (ESC는 Radix가 다이얼로그 닫기로 소비)
+  useEscSuppress(open);
   return (
-    <Dialog.Root open={open} onOpenChange={next => { if (!next) onCancel(); }}>
+    <Dialog.Root open={open} onOpenChange={next => { if (!next && dismissible) onCancel(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="motion-dim fixed inset-0 z-[60] bg-black/30" />
         <Dialog.Content className="motion-center-pop fixed left-1/2 top-1/2 z-[70] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-6 shadow-xl focus:outline-none">

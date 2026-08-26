@@ -9,6 +9,7 @@ import { applyReconciliation, extractDeletedMessageIds } from '@/features/chat-r
 import { CHAT_BEFORE_SIZE, CHAT_AFTER_SIZE } from '@/shared/config/constants';
 import { Message, WebSocketPublishItem, WebSocketChannelTypes } from '@/shared/types/websocket';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 
 interface FetchHandlersParams {
@@ -37,6 +38,13 @@ export function useChatRoomWsFetchHandlers({
       const filtered = reverse.filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
 
+      // 진단(2026-08-26 읽음 미갱신 추적) — 서버 읽음 원장 확인용, 원인 확정 후 제거.
+      // 여기 read에 모바일 계정 id가 없으면 서버가 읽음을 등록하지 않은 것 (클라이언트 무관)
+      console.info(
+        '[WS][FETCH] BEFORE 응답 read 원장:',
+        mapped.map(m => `${String(m.id).slice(-4)} read=[${m.readUserIds.join(',')}] cnt=${m.notReadCount}`).join(' | '),
+      );
+
       if (isInitialFetchRef.current) {
         isInitialFetchRef.current = false;
         // 실패한 로컬 메시지를 보존하여 재시도/삭제 가능하도록 유지
@@ -56,7 +64,10 @@ export function useChatRoomWsFetchHandlers({
         const allFailed = [...failedLocal, ...persistedFailed];
         replaceMessages(allFailed.length > 0 ? [...mapped, ...allFailed] : mapped);
       } else {
-        const participants = participantsManager.getParticipants(roomId, channelType);
+        // 불완전 참여자 스냅샷(초대 직후 본인만 등)은 빈 배열 취급 → totalUserCount 폴백 (RN 가드 패리티)
+        const participants = participantsManager.getReliableParticipants(
+          roomId, channelType, useChatRoomInfo.getState().totalUserCount ?? 0,
+        );
         setMessages(prev => {
           const deletedIds = extractDeletedMessageIds(filtered);
           const reconciledPrev = applyReconciliation(prev, deletedIds);
@@ -81,7 +92,10 @@ export function useChatRoomWsFetchHandlers({
       const filtered = (payload ?? []).filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
 
-      const participants = participantsManager.getParticipants(roomId, channelType);
+      // 불완전 참여자 스냅샷은 빈 배열 취급 → totalUserCount 폴백 (RN 가드 패리티)
+      const participants = participantsManager.getReliableParticipants(
+        roomId, channelType, useChatRoomInfo.getState().totalUserCount ?? 0,
+      );
       setMessages(prev => {
         const deletedIds = extractDeletedMessageIds(filtered);
         const reconciledPrev = applyReconciliation(prev, deletedIds);
@@ -106,42 +120,59 @@ export function useChatRoomWsFetchHandlers({
 
   const handleReadMessage = useCallback(
     (readItems: Array<{ roomId: string; messageId: string; userId: string }>, roomId: string) => {
-      const roomReadItems = readItems.filter(item => item.roomId === roomId);
-      if (roomReadItems.length === 0) return;
+      // 서버 payload의 id가 숫자로 오는 사례 방어 (PUB 에코 strict === 불일치와 동일 유형) — String 정규화 비교
+      const roomReadItems = readItems.filter(item => String(item.roomId) === String(roomId));
+      if (roomReadItems.length === 0) {
+        if (readItems.length > 0) {
+          console.warn('[WS][READ] 방 불일치로 무시:', readItems[0]?.roomId, '!== 현재 방', roomId);
+        }
+        return;
+      }
 
       const { messages: currentMessages } = useChatRoomRuntimeStore.getState();
-      const messageMap = new Map(currentMessages.map(m => [m.id, m]));
+      const messageMap = new Map(currentMessages.map(m => [String(m.id), m]));
       const readUsersByMessageId = new Map<string, Set<string>>();
 
       roomReadItems.forEach(item => {
         const normalizedReaderId = normalizeUserId(item.userId);
         if (!normalizedReaderId) return;
 
-        if (!messageMap.has(item.messageId)) {
-          // 메시지 미도착 — 전역 레지스트리에 보류 (방 전환에도 유지, TTL sweep이 상한 관리)
+        if (!messageMap.has(String(item.messageId))) {
+          console.warn('[WS][READ] 메시지 미도착 — 보류 등록:', item.messageId, 'reader:', item.userId);
+          // 메시지 미도착 — 전역 레지스트리에 보류 (방 전환에도 유지, TTL sweep이 상한 관리).
+          // 키는 String 정규화 — 서버가 숫자 id를 주면 소비측(문자열 조회)과 영원히 불일치한다 (2026-08-26 리뷰)
           pendingReadRegistry.add(
-            [{ roomId: item.roomId, messageId: item.messageId, userId: normalizedReaderId }],
+            [{ roomId: String(item.roomId), messageId: String(item.messageId), userId: normalizedReaderId }],
             Date.now(),
           );
           return;
         }
 
-        const currentMessage = messageMap.get(item.messageId);
+        const currentMessage = messageMap.get(String(item.messageId));
         if (currentMessage?.readUserIds.includes(normalizedReaderId)) return;
 
-        let userSet = readUsersByMessageId.get(item.messageId);
-        if (!userSet) { userSet = new Set(); readUsersByMessageId.set(item.messageId, userSet); }
+        let userSet = readUsersByMessageId.get(String(item.messageId));
+        if (!userSet) { userSet = new Set(); readUsersByMessageId.set(String(item.messageId), userSet); }
         userSet.add(normalizedReaderId);
       });
 
-      if (readUsersByMessageId.size === 0) return;
+      if (readUsersByMessageId.size === 0) {
+        console.info('[WS][READ] 신규 반영 없음 (이미 처리됨/중복):', roomReadItems.length, '건');
+        return;
+      }
 
-      const participants = participantsManager.getParticipants(roomId, channelType);
+      // 불완전 참여자 스냅샷(초대 직후 본인만 등)으로 계산하면 안읽음이 조기 소멸한다 —
+      // 기대 인원 미달이면 빈 배열 취급해 아래 totalUserCount 폴백을 태운다 (RN 가드 패리티)
+      const participants = participantsManager.getReliableParticipants(
+        roomId, channelType, useChatRoomInfo.getState().totalUserCount ?? 0,
+      );
       const hasParticipants = participants.length > 0;
+      // 진단(2026-08-25 읽음 미갱신 추적) — 원인 확정 후 제거 예정
+      console.info('[WS][READ] 병합:', { 대상메시지: readUsersByMessageId.size, 참여자수: participants.length, totalUserCount: useChatRoomInfo.getState().totalUserCount });
 
       setMessages(prev =>
         prev.map(msg => {
-          const readers = readUsersByMessageId.get(msg.id);
+          const readers = readUsersByMessageId.get(String(msg.id));
           if (!readers || readers.size === 0) return msg;
 
           const nextReadUserIds = new Set(msg.readUserIds.map(id => normalizeUserId(id)));
@@ -150,7 +181,12 @@ export function useChatRoomWsFetchHandlers({
           // 저장은 원본 보존(읽음 비후퇴 불변식) — 퇴장자 필터는 calculateNotReadCount 계산 시점에만
           const readUserIds = Array.from(nextReadUserIds);
           if (!hasParticipants) {
-            return { ...msg, readUserIds };
+            // participants 캐시 미로드(신규 초대 직후 등) — 파서와 동일하게 totalUserCount 폴백으로
+            // 재계산한다. 폴백 없이 readUserIds만 갱신하면 배지가 초기값에 고정된다(3인 방 2 고정 실측).
+            const totalCount = useChatRoomInfo.getState().totalUserCount ?? 0;
+            const nextNotReadCount =
+              totalCount > 0 ? Math.max(0, totalCount - readUserIds.length) : msg.notReadCount;
+            return { ...msg, readUserIds, notReadCount: nextNotReadCount };
           }
 
           const nextNotReadCount = readCountCalculator.calculateNotReadCount({ readUserIds, participants });

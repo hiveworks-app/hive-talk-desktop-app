@@ -17,6 +17,7 @@ import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui/Badge";
 import { GroupProfileAvatar, type GroupAvatarUser } from "@/shared/ui/GroupProfileAvatar";
 import { ProfileCircle } from "@/shared/ui/ProfileCircle";
+import { countDMTotalUsers, countRoomListTotalUsers } from '@/shared/utils/roomUserCount';
 import {
   WS_CHANNEL_TYPE,
   WebSocketChannelTypes,
@@ -66,11 +67,13 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
     ? formatChatTimestamp(lastMessage.message.createdAt)
     : "";
 
+  // DM은 상대 이름 우선 — 서버가 DM에 title을 채워도 상대 이름을 보여준다 (RN 패리티)
   const displayName =
-    roomModel.title ||
-    roomModel.participantDetail?.name ||
-    roomModel.participants?.map((p) => p.name).join(", ") ||
-    "채팅방";
+    channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
+      ? roomModel.participantDetail?.name || roomModel.title || "채팅방"
+      : roomModel.title ||
+        roomModel.participants?.map((p) => p.name).join(", ") ||
+        "채팅방";
 
   const profileStorageKey =
     roomModel.participantDetail?.thumbnailProfileUrl ?? null;
@@ -130,8 +133,12 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
         })
         .catch(() => null));
 
-    const totalUserCount = roomModel.participants?.length ?? 2;
     const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
+    // GM 목록 participants는 본인 제외(+1 필요) — 단일 유틸 강제 (RN roomUserCount 패리티)
+    const totalUserCount =
+      channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
+        ? countDMTotalUsers(isOtherUserExit)
+        : countRoomListTotalUsers(channelType, roomModel.participants);
 
     const invitedUserIds =
       channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE &&
@@ -256,7 +263,7 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
       // RN 패리티 — GM은 타이틀 옆 인원수 표기
       titleSuffix={
         channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE
-          ? String(roomModel.participants?.length ?? '')
+          ? String(countRoomListTotalUsers(channelType, roomModel.participants))
           : undefined
       }
       description={

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { handleForceLogout, refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { reportConnectivityRecovered } from '@/shared/network/connectivityMonitor';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { isSessionDisconnect } from '@/shared/types/websocket';
 import type { WebSocketEnvelope } from '@/shared/types/websocket';
@@ -87,6 +88,8 @@ export function useWebSocketCore({
     const ws = new WebSocket(`${WS_URL}/app/ws?Authorization=${encodeURIComponent(accessToken)}`);
 
     ws.onopen = () => {
+      // WS 연결 성공 = 확실한 온라인 증거 — 확정 오프라인 상태 즉시 해제 (RN 패리티)
+      reportConnectivityRecovered();
       const wasReconnect = reconnectAttemptRef.current > 0;
       wsRef.current = ws;
       reconnectAttemptRef.current = 0;
@@ -225,6 +228,11 @@ export function useWebSocketCore({
     if (useSessionDisconnectStore.getState().noticeVisible) return;
     const ws = wsRef.current;
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    // 진단(2026-08-26 읽음 미갱신 추적) — SUB 발신 확인용, 원인 확정 후 제거
+    const diagOp = data as { operationType?: string; channelType?: string; channelId?: unknown } | null;
+    if (diagOp?.operationType === 'SUB') {
+      console.info('[WS][TX] SUB', diagOp.channelType, diagOp.channelId, ws && ws.readyState === WebSocket.OPEN ? '' : '(대기열)');
+    }
     if (!ws || ws.readyState !== WebSocket.OPEN || !isOnline) {
       if (forceCloseRef.current || ws?.readyState === WebSocket.CLOSED) return;
       pendingQueue.current.push(data);

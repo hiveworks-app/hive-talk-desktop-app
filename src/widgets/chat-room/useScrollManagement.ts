@@ -13,6 +13,10 @@ interface UseScrollManagementOptions {
   hasMoreBefore: boolean;
   isBeforeLoading: boolean;
   loadMoreBeforeMessage: (direction: 'before') => void;
+  /** 아래(최신) 방향 페이지네이션 — 캘린더 날짜 점프 후 최신 메시지 복귀 경로 (RN onEndReached 패리티) */
+  hasMoreAfter?: boolean;
+  isAfterLoading?: boolean;
+  loadMoreAfterMessage?: () => void;
   /** 마지막 도착 메시지가 시스템 메시지(입장/퇴장/공지 등)인지 — '새 메시지 보기' 미유발 (RN 패리티) */
   lastMessageIsSystem?: boolean;
 }
@@ -27,6 +31,9 @@ export function useScrollManagement({
   hasMoreBefore,
   isBeforeLoading,
   loadMoreBeforeMessage,
+  hasMoreAfter = false,
+  isAfterLoading = false,
+  loadMoreAfterMessage,
   lastMessageIsSystem = false,
 }: UseScrollManagementOptions) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -36,6 +43,9 @@ export function useScrollManagement({
   const prevScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
   const canDismissSeparatorRef = useRef(false);
+  // 구분선 DOM 등장 대기 재시도 (초기 착지용)
+  const separatorRetryRef = useRef(0);
+  const [separatorRetryTick, setSeparatorRetryTick] = useState(0);
 
   // 구분선 표시: roomId 기반으로 추적
   const [dismissedRoomId, setDismissedRoomId] = useState<string | null>(null);
@@ -69,6 +79,7 @@ export function useScrollManagement({
     isInitialLoadRef.current = true;
     isNearBottomRef.current = initialNotReadCount === 0;
     canDismissSeparatorRef.current = false;
+    separatorRetryRef.current = 0;
     // 버튼 상태 리셋 — 동기 setState 금지 규칙 준수를 위해 비동기 콜백에서 수행
     const timer = setTimeout(() => {
       setIsAwayFromBottom(false);
@@ -83,21 +94,32 @@ export function useScrollManagement({
     if (messagesLength === 0 || isRoomTransitioning) return;
 
     if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-
       if (initialNotReadCount === 0) {
+        isInitialLoadRef.current = false;
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
         isNearBottomRef.current = true;
-      } else {
-        const separator = document.getElementById('unread-separator');
-        if (separator) {
-          separator.scrollIntoView({ behavior: 'auto', block: 'center' });
-          setTimeout(() => { canDismissSeparatorRef.current = true; }, 500);
-        } else {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-          isNearBottomRef.current = true;
-        }
+        return;
       }
+
+      const separator = document.getElementById('unread-separator');
+      if (separator) {
+        isInitialLoadRef.current = false;
+        separator.scrollIntoView({ behavior: 'auto', block: 'center' });
+        setTimeout(() => { canDismissSeparatorRef.current = true; }, 500);
+        return;
+      }
+
+      // 구분선이 아직 DOM에 없음 — 표시 판정(뷰포트 실측)이 setTimeout(0) 이후라 첫 실행 시점엔
+      // 항상 미존재였다(하단 스크롤로 오폴백 → 미독이 많아도 최하단 시작, 2026-08-26 감사).
+      // 초기 플래그를 소진하지 않고 짧게 재시도하고, 끝내 없으면(미표시 방) 하단으로 확정한다.
+      if (separatorRetryRef.current < 6) {
+        separatorRetryRef.current += 1;
+        const retryTimer = setTimeout(() => setSeparatorRetryTick(v => v + 1), 50);
+        return () => clearTimeout(retryTimer);
+      }
+      isInitialLoadRef.current = false;
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      isNearBottomRef.current = true;
       return;
     }
 
@@ -109,7 +131,7 @@ export function useScrollManagement({
       const timer = setTimeout(() => setHasNewWhileAway(true), 0);
       return () => clearTimeout(timer);
     }
-  }, [messagesLength, isRoomTransitioning]);
+  }, [messagesLength, isRoomTransitioning, separatorRetryTick]);
 
   useEffect(() => {
     if (scrollToBottomTrigger > 0) {
@@ -122,9 +144,11 @@ export function useScrollManagement({
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
-    const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const nearBottom = distanceFromBottom < 100;
     isNearBottomRef.current = nearBottom;
-    setIsAwayFromBottom(!nearBottom);
+    // 맨아래 버튼은 "1화면 이상" 벗어났을 때만 (RN·정책 chat-room.md 패리티 — 100px 임계는 과민)
+    setIsAwayFromBottom(distanceFromBottom > Math.max(60, clientHeight));
     if (nearBottom) setHasNewWhileAway(false);
 
     if (nearBottom && canDismissSeparatorRef.current) {
@@ -135,7 +159,13 @@ export function useScrollManagement({
       prevScrollHeightRef.current = scrollHeight;
       loadMoreBeforeMessage('before');
     }
-  }, [hasMoreBefore, isBeforeLoading, loadMoreBeforeMessage, storeRoomId]);
+
+    // 아래(최신) 방향 — 캘린더 점프 후 hasMoreAfter가 켜진 상태에서 하단 근접 시 이어받기.
+    // 미연결 시 점프 후 아래로 스크롤해도 최신 메시지를 못 불러왔다 (2026-08-26 감사, RN onEndReached 패리티)
+    if (scrollHeight - scrollTop - clientHeight < 80 && hasMoreAfter && !isAfterLoading) {
+      loadMoreAfterMessage?.();
+    }
+  }, [hasMoreBefore, isBeforeLoading, loadMoreBeforeMessage, hasMoreAfter, isAfterLoading, loadMoreAfterMessage, storeRoomId]);
 
   // 이전 메시지 로드 시 스크롤 위치 보존
   useEffect(() => {

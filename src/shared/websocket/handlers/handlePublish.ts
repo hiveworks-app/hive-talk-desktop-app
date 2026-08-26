@@ -1,7 +1,8 @@
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { upsertChatRoomListWithMessage } from '@/features/chat-room-list/updater';
+import { prependSidePanelCache } from '@/features/chat-room-side-panel/sidePanelCacheSync';
 import { apiGetStorage } from '@/features/storage/api';
-import { WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
+import { isSystemMessageContentType, WS_CHANNEL_TYPE, WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import type {
   WebSocketEnvelope,
@@ -58,6 +59,12 @@ export function handlePublish(
   const isRoomActive = Boolean(listener) && document.hasFocus();
   if (listener) listener(envelope);
 
+  // 사이드패널 첨부/파일 캐시 prepend — 미반영 시 새 사진/파일이 staleTime 30분 동안
+  // 패널에 나타나지 않는다 (RN sidePanelCacheSync 패리티, 캐시 미존재 시 no-op)
+  if (currentChannelType) {
+    prependSidePanelCache(queryClient, normalizedPayload, roomId, currentChannelType);
+  }
+
   // 채팅방 목록 React Query 캐시 갱신
   const targetQueryKey = getTargetQueryKey(currentChannelType);
   if (targetQueryKey) {
@@ -97,7 +104,10 @@ export function handlePublish(
   // 알림 (내가 보낸 메시지가 아니고, 방이 비활성이거나 창에 포커스가 없을 때)
   // 차단 발신자의 메시지는 알림 제외 (정책 block.md — 미리보기 접힘 문구로만 인지)
   const isWindowInactive = isElectronRef.current && !document.hasFocus();
-  if (!suppressNotification && !isMySentMessage && !isBlockedSender && (!isRoomActive || isWindowInactive)) {
+  // 시스템 안내(공지 등록·입장/퇴장·제목 변경 등)는 알림 제외 — RN은 서버 푸시가 시스템
+  // 메시지에 발송되지 않지만, 데스크톱은 WS 수신으로 로컬 알림을 만들므로 클라에서 걸러야 한다
+  const isSystemMessage = isSystemMessageContentType(normalizedPayload.message.messageContentType);
+  if (!suppressNotification && !isMySentMessage && !isBlockedSender && !isSystemMessage && (!isRoomActive || isWindowInactive)) {
     sendNotification(normalizedPayload, roomId, currentChannelType, targetQueryKey, queryClient);
   }
 }

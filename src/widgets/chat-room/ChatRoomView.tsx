@@ -21,7 +21,7 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useCalendarDateJump } from '@/features/chat-room/useCalendarDateJump';
 import { useGetTagInfo } from '@/features/tag/queries';
 import { isOffline } from '@/shared/utils/offlineGuard';
-import { isEscSuppressed } from '@/shared/utils/escSuppress';
+import { acquireEscSuppress, isEscSuppressed } from '@/shared/utils/escSuppress';
 import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { cn } from '@/shared/lib/cn';
@@ -77,11 +77,11 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, deleteMessage, addTagToMessage, removeTagFromMessage, retryTextMessage, removeFailedMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, loadMoreAfterMessage, deleteMessage, addTagToMessage, removeTagFromMessage, retryTextMessage, removeFailedMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const runtimeRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
-  const { hasMoreBefore, isBeforeLoading } = useChatRoomRuntimeStore(s => s.loading);
+  const { hasMoreBefore, isBeforeLoading, hasMoreAfter, isAfterLoading } = useChatRoomRuntimeStore(s => s.loading);
   const isOnline = useOnlineStatus();
   const scrollToBottomTrigger = useChatRoomRuntimeStore(s => s.scrollToBottomTrigger);
   const isRoomTransitioning = !isNewRoom && storeRoomId !== runtimeRoomId;
@@ -98,6 +98,23 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
   const [noticeReplaceConfirm, setNoticeReplaceConfirm] = useState<{ run: () => void } | null>(null);
   // 장문 전체보기 다이얼로그 (RN ChatRoomFullMessageScreen 대응)
   const [fullTextMessage, setFullTextMessage] = useState<ChatMessageUI | null>(null);
+  // 장문 전체보기 — ESC로 닫기 + Electron 창 숨김 억제 (억제 없으면 ESC가 앱을 트레이로 숨긴다)
+  useEffect(() => {
+    if (!fullTextMessage) return;
+    const release = acquireEscSuppress();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        setFullTextMessage(null);
+      }
+    };
+    // capture — 아래의 방 공용 ESC 핸들러(검색/사이드패널)보다 먼저 소비
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      release();
+    };
+  }, [fullTextMessage]);
   // 발신자 프로필 다이얼로그 — 멤버목록 미발견 시 미등록 처리 (RN 패리티)
   const [profileTarget, setProfileTarget] = useState<{ member: MemberItem; unregistered: boolean } | null>(null);
   const handleOpenProfile = useCallback((message: ChatMessageUI) => {
@@ -196,7 +213,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
 
   const { isTagOpen, handleOpenAddTag, handleOpenUpdateTag, handleTagConfirm, handleSendWithTags } =
     useTagActions({ roomId: effectiveRoomId, sendTextMessage, addTagToMessage, removeTagFromMessage });
-  const { pendingItems, clearPendingItems, handleFileConfirm, handleFilesSelected, dragHandlers } =
+  const { pendingItems, removePendingItem, clearPendingItems, handleFileConfirm, handleFilesSelected, dragHandlers } =
     useFileDragDrop({ onMediaSend: sendMediaMessage, onDocSend: sendDocumentMessage });
   const { viewerIndex, setViewerIndex, viewerVisible, allMediaItems, openMediaViewer, closeMediaViewer } =
     useMediaViewer(
@@ -219,6 +236,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
     useScrollManagement({
       messagesLength: messages.length, isRoomTransitioning, storeRoomId,
       initialNotReadCount, scrollToBottomTrigger, hasMoreBefore, isBeforeLoading, loadMoreBeforeMessage,
+      // 아래(최신) 방향 — 캘린더 점프 후 복귀 경로 (RN onEndReached 패리티)
+      hasMoreAfter, isAfterLoading, loadMoreAfterMessage,
       lastMessageIsSystem,
     });
 
@@ -307,6 +326,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
     <div className="flex flex-1 overflow-hidden">
       <main className="flex flex-1 flex-col overflow-hidden bg-background" {...dragHandlers}>
         <ChatRoomHeader
+          // 방 전환 시 헤더 리마운트 — 캘린더 선택일/열림 등 방 스코프 UI 상태 잔존 방지 (2026-08-26 리뷰)
+          key={effectiveRoomId}
           roomName={roomName}
           isExternalRoom={channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE}
           totalUserCount={totalUserCount}
@@ -323,8 +344,9 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
         {/* 채팅 본문(메시지+입력창) 래퍼 — 업무태그 바텀시트 오버레이의 기준(relative) */}
         <div className="relative flex flex-1 flex-col overflow-hidden">
         <div className="relative flex-1 overflow-hidden bg-chat-bg">
-          {/* 공지 배너 — 절대 위치 오버레이: 펼침/접힘이 메시지 레이아웃(스크롤·위치)에 영향 주지 않도록 띄운다 */}
-          {effectiveRoomId && (
+          {/* 공지 배너 — 절대 위치 오버레이: 펼침/접힘이 메시지 레이아웃(스크롤·위치)에 영향 주지 않도록 띄운다.
+              검색 모드에선 숨김 — 오버레이가 검색 결과 상단을 가린다 (RN 패리티) */}
+          {effectiveRoomId && !search.isSearchMode && (
             <div className="absolute inset-x-0 top-0 z-20">
               <NoticeBanner roomId={effectiveRoomId} channelType={channelType} />
             </div>
@@ -396,8 +418,11 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
             </div>
             <div ref={messagesEndRef} />
           </div>
-          {/* 스크롤 최하단/새 메시지 보기 플로팅 버튼 (RN NewMessageButton 패리티 — 새 메시지 시 노랑 pill) */}
-          {isAwayFromBottom && !isRoomTransitioning && messages.length > 0 && (
+          {/* 스크롤 최하단/새 메시지 보기 플로팅 버튼 (RN NewMessageButton 패리티 — 새 메시지 시 노랑 pill).
+              검색 중에는 숨김 — 결과 탐색 스크롤과 충돌 (RN 패리티).
+              새 메시지 강조는 "1화면 이상" 임계와 무관하게 노출 — 100px~1화면 구간에서 새 메시지가
+              와도 아무 표시가 없는 사각지대 방지 (하단 근접 시 hasNewWhileAway가 즉시 해제됨) */}
+          {(isAwayFromBottom || hasNewWhileAway) && !isRoomTransitioning && !search.isSearchMode && messages.length > 0 && (
             hasNewWhileAway ? (
               <button
                 onClick={scrollToBottom}
@@ -497,7 +522,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
         onClose={closeMediaViewer}
       />
       {pendingItems.length > 0 && (
-        <FileConfirmDialog items={pendingItems} onConfirm={handleFileConfirm} onCancel={clearPendingItems} />
+        <FileConfirmDialog items={pendingItems} onConfirm={handleFileConfirm} onCancel={clearPendingItems} onRemoveItem={removePendingItem} />
       )}
       {reportTargetId !== null && (
         <ReportMessageDialog

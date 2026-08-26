@@ -73,7 +73,9 @@ export function safeJsonParse<T>(jsonString: string | null, fallback: T): T {
   if (!jsonString) return fallback;
 
   try {
-    return JSON.parse(jsonString) as T;
+    const parsed = JSON.parse(jsonString) as T;
+    // 'null' 문자열도 fallback — null이 그대로 흘러가 소비처에서 터지는 것 방지 (RN 패리티)
+    return parsed === null ? fallback : parsed;
   } catch {
     return fallback;
   }

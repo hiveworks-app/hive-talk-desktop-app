@@ -27,6 +27,15 @@ export function useFileDragDrop({ onMediaSend, onDocSend }: UseFileDragDropOptio
     setPendingItems(items);
   }, []);
 
+  // 확인 단계에서 개별 제거 — 마지막 하나를 지우면 다이얼로그 자체가 닫힌다 (RN MediaPickerPreview 패리티)
+  const removePendingItem = useCallback((index: number) => {
+    setPendingItems(prev => {
+      const target = prev[index];
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
   const clearPendingItems = useCallback(() => {
     setPendingItems(prev => {
       prev.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
@@ -71,6 +80,7 @@ export function useFileDragDrop({ onMediaSend, onDocSend }: UseFileDragDropOptio
 
   return {
     pendingItems,
+    removePendingItem,
     clearPendingItems,
     handleFileConfirm,
     handleFilesSelected,

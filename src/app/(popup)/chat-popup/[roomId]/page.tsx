@@ -41,6 +41,7 @@ export default function ChatPopupPage() {
   if (!roomId) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-background px-6 text-center">
+        <img src="/hivetalk-sad.png" alt="" className="mb-2 h-[130px] w-[130px] object-contain" />
         <span className="text-body font-medium text-text-primary">채팅방을 열지 못했어요.</span>
         <span className="text-sub-sm text-text-secondary">주소에 채팅방 정보가 없어요.</span>
       </div>
@@ -58,6 +59,7 @@ export default function ChatPopupPage() {
   if (status === 'error') {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-background px-6 text-center">
+        <img src="/hivetalk-sad.png" alt="" className="mb-2 h-[130px] w-[130px] object-contain" />
         <span className="text-body font-medium text-text-primary">채팅방을 열지 못했어요.</span>
         <span className="text-sub-sm text-text-secondary">{errorDetail}</span>
       </div>

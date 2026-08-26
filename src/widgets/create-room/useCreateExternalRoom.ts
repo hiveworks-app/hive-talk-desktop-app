@@ -13,6 +13,7 @@ import { filterByhangeulSearch } from '@/shared/utils/hangeulSearch';
 import type { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { useBlockedMembersStore } from '@/store/blockedMembersStore';
+import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
@@ -118,10 +119,10 @@ export function useCreateExternalRoom(onClose: () => void) {
     onClose();
   }, [reset, onClose]);
 
+  // 탭 전환 시 검색어 유지 (RN 단일 useSearch 패리티 — 초기화하지 않는다)
   const changeTab = (tab: CreateExternalTab) => {
     if (tab === activeTab) return;
     setActiveTab(tab);
-    setSearch('');
   };
 
   // 협력방 입장(기존 방/신규 방 공통) — 캐시에서 방 정보를 찾아 채워 입장
@@ -178,7 +179,8 @@ export function useCreateExternalRoom(onClose: () => void) {
       }
       setStep(2);
     } catch {
-      // 검사 실패는 서버가 생성 시 재검증하므로 진행 (RN §7-C-6 정책)
+      // 검사 실패는 서버가 생성 시 재검증하므로 안내 후 진행 (RN §7-C-6 정책 + 스낵바 패리티)
+      useUIStore.getState().showSnackbar({ message: '잠시 후 다시 시도해주세요.', state: 'error' });
       setStep(2);
     }
   };

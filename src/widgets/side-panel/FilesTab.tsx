@@ -9,6 +9,8 @@ import { IconDownload } from '@/shared/ui/icons';
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatBytes } from '@/shared/utils/fileUtils';
 import { FileTypeIcon } from '@/shared/ui/FileTypeIcon';
+import { PresignedImage } from '@/shared/ui/PresignedImage';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { isBlockedUser } from '@/store/blockedMembersStore';
 import { formatSizeParts, groupByDate } from '@/shared/utils/chatSidePanelUtils';
 import IconBlock from '@assets/icons/block.svg';
@@ -94,10 +96,6 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
     return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
-  if (allFiles.length === 0 && !isFilterMode) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">파일이 없어요.</div>;
-  }
-
   return (
     <div className="flex h-full flex-col">
       {/* 보낸사람·파일명 통합 검색 줄 (RN 검색 모드 패리티 — 드롭다운 + 칩 + 파일명 안내 행) */}
@@ -145,8 +143,13 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
       </div>
 
       <div className="flex-1 py-1">
-        {isFilterMode && filtered.length === 0 && (
-          <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">찾는 파일이 없어요.</div>
+        {filtered.length === 0 && (
+          /* RN SidePanelSelectItemList 패리티 — EmptyContainer + 검색 중 '찾는 ' 접두 */
+          <EmptyState
+            variant={isFilterMode ? 'search' : 'sad'}
+            message={`${isFilterMode ? '찾는 ' : ''}파일이 없어요.`}
+            className="py-10"
+          />
         )}
         {/* RN SidePanelSelectItemFile 패리티 — 날짜 헤더 + 카드형 행 */}
         {groupByDate(filtered).map(group => (
@@ -168,8 +171,12 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
                     {/* 56px 미리보기 — 썸네일 없으면 확장자 아이콘. 차단 발신자는 미리보기만 가림
                         (RN Figma 3170:59084 — 파일명/용량/다운로드는 그대로) */}
                     <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gray-50">
-                      {file.thumbnailPresignedUrl ? (
-                        <img src={file.thumbnailPresignedUrl} alt="" className="h-full w-full object-cover" />
+                      {file.thumbnailPresignedUrl || file.thumbnailPath ? (
+                        <PresignedImage
+                          storageKey={file.thumbnailPath}
+                          fallbackUrl={file.thumbnailPresignedUrl}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <FileTypeIcon fileName={fileName} size={42} />
                       )}

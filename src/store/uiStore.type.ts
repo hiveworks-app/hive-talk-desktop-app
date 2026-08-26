@@ -3,6 +3,8 @@ export interface ToastItem {
   message: string;
   state?: 'info' | 'success' | 'warning' | 'error';
   duration?: number;
+  /** true면 단일 표시 정책(새 스낵바가 기존을 걷어내는 규칙)에서 제외 */
+  sticky?: boolean;
 }
 
 export interface LoadingOverlayState {

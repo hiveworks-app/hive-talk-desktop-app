@@ -48,6 +48,22 @@ export class ParticipantsManager {
     return this.getParticipants(roomId, channelType).length;
   }
 
+  /**
+   * 신뢰 가능한 참여자 스냅샷 (RN 진입 동기화 완전성 가드 패리티).
+   * 초대 직후 서버 /participants가 잠시 본인만 반환하는 구간(RN 2026-07-29 실측)에 그 목록으로
+   * 읽음 수를 계산하면 틀린 값이 화면에 굳는다. 기대 인원(expectedCount)에 못 미치는 목록은
+   * 빈 배열로 취급해 호출부의 totalUserCount 폴백 계산을 태운다.
+   */
+  getReliableParticipants(
+    roomId: string,
+    channelType: WebSocketChannelTypes,
+    expectedCount: number,
+  ): ParticipantItemsType[] {
+    const participants = this.getParticipants(roomId, channelType);
+    if (expectedCount > 0 && participants.length < expectedCount) return [];
+    return participants;
+  }
+
   async refetchParticipants(roomId: string, channelType: WebSocketChannelTypes): Promise<void> {
     const cacheKey = this.getCacheKey(roomId, channelType);
     this.participantIdsCache.delete(cacheKey);

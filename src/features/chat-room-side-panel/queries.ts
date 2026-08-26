@@ -236,10 +236,13 @@ export const getSidePanelParticipantsQuery = (
     const res = await apiGetSidePanelParticipants(roomId, channelType);
     return res.payload.items;
   },
-  staleTime: 1000 * 60 * 5,
-  gcTime: 1000 * 60 * 5,
-  refetchOnMount: false,
-  refetchOnReconnect: false,
+  // RN 캐시 정책 패리티 (staleTime 30분 / gcTime 60분 / mount·reconnect 재검증).
+  // 특히 gcTime 5분은 패널이 닫혀 observer가 없으면 캐시가 GC되어 ParticipantsManager가
+  // 빈 배열을 반환 → 안읽음 계산이 totalUserCount 폴백으로 떨어지던 원인 (2026-08-26 감사)
+  staleTime: 1000 * 60 * 30,
+  gcTime: 1000 * 60 * 60,
+  refetchOnMount: true,
+  refetchOnReconnect: true,
   refetchOnWindowFocus: false,
   retry: 1,
 });

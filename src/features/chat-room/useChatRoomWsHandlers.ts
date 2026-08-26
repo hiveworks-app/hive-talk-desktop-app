@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, type MutableRefObject } from 'react';
+import { useCallback, useRef, type MutableRefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { createWsMessageParser } from '@/features/chat-room/createWsMessageParser';
 import { consumeDraftBackfill } from '@/features/chat-room/draftBackfill';
+import { mergeTagsPreservingOrder } from '@/features/chat-room/mergeTagsPreservingOrder';
+import { pendingTagUpdateRegistry } from '@/features/chat-room/pendingTagUpdateRegistry';
 import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { ParticipantsManager } from '@/features/chat-room/domain';
 import { useChatRoomWsFetchHandlers } from '@/features/chat-room/useChatRoomWsFetchHandlers';
@@ -17,7 +19,8 @@ import {
   WebSocketPublishItem, isAddTagBroadcast, isAddTagSession, isBroadcast, isDeleteMessage,
   isExitMessageRoomBroadcast, isExitMessageRoomSession, isFetchAfterMessage, isFetchBeforeMessage,
   isFetchMessage, isMediaFileMessage, isPublish, isReadMessage, isRemoveTagBroadcast,
-  isRemoveTagSession, isReportedMessageBroadcast, isReportHiddenBroadcast, isSub, isViewInMessage, isViewOutMessage,
+  isRemoveTagSession, isReportedMessageBroadcast, isReportHiddenBroadcast,
+  isRoomChannelSessionFailure, isSub, isSubscribeSession, isViewInMessage, isViewOutMessage,
 } from '@/shared/types/websocket';
 import { ParticipantItemsType } from '@/shared/types/chatRoom';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -41,13 +44,23 @@ interface UseChatRoomWsHandlersParams {
   /** draft 백필용 — 첫 PUB 수신 시 FETCH_BEFORE 1회 발행 */
   send: (msg: unknown) => void;
   buildFetchBeforeMessage: (opts: { currentMessage: string; isInclusive: boolean; channelIdOverride: string }) => unknown;
+  /** 유령 구독 방지 재전송용 (RN CHANNEL_RETRY 패리티) */
+  buildSubscribeMessage: (opts: { channelIdOverride: string }) => unknown;
+  buildViewInMessageRoom: (opts: { channelIdOverride: string }) => unknown;
+  buildFetchAfterMessage: (opts: { currentMessage: string; isInclusive: boolean; channelIdOverride: string }) => unknown;
+  viewStateRef: MutableRefObject<'in' | 'out' | null>;
 }
+
+/* 🔁 SUB/VIEW_IN 실패(SE003 등) 재전송 정책 — 유령 구독 방지 (RN 2026-07-20 dev 장애 실측 패리티) */
+const CHANNEL_RETRY_MAX = 3;
+const CHANNEL_RETRY_BASE_DELAY_MS = 1500; // 1.5s → 3s → 6s 지수 백오프
 
 export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
   const {
     channelType, parseWsMessage, setMessages, deleteMessageById,
     replaceLocalWithServer, participantsManager, recalculateAllMessagesNotReadCount, isMountedRef,
     send, buildFetchBeforeMessage,
+    buildSubscribeMessage, buildViewInMessageRoom, buildFetchAfterMessage, viewStateRef,
   } = params;
   const queryClient = useQueryClient();
   const router = useAppRouter();
@@ -70,7 +83,12 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     const normalized = items.map(item => ({ ...item, tagId: Number(item.tagId), categoryId: Number(item.categoryId) }));
     const seen = new Set<number>();
     const dedup = normalized.filter(item => { if (seen.has(item.tagId)) return false; seen.add(item.tagId); return true; });
-    setMessages(prev => prev.map(m => (m.id === targetMessageId ? { ...m, tags: dedup } : m)));
+    // 서버 응답 순서를 그대로 쓰면 기존 태그 위치가 흔들린다 — 기존 순서 유지 병합 (RN 패리티)
+    setMessages(prev =>
+      prev.map(m =>
+        m.id === targetMessageId ? { ...m, tags: mergeTagsPreservingOrder(m.tags, dedup) } : m,
+      ),
+    );
   }, [setMessages]);
 
   // 신고 마스킹: REPORTED → 마스킹 텍스트(TEXT) / REPORT_HIDDEN → 시스템 안내(SYSTEM_REPORTED)
@@ -141,14 +159,78 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
     }
   }, [parseWsMessage, replaceLocalWithServer, setMessages, handleParticipantChange, send, buildFetchBeforeMessage]);
 
+  /* 🔁 SUB/VIEW_IN 실패 백오프 재전송 (RN scheduleRoomChannelRetry 패리티).
+     거절을 방치하면 방 화면은 정상처럼 보여도 서버에 구독이 없어 READ/PUB 브로드캐스트가
+     전부 유실된다("유령 구독"). 실패가 연달아 와도 타이머 1개로 SUB+VIEW_IN을 함께 복구한다. */
+  const channelRetryRef = useRef<{ roomId: string | null; count: number; timer: ReturnType<typeof setTimeout> | null }>({ roomId: null, count: 0, timer: null });
+  const scheduleChannelRetry = useCallback((operationType: string, code?: string) => {
+    // 예산은 방 단위 — 이전 방이 소진한 카운트가 다음 방의 재시도를 막으면 유령 구독이 된다 (2026-08-26 리뷰)
+    const scheduledRoomId = useChatRoomRuntimeStore.getState().currentRoomId;
+    if (channelRetryRef.current.roomId !== scheduledRoomId) {
+      if (channelRetryRef.current.timer) clearTimeout(channelRetryRef.current.timer);
+      channelRetryRef.current = { roomId: scheduledRoomId, count: 0, timer: null };
+    }
+    const retry = channelRetryRef.current;
+    if (retry.timer) return;
+    if (retry.count >= CHANNEL_RETRY_MAX) {
+      console.warn(`[WS][CHANNEL-RETRY] ${operationType} 재전송 한도(${CHANNEL_RETRY_MAX}회) 초과 — 재연결 전까지 브로드캐스트 유실 가능`);
+      return;
+    }
+    const delay = CHANNEL_RETRY_BASE_DELAY_MS * Math.pow(2, retry.count);
+    console.warn(`[WS][CHANNEL-RETRY] ${operationType} 실패(code=${code ?? '?'}) → ${delay}ms 후 SUB/VIEW_IN 재전송 (${retry.count + 1}/${CHANNEL_RETRY_MAX})`);
+    retry.timer = setTimeout(() => {
+      retry.timer = null;
+      retry.count += 1;
+      const activeRoomId = useChatRoomRuntimeStore.getState().currentRoomId;
+      // 방이 바뀌었으면 이전 방의 재전송 폐기 (예산도 새 방 첫 실패 시 리셋됨)
+      if (!isMountedRef.current || !activeRoomId || activeRoomId !== scheduledRoomId) return;
+      send(buildSubscribeMessage({ channelIdOverride: activeRoomId }));
+      // 블러 상태에선 VIEW_IN을 보내지 않는다 — 보지 않는 사용자가 '보는 중'으로 기록되면
+      // 상대에게 안읽음이 표시되지 않는다 (RN AppState 가드의 데스크톱 대응 = viewState 래치)
+      if (viewStateRef.current === 'in') {
+        send(buildViewInMessageRoom({ channelIdOverride: activeRoomId }));
+      }
+    }, delay);
+  }, [send, buildSubscribeMessage, buildViewInMessageRoom, viewStateRef, isMountedRef]);
+
   const extractTagTarget = (payload: { items: TagListType[] } & Record<string, unknown>) =>
     payload.items[0]?.messageId ?? (payload.messageId as string | undefined);
 
   const handleWsMessage = useCallback((data: WebSocketEnvelope) => {
     const roomId = useChatRoomRuntimeStore.getState().currentRoomId;
     if (!roomId) return;
+
+    // SUB/VIEW_IN 실패(SE003 등) → 유령 구독 방지 백오프 재전송 (RN 패리티)
+    if (isRoomChannelSessionFailure(data)) {
+      scheduleChannelRetry(String(data.response.operationType), data.response.code);
+      return;
+    }
+    // SUB 성공 ack — 재시도 복구였다면 실패~복구 사이 유실된 READ/PUB을 fetch로 만회 (RN 패리티)
+    if (isSubscribeSession(data)) {
+      const retry = channelRetryRef.current;
+      if (retry.count > 0 && data.response.success !== false) {
+        retry.count = 0;
+        const anchorId = [...useChatRoomRuntimeStore.getState().messages].reverse().find(m => !m.isLocal)?.id;
+        console.info('[WS][CHANNEL-RETRY] SUB 복구 성공 → 유실 구간 catch-up');
+        if (anchorId) {
+          // AFTER: 유실된 신규 메시지 회수 / BEFORE(inclusive): 기존 메시지의 읽음·삭제 최신화
+          send(buildFetchAfterMessage({ currentMessage: anchorId, isInclusive: false, channelIdOverride: roomId }));
+          send(buildFetchBeforeMessage({ currentMessage: anchorId, isInclusive: true, channelIdOverride: roomId }));
+        }
+      }
+      return;
+    }
+
     if (isViewInMessage(data) || isViewOutMessage(data)) return;
-    if (isExitMessageRoomSession(data)) { handleExitMessageRoom(roomId); return; }
+    if (isExitMessageRoomSession(data)) {
+      // 다른 방 EXIT의 ack가 허브→스포크 relay로 들어와 현재 방(팝업)을 닫지 않도록 payload 방 확인.
+      // 서버가 payload 없이(null) 응답하는 경우만 현재 방의 EXIT으로 간주 (RN 1729-1738 패리티)
+      const exitedRoomId = (data.response.payload as { roomId?: string } | null)?.roomId;
+      if (exitedRoomId == null || String(exitedRoomId) === String(roomId)) {
+        handleExitMessageRoom(roomId);
+      }
+      return;
+    }
     if (isFetchMessage(data) || isFetchBeforeMessage(data)) { handleFetchBeforeHistory(data.response.payload, roomId); return; }
     if (isFetchAfterMessage(data)) { handleFetchAfterHistory(data.response.payload, roomId); return; }
     if (isAddTagSession(data) || isRemoveTagSession(data)) return;
@@ -196,13 +278,19 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
       const p = data.response.payload;
       const pendingId = useChatRoomRuntimeStore.getState().pendingRemoveTagMessageId;
       const target = extractTagTarget(p) ?? pendingId;
+      // REMOVE→ADD 콤보 진행 중 — 중간 상태(유지분만 남음)는 화면에 반영하지 않고
+      // 대기 중이던 ADD를 발사한다 (TA003 회피, RN pendingTagUpdateRegistry 패리티)
+      if (target && pendingTagUpdateRegistry.consumeOnRemoveBroadcast(target)) {
+        useChatRoomRuntimeStore.getState().setPendingRemoveTagMessageId(null);
+        return;
+      }
       if (target) handleTagBroadcast(target, p.items);
       useChatRoomRuntimeStore.getState().setPendingRemoveTagMessageId(null);
     }
   }, [
     handleExitMessageRoom, handleFetchBeforeHistory, handleFetchAfterHistory,
     handleTagBroadcast, deleteMessageById, handleReadMessage, handlePublishMessage, channelType,
-    maskReportedMessage,
+    maskReportedMessage, scheduleChannelRetry, send, buildFetchAfterMessage, buildFetchBeforeMessage,
   ]);
 
   return { handleWsMessage };

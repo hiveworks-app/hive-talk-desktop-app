@@ -85,8 +85,11 @@ export function getIndexLabel(char: string): string {
     const choseong = CHOSEONG_LIST[Math.floor((code - 0xac00) / 28 / 21)];
     return TWIN_TO_PLAIN_CHOSEONG[choseong] ?? choseong;
   }
-  // 한글 호환 자모 단독 입력 닉네임 (ㄱ, ㄴ 등)
-  if (code >= 0x3131 && code <= 0x314e) return TWIN_TO_PLAIN_CHOSEONG[char] ?? char;
+  // 한글 호환 자모 단독 입력 닉네임 (ㄱ, ㄴ 등) — 초성 집합 밖 겹자음(ㄳ·ㄵ·ㄺ 등)은 '#' (RN 패리티)
+  if (code >= 0x3131 && code <= 0x314e) {
+    const plain = TWIN_TO_PLAIN_CHOSEONG[char] ?? char;
+    return (CHOSEONG_LIST as readonly string[]).includes(plain) ? plain : '#';
+  }
   if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
   return '#';
 }

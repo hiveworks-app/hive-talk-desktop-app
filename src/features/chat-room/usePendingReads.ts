@@ -6,6 +6,7 @@ import { pendingReadRegistry } from '@/features/chat-room/pendingReadRegistry';
 import { Message, WebSocketChannelTypes } from '@/shared/types/websocket';
 import { ParticipantItemsType } from '@/shared/types/chatRoom';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 
 interface UsePendingReadsParams {
   channelType: WebSocketChannelTypes;
@@ -23,8 +24,12 @@ export function usePendingReads({ channelType, normalizeUserId, participantsMana
     const pendingEntries = pendingReadRegistry.peekRoom(roomId);
     if (pendingEntries.length === 0) return;
 
-    const participants = participantsManager.getParticipants(roomId, channelType);
-    if (participants.length === 0) return; // 참여자 로드 후 재시도 (ack하지 않음)
+    // 참여자 미로드/불완전(기대 인원 미달)이어도 totalUserCount가 있으면 폴백 계산으로 즉시
+    // 반영한다 (파서·READ 핸들러와 동일 규칙). 무조건 보류하면 신규 방(사이드패널 미개방 →
+    // 참여자 영영 미로드)에서 보류가 소비되지 않아 카운트가 고정된다. 둘 다 없을 때만 재시도.
+    const fallbackTotalCount = useChatRoomInfo.getState().totalUserCount ?? 0;
+    const participants = participantsManager.getReliableParticipants(roomId, channelType, fallbackTotalCount);
+    if (participants.length === 0 && fallbackTotalCount === 0) return;
 
     const pendingByMessageId = new Map(pendingEntries.map(e => [e.messageId, e]));
     const processed: { messageId: string; userIds: string[] }[] = [];
@@ -50,7 +55,10 @@ export function usePendingReads({ channelType, normalizeUserId, participantsMana
 
         // 저장은 원본 보존(읽음 비후퇴 불변식) — 퇴장자 필터는 계산 시점에만 적용
         const readUserIds = Array.from(nextReadUserIds);
-        const nextNotReadCount = readCountCalculator.calculateNotReadCount({ readUserIds, participants });
+        const nextNotReadCount =
+          participants.length > 0
+            ? readCountCalculator.calculateNotReadCount({ readUserIds, participants })
+            : Math.max(0, fallbackTotalCount - readUserIds.length);
         hasChanges = true;
         return { ...msg, readUserIds, notReadCount: nextNotReadCount };
       });

@@ -7,6 +7,8 @@ import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLog
 import { ExternalInviteArrivalNotice } from '@/features/external-member/ExternalInviteArrivalNotice';
 import { MemberInviteConfirm } from '@/features/member-invite/MemberInviteConfirm';
 import { useGetBlockedMembers } from '@/features/block/queries';
+import { useGetPushSettings } from '@/features/notification-settings/queries';
+import { useConnectivityMonitor } from '@/shared/network/connectivityMonitor';
 import { useMembersAutoRefresh } from '@/features/members/useMembersAutoRefresh';
 import { apiGetTagCategoryList, apiGetTagList } from '@/features/tag/api';
 import { TAG_CATEGORY_KEY, TAG_LIST_KEY } from '@/shared/config/queryKeys';
@@ -15,6 +17,7 @@ import { AppNav } from '@/widgets/nav/AppNav';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useAutoUpdate } from '@/shared/hooks/useAutoUpdate';
 import { OfflineBanner } from '@/shared/ui/OfflineBanner';
+import { SystemErrorBanner } from '@/shared/ui/SystemErrorBanner';
 
 const TAG_STALE_TIME = 1000 * 60 * 60 * 24; // 24시간
 
@@ -26,6 +29,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const accessToken = useAuthStore(s => s.accessToken);
   // 차단 목록 상시 조회 — cold start baseline 확보 + 스토어 write-through (결과 미사용, RN useMembersAutoRefresh 패리티)
   useGetBlockedMembers();
+  // 푸시 설정 상시 로드 — 알림 게이트(handlePublish 등)가 이 캐시를 직접 읽는다. 설정 화면 진입
+  // 시에만 로드하면 콜드스타트에서 캐시가 비어 "알림 OFF"가 무시된다 (RN usePushSettingsSync 패리티)
+  useGetPushSettings();
+  // 오프라인 확정 검증 — navigator.onLine 오탐을 유예+probe로 걸러 3상 판정 (RN connectivityPolicy 패리티)
+  useConnectivityMonitor();
   // 멤버목록·관심멤버 5분 자동 갱신 (RN 패리티)
   useMembersAutoRefresh();
 
@@ -73,6 +81,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <WebSocketProvider>
       <div className="relative flex h-full overflow-hidden">
         <OfflineBanner />
+        <SystemErrorBanner />
         {updateReady && (
           <div className="absolute right-0 bottom-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
             <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>

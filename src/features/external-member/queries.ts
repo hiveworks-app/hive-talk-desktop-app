@@ -125,7 +125,8 @@ export const useSentInvites = () => {
       }));
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60,
+    // 진입마다 재조회 (RN staleTime 미지정 패리티) — WS 미수신 변동(만료 등) 반영 지연 방지
+    staleTime: 0,
   });
 };
 
@@ -147,7 +148,8 @@ export const useReceivedInvites = () => {
       }));
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60,
+    // 진입마다 재조회 (RN staleTime 미지정 패리티) — WS 미수신 변동(만료 등) 반영 지연 방지
+    staleTime: 0,
   });
 };
 
@@ -205,6 +207,8 @@ export const useDeleteExternalContact = () => {
         PINNED_MEMBERS_KEY,
         prev => prev?.filter(m => String(m.userId) !== userId) ?? [],
       );
+      // 서버 unpin 실패 경로의 stale 잔존 방지 — 즉시 제거 후 서버 재확인 (RN 패리티)
+      queryClient.invalidateQueries({ queryKey: PINNED_MEMBERS_KEY });
       queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
       queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
       // state error = X 아이콘 표기용 (RN 패리티 — 삭제 완료 안내는 X 아이콘)

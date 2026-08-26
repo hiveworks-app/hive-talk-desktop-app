@@ -47,6 +47,15 @@ export function useChangeEmail() {
   const handleEmailChange = (next: string) => {
     setEmail(next);
     if (emailError) setEmailError('');
+    // 이메일을 고치면 진행 중이던 인증 흐름 무효화 (RN 패리티) — A로 받은 코드로
+    // B를 검증하는 상태가 남지 않게 단계/코드/타이머를 초기화한다
+    if (step === 'CODE') {
+      setStep('EMAIL');
+      setCode('');
+      setCodeError('');
+      setCodeLocked(false);
+      timer.stop();
+    }
   };
 
   const handleCodeChange = (next: string) => {

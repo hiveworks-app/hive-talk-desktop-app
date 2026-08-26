@@ -60,7 +60,24 @@ export function handleBroadcastExternalInvite(
     });
     const store = useMemberInviteStore.getState();
     store.setExternalReceivedCount(store.externalReceivedCount + 1);
-    // 포그라운드 안내는 인앱 모달(ExternalInviteArrivalNotice)이 전담 — 시스템 알림 이중 표시 금지 (RN 7/20 QA)
+    // 포그라운드 안내는 인앱 모달(ExternalInviteArrivalNotice)이 전담 — 시스템 알림 이중 표시 금지 (RN 7/20 QA).
+    // 창이 뒤에 있으면(비포커스) 시스템 알림으로 보강 — RN의 백그라운드 FCM 푸시 대응 (정책 external-invite.md)
+    if (typeof document !== 'undefined' && !document.hasFocus() && !deps.suppressNotification) {
+      const pushSettings = queryClient.getQueryData<PushSettingsResponse>(PUSH_SETTINGS_KEY);
+      if (!pushSettings || pushSettings.allInvitesPushEnabled) {
+        const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+          | { isElectron?: boolean; showNotification?: (data: unknown) => void }
+          | undefined;
+        if (electronAPI?.isElectron && electronAPI.showNotification) {
+          electronAPI.showNotification({
+            title: '하이브톡',
+            body: `${user.name}님이 멤버 초대를 보냈어요.`,
+            // 클릭 시 멤버목록 이동 + 초대현황 자동 오픈 (RN EXTERNAL_INVITE PENDING 라우팅 패리티)
+            meta: { navigate: 'invite-status', senderName: user.name },
+          });
+        }
+      }
+    }
   } else if (result === 'REJECTED') {
     queryClient.setQueryData<SentInviteItem[]>(SENT_INVITES_KEY, prev =>
       prev ? prev.filter(item => String(item.userId) !== String(user.userId)) : prev,
@@ -85,7 +102,8 @@ export function applyExternalInviteAccepted(
   queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
   queryClient.invalidateQueries({ queryKey: PINNED_MEMBERS_KEY });
 
-  if (options?.notify) {
+  if (options?.notify && !deps.suppressNotification) {
+    // 스포크(팝업)는 알림 미발화 — 같은 프레임을 허브와 팝업이 각각 라우팅한다 (handlePublish와 동일 정책).
     // 초대 알림 마스터 OFF면 억제 (설정 미로딩 시 표시 — 채팅 알림과 동일 정책)
     const pushSettings = queryClient.getQueryData<PushSettingsResponse>(PUSH_SETTINGS_KEY);
     if (pushSettings && !pushSettings.allInvitesPushEnabled) return;

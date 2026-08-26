@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useReceivedInvites,
   useSentInvites,
@@ -10,6 +10,7 @@ import { cn } from '@/shared/lib/cn';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { USER_TYPE } from '@/shared/types/user';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useMemberInviteStore } from '@/store/memberInviteStore';
 import type { ReceivedInviteItem } from '@/features/external-member/type';
 import { ProfileDialogShell } from '@/widgets/profile/ProfileDialogShell';
 import { ReceivedInviteRow } from './ReceivedInviteRow';
@@ -46,6 +47,12 @@ export function InviteStatusDialog({ open, onClose }: InviteStatusDialogProps) {
 function InviteStatusScreen({ onClose }: { onClose: () => void }) {
   const isOrgMember = useAuthStore(s => s.user?.userType) === USER_TYPE.ORG_MEMBER;
   const [activeTab, setActiveTab] = useState<StatusTab>('received');
+
+  // 열림 상태를 스토어에 알림 — 도착 안내 모달 중복 노출 가드 (RN 패리티)
+  useEffect(() => {
+    useMemberInviteStore.getState().setInviteStatusOpen(true);
+    return () => useMemberInviteStore.getState().setInviteStatusOpen(false);
+  }, []);
 
   const { data: receivedInvites = [], isLoading: isReceivedLoading } = useReceivedInvites();
   const { data: sentInvites = [], isLoading: isSentLoading } = useSentInvites();

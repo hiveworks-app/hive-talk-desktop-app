@@ -4,6 +4,8 @@ import { useCallback, useEffect } from 'react';
 import type { ChatMessageUI } from '@/shared/types/websocket';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
+import { pendingTagUpdateRegistry } from '@/features/chat-room/pendingTagUpdateRegistry';
+import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useSelectedTagStore, useTagStore } from '@/store/tag/tagStore';
 
@@ -64,18 +66,32 @@ export function useTagActions({
           );
       }
 
+      // 최근 사용 태그 기록 — 태그 시트 완료도 기록 경로 (RN 3경로 패리티)
       if (addedTagIds.length > 0) {
-        addTagToMessage({ messageId: tagSelectedMessage.id, tagIdList: addedTagIds });
+        const addedIdSet = new Set(addedTagIds);
+        selectedTags
+          .filter(t => addedIdSet.has(String(t.tagId)))
+          .forEach(t => useRecentTagUsageStore.getState().record(t.title));
       }
-      if (removedTagIds.length > 0) {
-        const removedTagIdSet = new Set(removedTagIds);
-        const taggingIdList = tagSelectedMessage.originalTags
-          .filter(t => removedTagIdSet.has(String(t.tagId)))
-          .map(t => String(t.taggingId))
-          .filter(Boolean);
-        if (taggingIdList.length > 0) {
-          removeTagFromMessage({ messageId: tagSelectedMessage.id, taggingIdList });
-        }
+
+      const removedTagIdSet = new Set(removedTagIds);
+      const taggingIdList = tagSelectedMessage.originalTags
+        .filter(t => removedTagIdSet.has(String(t.tagId)))
+        .map(t => String(t.taggingId))
+        .filter(Boolean);
+      const hasRemove = taggingIdList.length > 0;
+      const hasAdd = addedTagIds.length > 0;
+
+      if (hasRemove && hasAdd) {
+        // 서버는 ADD/REMOVE 순서를 보장하지 않아 ADD가 먼저 처리되면 3개 한도 초과(TA003)로
+        // reject된다 — REMOVE 브로드캐스트 도착 후 ADD 발사 (RN 패리티)
+        pendingTagUpdateRegistry.mark(tagSelectedMessage.id, addedTagIds, tagIdList =>
+          addTagToMessage({ messageId: tagSelectedMessage.id, tagIdList }),
+        );
+        removeTagFromMessage({ messageId: tagSelectedMessage.id, taggingIdList });
+      } else {
+        if (hasAdd) addTagToMessage({ messageId: tagSelectedMessage.id, tagIdList: addedTagIds });
+        if (hasRemove) removeTagFromMessage({ messageId: tagSelectedMessage.id, taggingIdList });
       }
       resetSelectedTags();
       closeTagPanel();
@@ -86,6 +102,8 @@ export function useTagActions({
     const tagList = selectedTags.map(t => String(t.tagId));
     sendTextMessage(content, tagList);
     if (tagList.length > 0) {
+      // 최근 사용 태그 기록 — 태그 달아 전송도 기록 경로 (RN 패리티)
+      selectedTags.forEach(t => useRecentTagUsageStore.getState().record(t.title));
       resetSelectedTags();
     }
   }, [sendTextMessage, selectedTags, resetSelectedTags]);

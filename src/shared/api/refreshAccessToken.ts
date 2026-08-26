@@ -68,6 +68,14 @@ export async function refreshAccessToken(): Promise<string | null> {
           console.warn('📜 RefreshToken 거절 — 중복 로그인 안내 대기', res.status, rejectCode);
           return null;
         }
+        // 거절 경로 세션 fence (RN commit gate 패리티) — 로그아웃→재로그인이 겹친 뒤 늦게
+        // 도착한 이전 세션의 401이 방금 만든 새 세션을 죽이는 것 방지. 이 flight를 시작한
+        // refreshToken이 더 이상 현재 세션 것이 아니면 조용히 폐기한다.
+        const rejected = useAuthStore.getState();
+        if (rejected.refreshToken !== refreshToken) {
+          console.warn('📜 Refresh 거절 stale 응답 폐기 — 세션이 이미 교체됨');
+          return null;
+        }
         handleForceLogout();
         return null;
       }
@@ -101,6 +109,15 @@ export async function refreshAccessToken(): Promise<string | null> {
 }
 
 export function handleForceLogout() {
+  // 서버 디바이스 세션 종료 best-effort — 로컬만 지우면 서버에 세션이 잔존한다 (RN 패리티).
+  // 이미 토큰이 무효한 상황일 수 있으므로 실패는 무시(fire-and-forget).
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    void fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
   useAuthStore.getState().logout();
   del("hiveworks-query-cache");           // IndexedDB 영속 캐시 삭제
   document.cookie = "has-auth=; max-age=0; path=/";

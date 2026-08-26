@@ -25,6 +25,8 @@ interface ProfileInfoSectionProps {
   isUnknownUser?: boolean;
   /** 내 프로필 전용 — 이미지 뷰어 헤더에 '프로필 수정' 노출, 클릭 시 뷰어 닫고 편집 진입 (RN ProfileImageViewerScreen) */
   onEditProfile?: () => void;
+  /** 내 프로필 전용 — 이미지 뷰어에서 [삭제] 노출, 클릭 시 뷰어 닫고 기본 이미지로 (RN ProfileImageViewerScreen [삭제]) */
+  onDeleteImage?: () => void;
 }
 
 /**
@@ -42,6 +44,7 @@ export function ProfileInfoSection({
   isUnknownUser = false,
   compactGap = false,
   onEditProfile,
+  onDeleteImage,
 }: ProfileInfoSectionProps) {
   const infoLines = (lines ?? []).filter((l): l is string => !!l && l.trim().length > 0);
 
@@ -83,6 +86,16 @@ export function ProfileInfoSection({
           currentIndex={0}
           onIndexChange={() => {}}
           onClose={() => setViewerOpen(false)}
+          // 다운로드는 본인 프로필에서만 — RN canManageProfile 패리티 (수정 가능 = 본인)
+          showDownload={!!onEditProfile}
+          onDelete={
+            onDeleteImage
+              ? () => {
+                  setViewerOpen(false);
+                  onDeleteImage();
+                }
+              : undefined
+          }
           headerAction={
             onEditProfile
               ? {

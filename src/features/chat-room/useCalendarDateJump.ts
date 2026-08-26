@@ -39,6 +39,15 @@ export function useCalendarDateJump({ roomId, channelType, scrollToIndex }: UseC
       const targetDateStr = toDateKey(date);
       if (!roomId) return;
 
+      // 날짜 점프 시 키워드 검색 잔상(하이라이트·n/N 카운터) 초기화 (RN clearKeywordSearch 패리티)
+      const rt = useChatRoomRuntimeStore.getState();
+      if (rt.activeSearchKeyword) {
+        rt.setSearchKeyword('');
+        rt.setActiveSearchKeyword('');
+        rt.setFocusedMessageId(null);
+        rt.setCurrentSearchIndex(0);
+      }
+
       // 1. 이미 로드된 메시지에서 먼저 찾기
       const messages = useChatRoomRuntimeStore.getState().messages;
       const localIndex = messages.findIndex(

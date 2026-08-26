@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chooseDownloadDirectory: () => ipcRenderer.invoke('choose-download-directory'),
   // 멀티 채팅창 — 채팅 목록 우클릭 '새 창에서 열기' (프로토타입)
   openChatWindow: (data: { path: string; roomId: string }) => ipcRenderer.invoke('open-chat-window', data),
+  closeChatWindow: (roomId: string) => ipcRenderer.invoke('close-chat-window', roomId),
   setBadgeCount: (count: number) => ipcRenderer.invoke('set-badge-count', count),
   isElectron: true,
   platform: process.platform,

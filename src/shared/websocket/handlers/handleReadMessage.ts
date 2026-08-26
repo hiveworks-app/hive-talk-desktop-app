@@ -28,8 +28,8 @@ export function handleReadMessage(
   if (newMyReadItems.length > 0) {
     const readCountByRoom = new Map<string, number>();
     newMyReadItems.forEach((item: WebSocketReceiveReadItemProps) => {
-      const current = readCountByRoom.get(item.roomId) ?? 0;
-      readCountByRoom.set(item.roomId, current + 1);
+      const current = readCountByRoom.get(String(item.roomId)) ?? 0;
+      readCountByRoom.set(String(item.roomId), current + 1);
     });
 
     const targetQueryKey = getTargetQueryKey(currentChannelType);
@@ -39,7 +39,7 @@ export function handleReadMessage(
         (prev: GetChatRoomListItemType[] | undefined) => {
           if (!prev) return prev;
           return prev.map(room => {
-            const decrementCount = readCountByRoom.get(room.roomModel.roomId);
+            const decrementCount = readCountByRoom.get(String(room.roomModel.roomId));
             if (decrementCount) {
               return {
                 ...room,
@@ -64,18 +64,18 @@ export function handleReadMessage(
 
           const readItemsByMessageId = new Map<string, WebSocketReceiveReadItemProps[]>();
           readItems.forEach((readItem: WebSocketReceiveReadItemProps) => {
-            const existing = readItemsByMessageId.get(readItem.messageId) ?? [];
-            readItemsByMessageId.set(readItem.messageId, [...existing, readItem]);
+            const existing = readItemsByMessageId.get(String(readItem.messageId)) ?? [];
+            readItemsByMessageId.set(String(readItem.messageId), [...existing, readItem]);
           });
 
           return prev.map(room => {
             const hasReadEvent = readItems.some(
-              (item: WebSocketReceiveReadItemProps) => item.roomId === room.roomModel.roomId,
+              (item: WebSocketReceiveReadItemProps) => String(item.roomId) === String(room.roomModel.roomId),
             );
             if (!hasReadEvent) return room;
 
             const updatedMessageList = room.messageList.map(msg => {
-              const newReadItems = readItemsByMessageId.get(msg.message.id);
+              const newReadItems = readItemsByMessageId.get(String(msg.message.id));
               if (!newReadItems) return msg;
 
               const existingReadItems = msg.readItems?.items ?? [];

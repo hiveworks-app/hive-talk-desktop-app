@@ -63,13 +63,16 @@ export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoo
                   <div key={m.userId} className="flex w-[60px] shrink-0 flex-col items-center gap-1 px-1.5 pt-1">
                     <div className="relative">
                       <ProfileCircle name={m.name} size="sm" storageKey={m.profileUrl} />
-                      <button
-                        onClick={() => r.removeSelected(String(m.userId))}
-                        aria-label={`${m.name} 제외`}
-                        className="absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-gray-600 text-white hover:bg-gray-900"
-                      >
-                        <IconClose size={10} />
-                      </button>
+                      {/* 기존 참여자(preset)는 제외 불가 — X 미노출 (RN 선택 스트립 제외 규칙 대응) */}
+                      {!r.isPreset(String(m.userId)) && (
+                        <button
+                          onClick={() => r.removeSelected(String(m.userId))}
+                          aria-label={`${m.name} 제외`}
+                          className="absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-gray-600 text-white hover:bg-gray-900"
+                        >
+                          <IconClose size={10} />
+                        </button>
+                      )}
                     </div>
                     <span className="max-w-full truncate text-[11px] text-text-primary">{m.name}</span>
                   </div>
@@ -98,7 +101,7 @@ export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoo
               ) : !r.hasAnyMember ? (
                 <EmptyState message="아직 함께할 멤버가 없어요." className="py-10" />
               ) : noSearchResult ? (
-                <div className="py-8 text-center text-sub-sm text-text-tertiary">검색 결과가 없어요.</div>
+                <EmptyState variant="search" message="검색 결과가 없어요." className="py-10" />
               ) : (
                 <>
                   {r.pinnedSection.length > 0 && (
@@ -108,7 +111,7 @@ export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoo
                         <span className="text-sub-sm text-text-secondary">관심멤버 ({r.pinnedSection.length})</span>
                       </div>
                       {r.pinnedSection.map((m) => (
-                        <SelectMemberRow key={`pinned-${m.userId}`} member={m} selected={r.isMember(m)} onToggle={() => r.toggleSelect(String(m.userId))} />
+                        <SelectMemberRow key={`pinned-${m.userId}`} member={m} selected={r.isMember(m)} disabled={r.isPreset(String(m.userId))} onToggle={() => r.toggleSelect(String(m.userId))} />
                       ))}
                     </div>
                   )}
@@ -116,7 +119,7 @@ export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoo
                     <span className="text-sub-sm text-text-secondary">사내멤버 ({r.companySection.length})</span>
                   </div>
                   {r.companySection.map((m) => (
-                    <SelectMemberRow key={m.userId} member={m} selected={r.isMember(m)} onToggle={() => r.toggleSelect(String(m.userId))} />
+                    <SelectMemberRow key={m.userId} member={m} selected={r.isMember(m)} disabled={r.isPreset(String(m.userId))} onToggle={() => r.toggleSelect(String(m.userId))} />
                   ))}
                 </>
               )}

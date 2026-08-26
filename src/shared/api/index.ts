@@ -1,5 +1,7 @@
 import { AuthError } from '@/shared/api/errors';
 import { refreshAccessToken } from '@/shared/api/refreshAccessToken';
+import { isEffectivelyOffline } from '@/store/networkStatusStore';
+import { normalizeEndpoint, useSystemErrorStore } from '@/store/systemErrorStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { DUPLICATE_LOGIN_CODE, useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
 
@@ -52,7 +54,7 @@ export function getErrorMessage(err: unknown, fallback: string): string {
 
 // API 타임아웃 — 응답 없는 서버/프록시에서 요청이 영구 대기(pending)로 남아
 // 로딩 스피너 고착·mutation 미완료가 발생하는 것을 방지 (RN fetchWithTimeout 패리티)
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000; // RN 패리티 — 저속 회선에서 조기 포기 방지
 const UPLOAD_TIMEOUT_MS = 120_000;
 
 function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
@@ -82,6 +84,10 @@ async function rawRequest(path: string, options: RequestOptions = {}) {
       signal: withTimeout(signal, REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
+    // 온라인인데 서버 도달 불가 — 시스템 오류 증거 (오프라인 의심 중엔 미보고, RN phase 게이트)
+    if (!isEffectivelyOffline()) {
+      useSystemErrorStore.getState().report(normalizeEndpoint(path));
+    }
     normalizeTimeoutError(err);
   }
 }
@@ -92,7 +98,8 @@ export async function request<TResponse>(
 ): Promise<ApiResponse<TResponse>> {
   const { method = 'GET', body, headers = {}, signal } = options;
 
-  if (method !== 'GET' && typeof navigator !== 'undefined' && !navigator.onLine) {
+  // 확정 오프라인만 차단 (RN 패리티 — verifying 구간엔 시도 허용, 실패는 네트워크 에러로 처리)
+  if (method !== 'GET' && isEffectivelyOffline()) {
     throw new ApiError({ status: 0, message: '오프라인 상태에서는 사용할 수 없습니다.' });
   }
 
@@ -237,10 +244,29 @@ async function buildApiErrorFromResponse(res: Response): Promise<ApiError<ApiRes
     // JSON 파싱 실패
   }
 
+  // 사용자 노출 메시지 정책 (RN 패리티):
+  // - JSON 응답의 message만 노출 후보로 인정 — 프록시(Cloudflare/Nginx)의 HTML 에러 페이지
+  //   원문이 스낵바에 그대로 뜨는 것을 차단한다 (raw 폴백 금지)
+  // - 5xx는 서버 내부 메시지를 버리고 일반 안내로 통일
+  // 5xx는 무조건 시스템 오류 증거 — 여러 endpoint에 걸쳐 반복되면 전역 배너 (RN reportIfSystemError)
+  if (res.status >= 500) {
+    try {
+      useSystemErrorStore.getState().report(normalizeEndpoint(new URL(res.url).pathname));
+    } catch {
+      // URL 파싱 실패 무시
+    }
+  }
+
+  const isJsonBody = (res.headers.get('content-type') ?? '').includes('application/json');
+  const safeMessage =
+    res.status >= 500
+      ? '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      : (isJsonBody ? parsed?.message : undefined) || res.statusText || '요청 처리 중 오류가 발생했습니다.';
+
   return new ApiError<ApiResponse<unknown>>({
     status: res.status,
     code: parsed?.code,
-    message: parsed?.message || raw || res.statusText || '요청 처리 중 오류가 발생했습니다.',
+    message: safeMessage,
     payload: parsed ?? null,
     rawBody: raw,
   });

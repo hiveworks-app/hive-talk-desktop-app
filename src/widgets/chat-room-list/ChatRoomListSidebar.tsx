@@ -29,6 +29,11 @@ import {
 let lastActiveChip: ChatChip = 'all';
 let lastSortType: ChatSortType = 'latest';
 
+/** 방 나가기 등 외부 이벤트가 목록 복귀 칩을 방 종류에 맞춘다 (RN setCompanyChatChipByChannelType 패리티) */
+export function setLastCompanyChatChip(chip: ChatChip) {
+  lastActiveChip = chip;
+}
+
 export function ChatRoomListSidebar() {
   // 칩·정렬은 모듈 스코프 보존 — 탭 전환(리마운트) 후에도 유지 (RN 스토어 focus 복원 패리티)
   const [activeChip, setActiveChipState] = useState<ChatChip>(() => lastActiveChip);
