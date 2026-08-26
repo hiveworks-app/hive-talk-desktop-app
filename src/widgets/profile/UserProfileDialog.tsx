@@ -322,7 +322,7 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
               채팅기록은 유지돼요.
             </>
           }
-          confirmLabel="삭제"
+          confirmLabel="확인"
           cancelLabel="취소"
           destructive
           onConfirm={handleDeleteConfirm}
@@ -354,6 +354,7 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
       <ConfirmDialog
         open={isInviteConfirmOpen}
         title={`${member.name}님을 멤버로 초대할까요?`}
+        description={'상대방이 초대 수락 시 멤버로 등록돼요.\n초대현황에서 초대내역을 확인할 수 있어요.'}
         confirmLabel="초대"
         cancelLabel="취소"
         onConfirm={() => {

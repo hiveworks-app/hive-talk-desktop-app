@@ -40,7 +40,8 @@ export function SmsVerificationSection({
           maxLength={5}
           inputMode="numeric"
           className="h-10 pr-16"
-          disabled={isMaxFailuresReached}
+          // 인증시간 만료·횟수 초과 시 입력 잠금 — 재발송으로만 재개 (RN 패리티)
+          disabled={isExpired || isMaxFailuresReached}
         />
         {timerText && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sub font-semibold text-state-error">

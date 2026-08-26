@@ -132,7 +132,12 @@ export function useExternalInvite({ presetEmail }: UseExternalInviteOptions = {}
       setInviteSuccess({ name: target.userName, company: target.company, profileUrl: target.profileUrl });
     } catch (inviteErr) {
       const code = isApiError(inviteErr) ? inviteErr.code : undefined;
-      showSnackbar({ message: getInviteErrorMessage(code, '초대에 실패했습니다.'), state: 'error' });
+      // 코드 매핑 밖 오류는 서버 안내 문구 그대로 (RN 패리티 — 만료·정책 위반 문구 소실 방지)
+      const serverMessage = isApiError(inviteErr) ? inviteErr.message : undefined;
+      showSnackbar({
+        message: getInviteErrorMessage(code, serverMessage || '초대에 실패했습니다.'),
+        state: 'error',
+      });
     } finally {
       hideLoadingOverlay();
     }

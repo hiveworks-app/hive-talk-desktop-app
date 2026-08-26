@@ -98,8 +98,9 @@ export function useMembersPage() {
   // cold start write-through(스토어 영속) 겸용 — 상시 마운트 지점
   const { data: blockedMembers = [] } = useGetBlockedMembers();
 
-  // 외부유저는 칩이 없으므로 항상 'all'(서버가 협력멤버만 응답) — RN과 동일
-  const effectiveChip: MemberChipType = isOrgMember ? activeChip : 'all';
+  // 외부유저(게스트)는 협력 칩 고정 — 관심멤버까지 isExternal 필터가 걸린다.
+  // 'all'이면 서버가 사내 레코드를 섞어줄 때 관심멤버 섹션에 노출된다 (RN activeChip='external' 패리티)
+  const effectiveChip: MemberChipType = isOrgMember ? activeChip : 'external';
 
   const blockedIdSet = useMemo(
     () => new Set(blockedMembers.map(m => String(m.userId))),

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Spinner } from '@/shared/ui/Spinner';
 import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useMemberListEditController } from '@/features/pinned-members/useMemberListEditController';
 import { useDimmed } from '@/shared/hooks/useDimmed';
@@ -128,6 +129,12 @@ export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProp
   // 등장 애니메이션(transform)은 내부 래퍼에만 — no-drag 루트가 움직이면 구멍 위치가 틀어진다.
   return createPortal(
     <div className="electron-no-drag fixed inset-0 z-50">
+    {/* 저장 중 전면 입력 차단 — 체크박스/드래그/해제가 계속 눌리는 것 방지 (RN dim+스피너 패리티) */}
+    {isSaving && (
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20">
+        <Spinner />
+      </div>
+    )}
     <div className="animate-overlay-in flex h-full flex-col bg-gray-50">
       {/* macOS 신호등 영역 확보용 드래그 바 */}
       <div className="electron-drag h-8 w-full shrink-0" />
@@ -158,8 +165,9 @@ export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProp
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {isLoading ? (
+          // 텍스트 대신 스피너 — 앱 내 다른 로딩 표시와 일관 (RN ActivityIndicator 패리티)
           <div className="flex flex-1 items-center justify-center">
-            <span className="text-sub text-text-tertiary">로딩 중...</span>
+            <Spinner />
           </div>
         ) : pinnedCount === 0 && totalCount === 0 ? (
           <EmptyState message="아직 함께할 멤버가 없어요." className="flex-1" />

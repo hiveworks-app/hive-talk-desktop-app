@@ -115,7 +115,8 @@ export function useLoginForm() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (consumePendingDismissedToast()) {
-        useUIStore.getState().showSnackbar({ message: '소속이 해제되었어요.', state: 'error' });
+        // RN은 기본(체크) 아이콘 토스트 — error(X)로 하면 실패처럼 읽힌다 (RN 패리티)
+        useUIStore.getState().showSnackbar({ message: '소속이 해제되었어요.' });
       }
     }, 0);
     return () => clearTimeout(timer);

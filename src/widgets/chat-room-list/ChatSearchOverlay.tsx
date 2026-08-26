@@ -42,6 +42,8 @@ interface ChatSearchOverlayProps {
  */
 export function ChatSearchOverlay({ initialChip, sortType, onClose }: ChatSearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // 칩 전환 시 결과 리스트 최상단으로 (RN scrollToOffset(0) 패리티)
+  const resultListRef = useRef<HTMLDivElement>(null);
   const [displayValue, setDisplayValue] = useState('');
   const [filterValue, setFilterValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -167,7 +169,7 @@ export function ChatSearchOverlay({ initialChip, sortType, onClose }: ChatSearch
                 key={chip.key}
                 label={chip.label}
                 active={activeChip === chip.key}
-                onClick={() => setActiveChip(chip.key)}
+                onClick={() => { setActiveChip(chip.key); resultListRef.current?.scrollTo({ top: 0 }); }}
               />
             ))}
           </div>
@@ -179,7 +181,7 @@ export function ChatSearchOverlay({ initialChip, sortType, onClose }: ChatSearch
           {visibleRooms.length === 0 ? (
             <EmptyState variant="search" message="검색 결과가 없어요." className="flex-1" />
           ) : (
-            <div className="scrollbar-thin flex-1 overflow-y-auto">
+            <div ref={resultListRef} className="scrollbar-thin flex-1 overflow-y-auto">
               {/* 행 클릭(방 이동) 시 검색 화면 닫기 — 나가기 버튼은 stopPropagation, 메뉴/컨펌은 포털이라 미해당 */}
               {visibleRooms.map(({ room, channelType }) => (
                 <div key={room.roomModel.roomId} onClick={() => onClose()}>

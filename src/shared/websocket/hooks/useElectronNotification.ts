@@ -4,6 +4,9 @@ import { useEffect, type MutableRefObject } from 'react';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
+import { MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { countDMTotalUsers, countRoomListTotalUsers } from '@/shared/utils/roomUserCount';
+import { useMemberInviteStore } from '@/store/memberInviteStore';
 import { WS_CHANNEL_TYPE, WS_OPERATION } from '@/shared/types/websocket';
 import type { WebSocketChannelTypes } from '@/shared/types/websocket';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
@@ -38,6 +41,14 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
     const cleanup = electronAPI.onNotificationClicked((meta) => {
       // 초대 수락 등 라우트 지정 알림 — 방 진입 대신 지정 화면으로 이동 (RN 패리티)
       if (meta.navigate === 'members') {
+        // 최신 멤버 목록 재수렴 후 진입 (RN MEMBERS_KEY invalidate 패리티)
+        queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+        routerRef.current.push('/members');
+        return;
+      }
+      // 받은 초대(PENDING) 알림 — 멤버목록 이동 + 초대현황 자동 오픈 (RN /invite-status 패리티)
+      if (meta.navigate === 'invite-status') {
+        useMemberInviteStore.getState().requestOpenInviteStatus();
         routerRef.current.push('/members');
         return;
       }
@@ -53,8 +64,12 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
 
       if (room) {
         const { roomModel } = room;
-        const totalUserCount = roomModel.participants?.length ?? 2;
         const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
+        // GM 목록 participants는 본인 제외 — 단일 유틸로 총원 계산 (RN roomUserCount 패리티)
+        const totalUserCount =
+          channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
+            ? countDMTotalUsers(isOtherUserExit)
+            : countRoomListTotalUsers(channelType as WebSocketChannelTypes, roomModel.participants);
         const invitedUserIds =
           channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE &&
           isOtherUserExit &&
@@ -62,11 +77,13 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
             ? [String(roomModel.participantDetail.userId)]
             : [];
 
+        // DM은 상대 이름 우선 (RN 패리티)
         const displayName =
-          roomModel.title ||
-          roomModel.participantDetail?.name ||
-          roomModel.participants?.map(p => p.name).join(', ') ||
-          senderName;
+          channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE
+            ? roomModel.participantDetail?.name || roomModel.title || senderName
+            : roomModel.title ||
+              roomModel.participants?.map(p => p.name).join(', ') ||
+              senderName;
 
         useChatRoomInfo.getState().setChatRoomInfo({
           roomId: roomModel.roomId,

@@ -1,5 +1,6 @@
 import { readCountCalculator } from '@/features/chat-room/domain';
 import type { ParticipantItemsType } from '@/shared/types/chatRoom';
+import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import {
   type Message,
   WS_MESSAGE_CONTENT_TYPE,
@@ -76,8 +77,15 @@ export function mergeFetchedReadState(
 
     changed = true;
     const readUserIds = Array.from(union);
-    // 참여자 미로드 시 union만 반영 — notReadCount는 participants 로드 후 전체 재계산이 보정
-    if (!hasParticipants) return { ...next, readUserIds };
+    if (!hasParticipants) {
+      // 참여자 미로드(신규 방 직후 등) — "로드 후 전체 재계산"만 믿으면 그 재계산이 오지 않는
+      // 경로(신규 방 + 사이드패널 미개방)에서 카운트가 초기값에 고정된다(3인 방 2 고정 실측).
+      // 파서·READ 핸들러와 동일하게 totalUserCount 폴백으로 즉시 재계산한다.
+      const totalCount = useChatRoomInfo.getState().totalUserCount ?? 0;
+      const nextNotReadCount =
+        totalCount > 0 ? Math.max(0, totalCount - readUserIds.length) : next.notReadCount;
+      return { ...next, readUserIds, notReadCount: nextNotReadCount };
+    }
     return {
       ...next,
       readUserIds,

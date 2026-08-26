@@ -8,6 +8,7 @@ import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 import { useMemberInviteStore } from '@/store/memberInviteStore';
 import { pendingReadRegistry } from '@/features/chat-room/pendingReadRegistry';
 import { isPopupWindow } from '@/shared/utils/popupWindow';
+import { runLogoutCleanups } from '@/shared/utils/logoutCleanup';
 import { wsRelay } from '@/shared/websocket/wsRelay';
 import type { AuthState } from './type';
 
@@ -55,6 +56,12 @@ export const useAuthStore = create<AuthState>()(
         useFailedMessagesStore.getState().clearAll();
         useMemberInviteStore.getState().reset();
         pendingReadRegistry.reset();
+        // Dock/트레이 뱃지 초기화 — 로그아웃 후 마지막 미읽음 수가 남지 않게 (RN safeClear 패리티)
+        (window as unknown as { electronAPI?: { setBadgeCount?: (n: number) => void } })
+          .electronAPI?.setBadgeCount?.(0);
+        // RQ 캐시·영속 캐시 등 Provider 등록 정리 일괄 실행 — 호출 경로(설정/탈퇴/계정정지/트레이)마다
+        // 정리 범위가 다르던 문제 통일 (RN logout() 내부 일괄 정리 패리티)
+        runLogoutCleanups();
       },
     }),
     {

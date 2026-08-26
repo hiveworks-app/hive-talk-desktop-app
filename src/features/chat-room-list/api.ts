@@ -13,3 +13,21 @@ export const apiGetChatRoomList = (type: WebSocketChannelUrlTypes) => {
 export const apiGetDmCheck = (userId: string) => {
   return request<GetChatRoomListItemType | null>(`/app/dm/${userId}`, { method: 'GET' });
 };
+
+export interface BatchExitRoomsRequest {
+  dmRoomIds: string[];
+  gmRoomIds: string[];
+  emRoomIds: string[];
+}
+
+/**
+ * DM/GM/EM 채팅방 일괄 나가기 (RN apiBatchExitRooms 패리티).
+ * 서버는 각 방별로 개별 처리하며, 일부 실패해도 나머지는 계속 진행한다.
+ * 방 관리의 다건 나가기는 WS EXIT 연발 대신 이 전용 REST를 사용한다 — 실패 시 호출부가
+ * invalidate 롤백으로 목록을 서버 상태에 재수렴시킨다.
+ */
+export const apiBatchExitRooms = (data: BatchExitRoomsRequest) =>
+  request<unknown>('/app/rooms/exit', {
+    method: 'DELETE',
+    body: data,
+  });

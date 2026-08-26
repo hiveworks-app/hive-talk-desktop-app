@@ -1,5 +1,6 @@
 'use client';
 
+import { isApiError } from '@/shared/api';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { Toggle } from '@/shared/ui/Toggle';
@@ -20,9 +21,19 @@ export default function NotificationSettingsPage() {
 
   const chatEnabled = settings?.allRoomsPushEnabled ?? true;
   const inviteEnabled = settings?.allInvitesPushEnabled ?? true;
-  const disabled = isLoading || toggleChat.isPending || toggleInvite.isPending;
 
-  const onError = () => showSnackbar({ message: '알림 설정 변경에 실패했습니다.', state: 'error' });
+  // 토글별 개별 disabled (RN 패리티) — 한쪽 저장 중에 다른 토글까지 잠기지 않게.
+  // 문구도 토글별 + 서버 메시지 우선 (RN 패리티)
+  const onChatError = (err: unknown) =>
+    showSnackbar({
+      message: (isApiError(err) && err.message) || '채팅 알림 설정 변경에 실패했어요.',
+      state: 'error',
+    });
+  const onInviteError = (err: unknown) =>
+    showSnackbar({
+      message: (isApiError(err) && err.message) || '초대 알림 설정 변경에 실패했어요.',
+      state: 'error',
+    });
 
   return (
     <SettingsOverlay bg="bg-gray-50">
@@ -44,15 +55,15 @@ export default function NotificationSettingsPage() {
             title="채팅 알림"
             description="새 메시지가 왔을 때 푸쉬알림을 받게 돼요."
             checked={chatEnabled}
-            disabled={disabled}
-            onChange={next => toggleChat.mutate(next, { onError })}
+            disabled={isLoading || toggleChat.isPending}
+            onChange={next => toggleChat.mutate(next, { onError: onChatError })}
           />
           <SettingToggleRow
             title="초대 알림"
             description="멤버초대에 대한 푸쉬알림을 받게 돼요."
             checked={inviteEnabled}
-            disabled={disabled}
-            onChange={next => toggleInvite.mutate(next, { onError })}
+            disabled={isLoading || toggleInvite.isPending}
+            onChange={next => toggleInvite.mutate(next, { onError: onInviteError })}
           />
         </section>
       </div>

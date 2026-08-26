@@ -67,13 +67,14 @@ export const useFindLoginId = () => {
       setFoundEmail(result.payload);
       setStep('result');
     } catch (err) {
-      const nextFailCount = failCount + 1;
-      setFailCount(nextFailCount);
       if (isApiError(err)) {
+        const nextFailCount = failCount + 1;
+        setFailCount(nextFailCount);
         const baseMessage = err.message || '인증번호가 올바르지 않습니다.';
         setVerifyErrorMessage(`${baseMessage} (${nextFailCount}/${MAX_VERIFY_ATTEMPTS})`);
       } else {
-        setVerifyErrorMessage(`요청에 실패했습니다. 잠시 후 다시 시도해주세요. (${nextFailCount}/${MAX_VERIFY_ATTEMPTS})`);
+        // 네트워크 오류는 실패 횟수에 미산입 — 오프라인 5회로 재발송이 강제되지 않게 (RN 패리티)
+        setVerifyErrorMessage('요청에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
     }
   }, [name, phone, verificationCode, verifySms, failCount]);

@@ -33,9 +33,9 @@ export default function ChangeEmailPage() {
   } = useChangeEmail();
 
   const isBusy = isSending || isVerifying;
-  // 인증번호 6자리 + 타이머 유효 + 오답/잠금 아님 + 비요청 상태일 때만 완료 가능
+  // 인증번호 입력만 있으면 완료 가능 — 자릿수는 서버가 판정 (RN·비밀번호 변경과 일관)
   const canComplete =
-    step === 'CODE' && code.length === 6 && timer.isRunning && !isBusy && !codeError;
+    step === 'CODE' && code.length > 0 && timer.isRunning && !isBusy && !codeError;
   // 이메일 입력이 있고 요청 중이 아닐 때만 인증요청(파란색) 활성화
   const canRequestCode = !isBusy && email.trim().length > 0;
 

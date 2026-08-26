@@ -119,6 +119,34 @@ export function isSub(data: WebSocketEnvelope): boolean {
   return meta.operationType === WS_OPERATION.SUB;
 }
 
+// SUB(채팅방 구독) SESSION ack 판별 — 성공/실패는 호출자가 response.success로 확인 (RN 패리티)
+export function isSubscribeSession(
+  data: WebSocketEnvelope,
+): data is WebSocketSessionProps<unknown> {
+  const meta = getSocketMeta(data);
+  if (!meta || meta.responseType !== WS_RESPONSE_TYPE.SESSION) return false;
+  return meta.operationType === WS_OPERATION.SUB;
+}
+
+// 방 채널 SESSION 실패(SUB/VIEW_IN + success:false) 판별 (RN 패리티).
+// 서버 일시 장애(SE003 등)로 구독/뷰 등록이 거절되면 방 화면은 정상처럼 보여도 서버에는
+// 구독이 없어 READ/PUB 브로드캐스트가 전부 유실되는 "유령 구독"이 된다 (RN 2026-07-20 dev
+// 장애 실측). 수신 측은 반드시 재전송을 스케줄해야 한다.
+export function isRoomChannelSessionFailure(
+  data: WebSocketEnvelope,
+): data is WebSocketSessionProps<null> {
+  const meta = getSocketMeta(data);
+  if (!meta || meta.responseType !== WS_RESPONSE_TYPE.SESSION) return false;
+  if (
+    meta.operationType !== WS_OPERATION.SUB &&
+    meta.operationType !== WS_OPERATION.VIEW_IN_MESSAGE_ROOM
+  ) {
+    return false;
+  }
+  const { response } = data as WebSocketSessionProps<unknown>;
+  return !!response && response.success === false;
+}
+
 export function isReadMessage(
   data: WebSocketEnvelope,
 ): data is WebSocketBroadcastProps<WebSocketReadMessagePayload> {

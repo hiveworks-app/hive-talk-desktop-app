@@ -24,7 +24,8 @@ export function formatBytes(
 
   if (bytes === 0) return '0 B';
 
-  const k = 1024;
+  // SI(1000) 진법 — OS 파일 표기·RN·보관함 총용량(formatSizeParts)과 일치 (RN 패리티)
+  const k = 1000;
   const dm = options?.decimals ?? 1;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
 

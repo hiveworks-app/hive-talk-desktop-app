@@ -11,9 +11,19 @@ export default function ExternalChatLayout({ children }: { children: React.React
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      {/* 사내채팅 레이아웃과 동일 정책 — 방이 열리면 창 폭 무관 '방 단독' (사용자 결정 2026-08-25) */}
-      <div className={cn('h-full shrink-0', hasActiveRoom ? 'hidden' : 'w-full')}>
-        <ExternalChatSidebar />
+      {/* 사내채팅 레이아웃과 동일 정책 — md 이상에선 목록(320px)+방 동시 표시, 좁으면 방 단독
+          (사용자 결정 2026-08-26 — 상세 근거는 chat/layout.tsx 주석 참조) */}
+      <div
+        className={cn(
+          'h-full shrink-0 overflow-hidden',
+          hasActiveRoom
+            ? 'w-0 opacity-0 transition-[width,opacity] duration-200 md:w-80 md:opacity-100'
+            : 'w-full',
+        )}
+      >
+        <div className={cn('h-full', hasActiveRoom ? 'w-80' : 'w-full')}>
+          <ExternalChatSidebar />
+        </div>
       </div>
       <div className={cn('min-w-0 flex-1', hasActiveRoom ? 'flex' : 'hidden')}>
         {children}

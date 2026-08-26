@@ -16,7 +16,11 @@ const MAX_MESSAGE_LENGTH = 10000;
    px를 복사하지 않고 "8줄"이라는 규칙만 가져와 데스크톱 스케일로 다시 계산한다. */
 const INPUT_LINE_HEIGHT = 20; // text-body line-height
 const INPUT_MAX_LINES = 8;
-const INPUT_VERTICAL_PADDING = 12; // py-1.5 (6 + 6)
+// 기본 3줄 높이 — 모바일(RN)은 키보드 위 1줄 시작이지만, 데스크톱 메신저 관례(카톡 PC)는
+// 상시 노출 입력 영역을 여러 줄로 확보한다 (사용자 피드백 2026-08-25: 1줄 기본이 좁아 보임)
+const INPUT_MIN_LINES = 3;
+const INPUT_VERTICAL_PADDING = 16; // py-2 (8 + 8) — RN 필드 min-h 38(=22+16) 규칙의 데스크톱 환산(20+16=36)
+const INPUT_MIN_HEIGHT = INPUT_LINE_HEIGHT * INPUT_MIN_LINES + INPUT_VERTICAL_PADDING;
 const INPUT_MAX_HEIGHT = INPUT_LINE_HEIGHT * INPUT_MAX_LINES + INPUT_VERTICAL_PADDING;
 
 /* 높이 재계산은 페인트 전에 끝나야 한다 — useEffect면 드래프트가 있는 방에 들어갈 때
@@ -55,7 +59,7 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
     if (!el) return;
     // 줄이 줄어든 경우에도 다시 측정되도록 먼저 높이를 해제한다 (scrollHeight는 줄어들지 않음)
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, INPUT_MAX_HEIGHT)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, INPUT_MIN_HEIGHT), INPUT_MAX_HEIGHT)}px`;
     el.style.overflowY = el.scrollHeight > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
   }, [text]);
 
@@ -142,12 +146,12 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
           disabled={otherUserIsRemoved}
           placeholder={otherUserIsRemoved ? '메시지를 보낼 수 없어요.' : '메시지 입력'}
           // 높이는 useIsomorphicLayoutEffect가 내용에 맞춰 잡는다 — rows는 첫 페인트 기준선(1줄)
-          rows={1}
+          rows={INPUT_MIN_LINES}
           className={cn(
             // 래퍼(px-3)와 패딩 중복 제거 — 안쪽은 최소만 (사용자 조정 2026-08-21)
             // text-body = 말풍선 본문과 같은 크기. RN도 입력창·버블이 동일 크기라, 여기만 작으면
             // 입력할 때(13px)와 보낸 뒤(14px) 글자가 커지는 것처럼 보인다.
-            'w-full resize-none rounded-xl px-1 py-1.5 text-body text-text-primary outline-none placeholder:text-text-placeholder bg-transparent',
+            'w-full resize-none rounded-xl px-1 py-2 text-body text-text-primary outline-none placeholder:text-text-placeholder bg-transparent',
             otherUserIsRemoved && 'placeholder:text-gray-500',
           )}
         />

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/shared/lib/cn';
+import IconCircleClose from '@assets/icons/circle-close.svg';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconExternalSymbol from '@assets/icons/external-symbol.svg';
 import { IconCalender } from '@assets/icons';
@@ -44,6 +45,8 @@ export function ChatRoomHeader({
   isCalendarLoading,
 }: ChatRoomHeaderProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  // 직전 점프 날짜 — 캘린더 재오픈 시 하이라이트 (RN selectedDateKey 복원 패리티)
+  const [selectedJumpDate, setSelectedJumpDate] = useState<Date | null>(null);
   // 메시지 0건이면 검색 버튼 비활성 (RN 패리티)
   const hasMessages = useChatRoomRuntimeStore(s => s.messages.length > 0);
   // 인원수는 GM/EM만 — DM 헤더는 상대 이름 단독 (RN 패리티)
@@ -165,22 +168,43 @@ export function ChatRoomHeader({
             <CalendarPopover
               open={isCalendarOpen}
               onClose={() => setIsCalendarOpen(false)}
-              onSelectDate={onCalendarDateSelect}
+              onSelectDate={date => {
+                setSelectedJumpDate(date);
+                onCalendarDateSelect(date);
+              }}
               activeDates={activeDates}
+              selectedDate={selectedJumpDate}
             />
           </div>
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={search.searchKeyword}
-            onChange={e => search.handleSearchKeywordChange(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') search.handleSearchSubmit(search.searchKeyword);
-              if (e.key === 'Escape') search.exitSearchMode();
-            }}
-            placeholder="대화 내용 · 파일명 검색"
-            className="flex-1 rounded-md border border-divider bg-gray-50 px-3 py-1.5 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
-          />
+          <div className="relative flex-1">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={search.searchKeyword}
+              onChange={e => search.handleSearchKeywordChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') search.handleSearchSubmit(search.searchKeyword);
+                if (e.key === 'Escape') search.exitSearchMode();
+              }}
+              placeholder="대화 내용 · 파일명 검색"
+              className="w-full rounded-md border border-divider bg-gray-50 px-3 py-1.5 pr-8 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+            />
+            {/* 키워드만 지우기 — 검색 모드는 유지 (RN 검색바 X 패리티, 우측 ✕는 모드 종료) */}
+            {search.searchKeyword.length > 0 && (
+              <button
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => {
+                  search.handleSearchKeywordChange('');
+                  searchInputRef.current?.focus();
+                }}
+                aria-label="검색어 지우기"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center text-text-tertiary transition-opacity hover:opacity-70"
+              >
+                <IconCircleClose width={16} height={16} />
+              </button>
+            )}
+          </div>
           {search.totalCount > 0 && (
             <span className="shrink-0 text-sub-sm text-text-secondary">
               {search.displayIndex}/{search.totalCount}

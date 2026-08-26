@@ -23,6 +23,10 @@ const SHOW_DELAY_MS = 700;
  */
 export function ExternalInviteArrivalNotice() {
   const count = useMemberInviteStore(s => s.externalReceivedCount);
+  // 중복 노출 가드 (RN 패리티) — ① 초대현황이 이미 열려 있으면(리스트 실시간 갱신 중) 생략
+  // ② 소속 초대 수락/거절 컨펌이 떠 있으면 겹쳐 띄우지 않음
+  const isInviteStatusOpen = useMemberInviteStore(s => s.isInviteStatusOpen);
+  const hasPendingMemberInvite = useMemberInviteStore(s => s.pendingInvite !== null);
   const router = useAppRouter();
   const [noticeCount, setNoticeCount] = useState<number | null>(null);
   const prevCountRef = useRef(0);
@@ -50,7 +54,7 @@ export function ExternalInviteArrivalNotice() {
     return () => clearTimeout(timer);
   }, [count]);
 
-  if (noticeCount == null) return null;
+  if (noticeCount == null || isInviteStatusOpen || hasPendingMemberInvite) return null;
 
   const recordAck = () => {
     const userId = useAuthStore.getState().user?.id;

@@ -4,7 +4,7 @@ import * as path from 'path';
 import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
-import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows } from './window';
+import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows, closeChatWindow } from './window';
 
 /* ─── 일괄 다운로드 (사이드패널 보관함) ─────────────────────────────
    렌더러의 <a download> 연쇄 클릭은 크로미엄 DownloadRequestLimiter가 '자동 다운로드'로
@@ -172,6 +172,10 @@ export function setupIpcHandlers(
   });
 
   // 멀티 채팅창 — 채팅 목록 우클릭 '새 창에서 열기' (프로토타입 2026-08-21)
+  ipcMain.handle('close-chat-window', (_event, roomId: string) => {
+    if (typeof roomId === 'string' && roomId) closeChatWindow(roomId);
+  });
+
   ipcMain.handle('open-chat-window', (_event, data: { path?: string; roomId?: string }) => {
     if (!data?.roomId || typeof data.path !== 'string' || !data.path.startsWith('/')) return;
     openChatWindow(serverUrl, data.path, data.roomId);

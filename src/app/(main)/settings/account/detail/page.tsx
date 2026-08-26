@@ -84,11 +84,18 @@ function DetailCard({
   onChange?: () => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-outline bg-surface">
+    // 변경 가능한 카드는 본문까지 전체 클릭 (RN AccountDetailCard Pressable 패리티)
+    <section
+      onClick={onChange}
+      className={`overflow-hidden rounded-xl border border-outline bg-surface ${onChange ? 'cursor-pointer transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]' : ''}`}
+    >
       {/* 헤더: 제목 + (변경 가능 시) "변경 >" */}
       {onChange ? (
         <button
-          onClick={onChange}
+          onClick={e => {
+            e.stopPropagation();
+            onChange();
+          }}
           className="flex w-full items-center gap-2.5 border-b border-outline px-4 py-3 text-left transition-colors hover:bg-surface-pressed"
         >
           <span className="flex-1 text-label font-semibold text-text-primary">{title}</span>

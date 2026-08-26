@@ -13,7 +13,7 @@ import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useUploadProgressStore } from '@/store/chat/uploadProgressStore';
 import { chunk, mapWithConcurrency, makeProgressThrottler } from './chatUploadUtils';
-import { createVideoThumbnail, createImageThumbnail } from './thumbnailUtils';
+import { createVideoThumbnail, prepareChatImage } from './thumbnailUtils';
 
 /**
  * 실패한 미디어/파일 재전송용 원본 File 보관 — RN retryPayload/retryFilePayload 대응.
@@ -63,32 +63,42 @@ export function useChatMediaUpload(
   const uploadOneMedia = useCallback(
     async (file: File) => {
       const isVideo = file.type.startsWith('video/');
-      const mimeType = file.type || (isVideo ? 'video/mp4' : 'image/jpeg');
+
+      // RN IMAGE_PROCESS_OPTS 파리티 — 이미지: 썸네일 360 상시 + 0.5MB 초과 원본 1600/q0.7 압축.
+      // 전처리 실패(디코드 불가 등) 시 원본 그대로 진행 (썸네일 없이).
+      let uploadFile = file;
+      let thumbBlob: Blob | null = null;
+      try {
+        if (isVideo) {
+          thumbBlob = await createVideoThumbnail(file, 200);
+        } else if (file.type.startsWith('image/')) {
+          const prepared = await prepareChatImage(file);
+          uploadFile = prepared.original;
+          thumbBlob = prepared.thumbnail;
+        }
+      } catch (err) {
+        console.warn('[Upload] 미디어 전처리 실패 (원본 그대로 진행):', err);
+      }
 
       let thumbFileKey: string | undefined;
-      try {
-        const thumbBlob = isVideo
-          ? await createVideoThumbnail(file, 200)
-          : file.type.startsWith('image/')
-            ? await createImageThumbnail(file, 200)
-            : null;
-
-        if (thumbBlob) {
+      if (thumbBlob) {
+        try {
           const thumbResult = await chatFileUploadMutation.mutateAsync({
             channelType,
             file: new File([thumbBlob], `thumb_${file.name.replace(/\.\w+$/, '.jpg')}`, { type: 'image/jpeg' }),
           });
           thumbFileKey = thumbResult.fileKey;
+        } catch (err) {
+          console.warn('[Upload] 썸네일 업로드 실패 (원본은 계속 진행):', err);
         }
-      } catch (err) {
-        console.warn('[Upload] 썸네일 생성 실패 (원본은 계속 진행):', err);
       }
 
-      const originRes = await chatFileUploadMutation.mutateAsync({ channelType, file });
+      const originRes = await chatFileUploadMutation.mutateAsync({ channelType, file: uploadFile });
+      const mimeType = uploadFile.type || (isVideo ? 'video/mp4' : 'image/jpeg');
 
       return {
         path: originRes.fileKey,
-        meta: { thumbnail: thumbFileKey ?? '', type: mimeType, size: file.size },
+        meta: { thumbnail: thumbFileKey ?? '', type: mimeType, size: uploadFile.size },
       };
     },
     [chatFileUploadMutation, channelType],

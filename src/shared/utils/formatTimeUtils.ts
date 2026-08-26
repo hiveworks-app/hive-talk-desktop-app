@@ -20,6 +20,8 @@ export function formatKoreanTime(isoString: string) {
  */
 export function formatDotDate(input: Date | number | string) {
   const date = new Date(input);
+  // 파싱 불능 값 가드 — "NaN.NaN.NaN" 렌더 방지 (RN parseServerDate 패리티)
+  if (Number.isNaN(date.getTime())) return '';
   const y = date.getFullYear();
   const m = (date.getMonth() + 1).toString().padStart(2, '0');
   const d = date.getDate().toString().padStart(2, '0');
@@ -109,14 +111,18 @@ export function formatChatDateLabel(isoString: string) {
 }
 
 /**
- * 동영상 길이(초)를 M:SS 로 포맷.
- * - 0/음수/undefined/비유한 → 빈 문자열(배지 미표시)
- * - 예: 75 → "1:15", 8 → "0:08"
+ * 동영상 길이(초) 포맷 (RN 패리티).
+ * - 1시간 이상은 H:MM:SS (65분 → "1:05:00"), 미만은 M:SS
+ * - 서버가 문자열로 주는 duration도 Number() 정규화 후 판정 (미정규화 시 배지 소실)
+ * - 0/음수/비유한 → 빈 문자열(배지 미표시)
  */
-export function formatMediaDuration(seconds?: number) {
+export function formatMediaDuration(value?: number | string) {
+  const seconds = typeof value === 'string' ? Number(value.trim()) : value;
   if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return '';
   const total = Math.floor(seconds);
-  const m = Math.floor(total / 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
 }

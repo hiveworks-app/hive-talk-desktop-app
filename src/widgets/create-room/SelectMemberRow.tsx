@@ -9,13 +9,15 @@ interface SelectMemberRowProps {
   member: MemberItem;
   selected: boolean;
   onToggle: () => void;
+  /** 기존 참여자(DM 대화초대 preset 등) — 체크 고정 + 해제 불가 (RN disabled 패리티) */
+  disabled?: boolean;
 }
 
 /**
  * 새 채팅방 대화상대 선택 행 — 체크박스 + 프로필 + 이름(+∞) + 부서·직급/회사명·직급 (Figma 931-15209 / 1670-52577).
  * 협력멤버(isExternal)는 이름 옆 ∞ 표시 + 우측 회사명·직급, 사내멤버는 부서·직급.
  */
-export function SelectMemberRow({ member, selected, onToggle }: SelectMemberRowProps) {
+export function SelectMemberRow({ member, selected, onToggle, disabled = false }: SelectMemberRowProps) {
   const isExternal = member.isExternal === true;
   const description = isExternal
     ? [member.companyName, member.job].filter(Boolean).join(' · ')
@@ -23,8 +25,13 @@ export function SelectMemberRow({ member, selected, onToggle }: SelectMemberRowP
 
   return (
     <button
-      onClick={onToggle}
-      className="flex w-full items-center gap-3 px-4 py-[7px] text-left transition-colors hover:bg-gray-50"
+      onClick={disabled ? undefined : onToggle}
+      disabled={disabled}
+      className={
+        disabled
+          ? 'flex w-full cursor-default items-center gap-3 px-4 py-[7px] text-left opacity-60'
+          : 'flex w-full items-center gap-3 px-4 py-[7px] text-left transition-colors hover:bg-gray-50'
+      }
     >
       <Checkbox checked={selected} size="lg" className="shrink-0" />
       <ProfileCircle name={member.name} size="sm" storageKey={member.profileUrl} className="h-10 w-10 shrink-0" />

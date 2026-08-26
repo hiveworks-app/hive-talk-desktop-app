@@ -10,6 +10,7 @@ import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
 import { GroupProfileAvatar, type GroupAvatarUser } from '@/shared/ui/GroupProfileAvatar';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { PresignedImage } from '@/shared/ui/PresignedImage';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { IconChevronLeft, IconChevronRight, IconAdd, IconLogout } from '@/shared/ui/icons';
@@ -31,6 +32,8 @@ import { buildFallbackMember } from '@/features/members/fallbackMember';
 import { useGetMembers } from '@/features/members/queries';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
 import type { MemberItem } from '@/shared/types/user';
+import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
+import { MyProfileDialog } from '@/widgets/profile/MyProfileDialog';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
 import { MediaTab } from './MediaTab';
 import { FilesTab } from './FilesTab';
@@ -70,8 +73,13 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   const [isCreateGmOpen, setIsCreateGmOpen] = useState(false);
   // 참여자 프로필 다이얼로그 — 멤버목록 미발견 시 미등록(unregistered) 처리 (RN 패리티)
   const [profileTarget, setProfileTarget] = useState<{ member: MemberItem; unregistered: boolean } | null>(null);
+  // 본인 행 클릭 → 내 프로필 (RN 패리티 — 무동작 대신 내 프로필 열기)
+  const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
   const openParticipantProfile = (participant: { userId: string; name: string; thumbnailProfileUrl: string | null }) => {
-    if (String(participant.userId) === String(currentUserId)) return; // 본인은 내 프로필에서
+    if (String(participant.userId) === String(currentUserId)) {
+      setIsMyProfileOpen(true);
+      return;
+    }
     const members = queryClient.getQueryData<MemberItem[]>(MEMBERS_KEY) ?? [];
     const found = members.find(m => String(m.userId) === String(participant.userId));
     setProfileTarget(
@@ -90,6 +98,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   };
 
   const roomName = useChatRoomInfo(s => s.roomName);
+  const totalUserCount = useChatRoomInfo(s => s.totalUserCount);
   const userRole = useAuthStore(s => s.user?.role);
   const { mutate: changeRoomTitle, isPending: isTitleSaving } = useChangeRoomTitle();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -117,8 +126,10 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
   });
 
   const { data: attachmentData } = useInfiniteQuery({
+    // lastMessageId 게이팅 제거 — 해당 인자는 legacy 무시 파라미터라, 메시지 로드 전 패널을
+    // 열면 미리보기만 비어 보였다 (2026-08-26 감사, 파일 탭과 동일 조건으로)
     ...getSidePanelBeforeAttachmentQuery(roomId, lastMessageId, channelType),
-    enabled: isOpen && !!roomId && !!lastMessageId,
+    enabled: isOpen && !!roomId,
   });
   const previewAll = attachmentData?.pages.flatMap(p => p.items) ?? [];
   const previewMedia = previewAll.slice(0, 4); // RN 패리티 — 패널 폭 기준 한 줄(4개)만
@@ -240,9 +251,15 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               <IconChevronLeft size={20} />
             </button>
           )}
-          {/* 채팅방 헤더 타이틀(text-heading-md medium)과 동일 스타일 (사용자 결정 2026-08-25) */}
-          <h3 className="text-heading-md font-medium text-text-primary">
-            {view === 'main' ? '채팅방 정보' : view === 'media' ? '사진/동영상' : '파일'}
+          {/* 채팅방 헤더 타이틀(text-heading-md medium)과 동일 스타일 (사용자 결정 2026-08-25).
+              메인 뷰 타이틀은 방 이름 + 인원수 (RN ChatRoomSidePanelScreen 패리티) */}
+          <h3 className="min-w-0 truncate text-heading-md font-medium text-text-primary">
+            {view === 'main' ? (
+              <>
+                {roomName || '채팅방 정보'}
+                {totalUserCount > 0 && <span className="ml-1 text-gray-400">{totalUserCount}</span>}
+              </>
+            ) : view === 'media' ? '사진/동영상' : '파일'}
           </h3>
         </div>
         <button
@@ -264,17 +281,18 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               const avatarUsers: GroupAvatarUser[] = others
                 .slice(0, 4)
                 .map(p => ({ name: p.name, storageKey: p.thumbnailProfileUrl }));
-              if (others.length === 0 && !isAloneRoom) return null;
+              // 참여자 미반영(신규 EM 직후 등)이라도 초대 가능하면 섹션 유지 — 초대 버튼 소실 방지 (RN 패리티)
+              if (others.length === 0 && !isAloneRoom && !canInvite) return null;
               return (
                 <div className="flex flex-col items-center gap-2.5 border-b border-divider py-5">
-                  {/* RN 사이드패널 패리티 — 상단 대형 프로필 90px */}
+                  {/* RN 사이드패널 패리티 — 상단 대형 프로필 90px. DM은 원본 우선(90px 업스케일 흐림 방지) */}
                   {channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE && others[0] ? (
-                    <ProfileCircle name={others[0].name} size="lg" storageKey={others[0].thumbnailProfileUrl} className="h-[90px] w-[90px]" />
-                  ) : (
+                    <ProfileCircle name={others[0].name} size="lg" storageKey={others[0].profileUrl ?? others[0].thumbnailProfileUrl} className="h-[90px] w-[90px]" />
+                  ) : (others.length > 0 || isAloneRoom) ? (
                     <div className={cn('relative', isAloneRoom && 'opacity-50')}>
                       <GroupProfileAvatar users={avatarUsers} size="lg" />
                     </div>
-                  )}
+                  ) : null}
                   {canInvite && (
                     <button
                       onClick={() => (channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? setIsCreateGmOpen(true) : setIsInviteOpen(true))}
@@ -292,19 +310,26 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
             {channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE && (
               <div className="border-b border-divider px-4 py-3">
                 {isEditingTitle ? (
+                  <>
                   <div className="flex items-center gap-2">
-                    <input
-                      autoFocus
-                      value={titleDraft}
-                      onChange={e => setTitleDraft(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') handleTitleSubmit();
-                        if (e.key === 'Escape') setIsEditingTitle(false);
-                      }}
-                      maxLength={50}
-                      placeholder="채팅방 이름"
-                      className="min-w-0 flex-1 rounded-md border border-divider bg-gray-50 px-2.5 py-1.5 text-sub text-text-primary outline-none transition focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
-                    />
+                    <div className="relative min-w-0 flex-1">
+                      <input
+                        autoFocus
+                        value={titleDraft}
+                        onChange={e => setTitleDraft(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleTitleSubmit();
+                          if (e.key === 'Escape') setIsEditingTitle(false);
+                        }}
+                        maxLength={50}
+                        placeholder="채팅방 이름"
+                        className="w-full rounded-md border border-divider bg-gray-50 px-2.5 py-1.5 pr-12 text-sub text-text-primary outline-none transition focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+                      />
+                      {/* RN 패리티 — {n}/50 글자수 카운터 */}
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sub-sm text-text-tertiary">
+                        {titleDraft.length}/50
+                      </span>
+                    </div>
                     <button
                       onClick={handleTitleSubmit}
                       disabled={isTitleSaving}
@@ -319,6 +344,11 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                       취소
                     </button>
                   </div>
+                  {/* RN ChatRoomSettingsScreen 안내 문구 패리티 */}
+                  <p className="mt-1.5 text-sub-sm text-text-tertiary">
+                    채팅방 이름을 변경하면, 모두에게 같은 이름으로 변경돼요.
+                  </p>
+                  </>
                 ) : (
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -368,12 +398,17 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                       onClick={() => previewViewer.open(idx)}
                       className="relative aspect-square overflow-hidden rounded bg-gray-100"
                     >
-                      <img
-                        src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
-                        alt=""
-                        loading="lazy"
+                      <PresignedImage
+                        storageKey={media.thumbnailPath || media.path}
+                        fallbackUrl={media.thumbnailPresignedUrl || media.presignedUrl}
                         className="h-full w-full object-cover"
                       />
+                      {/* 동영상 길이 배지 (RN SidePanelMediaThumb 패리티 — 보관함 탭과 동일 규칙) */}
+                      {media.messageContentType === 'MEDIA' && formatMediaDuration(media.duration) && (
+                        <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white">
+                          {formatMediaDuration(media.duration)}
+                        </span>
+                      )}
                       {/* 차단 발신자 리소스 가림 (RN Figma 3145:66586) */}
                       {isBlocked && (
                         <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70">
@@ -405,17 +440,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               <span className="text-sub text-gray-600">대화상대 ({sortedParticipants.length})</span>
             </div>
 
-            {/* 대화상대 초대 — GM/EM만. DM은 상단 [대화초대](신규 GM 생성)만 제공 (RN 패리티) */}
-            {canInvite && channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE && (
-              <div className="px-4 py-1.5">
-                <button onClick={() => setIsInviteOpen(true)} className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
-                    <IconAdd size={18} className="text-primary" />
-                  </div>
-                  <span className="text-sub font-medium text-primary">대화상대 초대</span>
-                </button>
-              </div>
-            )}
+            {/* 대화상대 초대는 상단 프로필 섹션의 [대화초대] pill 하나만 — 하단 행은 RN도 전 채널 숨김 (진입점 중복 제거) */}
 
             {/* 참여자 목록 */}
             {sortedParticipants.map(p => {
@@ -427,8 +452,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                   key={p.userId}
                   type="button"
                   onClick={() => openParticipantProfile(p)}
-                  disabled={isMe}
-                  className="flex w-full items-center gap-3 px-4 py-1.5 text-left transition-colors enabled:hover:bg-gray-100"
+                  className="flex w-full items-center gap-3 px-4 py-1.5 text-left transition-colors hover:bg-gray-100"
                 >
                   <div className="relative shrink-0">
                     <ProfileCircle
@@ -447,10 +471,11 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                         나
                       </span>
                     )}
-                    {isBlocked && <IconBlock width={16} height={16} className="shrink-0 text-gray-500" />}
                     <span className={cn('truncate text-body', isMe ? 'font-semibold text-text-primary' : isBlocked ? 'text-gray-500' : 'text-text-primary')}>
                       {p.name}
                     </span>
+                    {/* 차단 아이콘은 이름 뒤 (RN SidePanelParticipantItem 패리티) */}
+                    {isBlocked && <IconBlock width={16} height={16} className="shrink-0 text-gray-500" />}
                     {/* 본인 프로필엔 외부/미등록 표시 불필요 (RN 패리티) */}
                     {!isMe && p.isExternal ? (
                       <IconExternalSymbol width={18} height={10} className="shrink-0 text-gray-400" />
@@ -487,10 +512,34 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               </button>
             </div>
           </div>
-        ) : view === 'media' ? (
-          <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
         ) : (
-          <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
+          // 보관함: 상단 pill로 사진/동영상 ↔ 파일 즉시 전환 (RN SidePanelSelectItemTitle 패리티).
+          // 두 탭을 언마운트하지 않고 hidden 전환 — 각 탭의 검색어·선택 상태가 유지된다 (RN 유지 정책)
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center gap-1.5 px-4 pb-1 pt-2">
+              {([['media', '사진/동영상'], ['files', '파일']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setView(key)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-sub font-medium transition-colors',
+                    view === key
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className={view === 'media' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
+            </div>
+            <div className={view === 'files' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -520,14 +569,18 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
         {panelContent}
       </div>
 
-      {/* DM 대화초대 → 상대 포함 신규 GM 생성 (RN CreateChatRoomScreen 진입 대응) */}
-      <CreateRoomDialog
-        isOpen={isCreateGmOpen}
-        onClose={() => setIsCreateGmOpen(false)}
-        presetMemberIds={participants
-          .filter(p => String(p.userId) !== String(currentUserId))
-          .map(p => String(p.userId))}
-      />
+      {/* DM 대화초대 → 상대 포함 신규 GM 생성 (RN CreateChatRoomScreen 진입 대응).
+          조건부 마운트 필수 — 상시 마운트하면 preset이 참여자 로드 전(빈 배열)의 lazy useState로
+          굳어 기존 상대가 빠진 방이 생성된다 (2026-08-26 감사 실측) */}
+      {isCreateGmOpen && (
+        <CreateRoomDialog
+          isOpen
+          onClose={() => setIsCreateGmOpen(false)}
+          presetMemberIds={participants
+            .filter(p => String(p.userId) !== String(currentUserId))
+            .map(p => String(p.userId))}
+        />
+      )}
 
       {/* 메인 뷰 미리보기 썸네일 → 전체화면 뷰어 (보관함 탭 뷰어와 동일 컴포넌트) */}
       <MediaViewer
@@ -575,6 +628,9 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
         unregistered={profileTarget?.unregistered}
         disableDirectChat={channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE}
       />
+
+      {/* 본인 행 클릭 → 내 프로필 (RN 패리티) */}
+      <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
     </>
   );
 }

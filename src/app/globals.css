@@ -475,14 +475,17 @@ html[data-electron-win] .electron-fixed-safe-top {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
-/* 중앙 고정(-translate-50%) 다이얼로그 전용 — translate를 keyframe에 포함해야 위치가 안 깨진다 */
+/* 중앙 고정(-translate-1/2) 다이얼로그 전용.
+   ⚠️ Tailwind 4의 -translate-x-1/2는 transform이 아니라 별도 `translate` 속성을 쓴다 —
+   keyframe에 translate를 넣으면 애니메이션 동안 이중 적용(-100%)됐다가 종료 시 중앙으로
+   튀어 "구석에서 날아오는" 현상이 난다. scale/opacity만 애니메이션한다. */
 @keyframes motion-center-pop-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 @keyframes motion-center-pop-out {
-  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  to { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
 }
 
 /* 풀스크린 화면(프로필·설정 상세·멤버목록 편집·채팅방 관리) — RN push처럼 우측에서 등장 */

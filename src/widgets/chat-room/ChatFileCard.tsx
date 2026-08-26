@@ -1,6 +1,8 @@
 'use client';
 
+import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload';
 import { FileTypeIcon } from '@/shared/ui/FileTypeIcon';
+import { PresignedImage } from '@/shared/ui/PresignedImage';
 import { extractFileName, formatBytes } from '@/shared/utils/fileUtils';
 import type { MessageFileItem } from '@/shared/types/websocket';
 
@@ -37,7 +39,7 @@ function renderHighlightedFileName(fileName: string, keyword?: string | null) {
 }
 
 /** S3 path 마지막 세그먼트에서 파일명을 추출하고, 퍼센트 인코딩이면 디코드한다. */
-function resolveFileName(path: string): string {
+export function resolveFileName(path: string): string {
   const raw = extractFileName(path);
   try {
     return decodeURIComponent(raw) || raw;
@@ -53,8 +55,12 @@ function resolveFileName(path: string): string {
  */
 export function ChatFileCard({ file, disabled, highlightKeyword }: ChatFileCardProps) {
   const fileName = resolveFileName(file.path) || '파일';
-  const sizeText = file.meta?.size ? formatBytes(file.meta.size, { fallback: '' }) : '';
-  const href = file.presignedUrl || file.path;
+  // 용량 미상도 '정보 없음'으로 표기 (RN ChatFile 패리티 — 행 자체를 숨기지 않는다)
+  const sizeText = file.meta?.size ? formatBytes(file.meta.size, { fallback: '정보 없음' }) : '정보 없음';
+  // 메시지에 실려온 presigned URL은 곧 만료된다 — 클릭 시 키로 fresh URL을 재발급해 다운로드
+  // (보관함·뷰어와 동일 패턴. 재발급 실패 시에만 기존 URL 폴백)
+  const { download, downloadingId } = useFileDownload();
+  const isDownloading = downloadingId === file.path;
 
   const content = (
     <>
@@ -70,8 +76,23 @@ export function ChatFileCard({ file, disabled, highlightKeyword }: ChatFileCardP
         )}
       </div>
 
-      <div className="flex size-14 shrink-0 items-center justify-center rounded-[10px] bg-gray-100">
-        <FileTypeIcon fileName={fileName} size={42} />
+      <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gray-100">
+        {/* 이미지형 파일은 썸네일 우선 (RN ChatFile 패리티) — 만료 시 키로 재발급 */}
+        {file.meta?.thumbnail || file.meta?.thumbnailPresignedUrl ? (
+          <PresignedImage
+            storageKey={file.meta.thumbnail || file.path}
+            fallbackUrl={file.meta.thumbnailPresignedUrl}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <FileTypeIcon fileName={fileName} size={42} />
+        )}
+        {/* 다운로드 진행 표시 (RN ProgressRing 대응 — 데스크톱은 스피너 오버레이) */}
+        {isDownloading && (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          </span>
+        )}
       </div>
     </>
   );
@@ -84,14 +105,13 @@ export function ChatFileCard({ file, disabled, highlightKeyword }: ChatFileCardP
   }
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      download={fileName}
-      className={`${cardClass} transition-colors hover:bg-gray-50`}
+    <button
+      type="button"
+      onClick={() => download(file.path, file.presignedUrl, fileName, file.path)}
+      disabled={isDownloading}
+      className={`${cardClass} text-left transition-colors hover:bg-gray-50 disabled:opacity-60`}
     >
       {content}
-    </a>
+    </button>
   );
 }

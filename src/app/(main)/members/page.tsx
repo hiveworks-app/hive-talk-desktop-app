@@ -124,9 +124,10 @@ export default function MembersPage() {
       <div className="flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
         {isOrgMember && (
           <div className="flex items-center gap-1.5 px-4 py-3.5">
-            <Chip label="전체" active={activeChip === 'all'} onClick={() => setActiveChip('all')} />
-            <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => setActiveChip('company')} />
-            <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => setActiveChip('external')} />
+            {/* 칩 전환 시 리스트 최상단으로 — 짧은 목록 전환 시 빈 화면 방지 (RN scrollToOffset(0) 패리티) */}
+            <Chip label="전체" active={activeChip === 'all'} onClick={() => { setActiveChip('all'); listContainerRef.current?.scrollTo({ top: 0 }); }} />
+            <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => { setActiveChip('company'); listContainerRef.current?.scrollTo({ top: 0 }); }} />
+            <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => { setActiveChip('external'); listContainerRef.current?.scrollTo({ top: 0 }); }} />
           </div>
         )}
 

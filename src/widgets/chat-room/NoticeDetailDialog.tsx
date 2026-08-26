@@ -10,7 +10,10 @@ import {
 } from '@/features/chat-room/notice/noticeUtils';
 import type { NoticeModel } from '@/features/chat-room/notice/type';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
-import { IconCampaign, IconDelete, IconDescription, IconPlay } from '@/shared/ui/icons';
+import { IconPlay } from '@/shared/ui/icons';
+import { IconNoticeDefault, IconOptionDelete } from '@assets/icons';
+import { FileTypeIcon } from '@/shared/ui/FileTypeIcon';
+import { renderTextWithLinks } from './MessageContent';
 import { formatBytes } from '@/shared/utils/fileUtils';
 import { ProfileDialogShell } from '@/widgets/profile/ProfileDialogShell';
 
@@ -59,7 +62,7 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
       <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto px-5 py-4">
         {/* 작성자 + 등록일시 (+ 작성자 본인이면 삭제) */}
         <div className="flex items-center gap-1.5">
-          <IconCampaign size={24} className="shrink-0 text-primary" />
+          <IconNoticeDefault width={24} height={24} className="shrink-0" />
           <div className="min-w-0 flex-1">
             {!!creatorName && (
               <p className="truncate text-label font-semibold text-text-primary">{creatorName}</p>
@@ -70,16 +73,16 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
             <button
               onClick={onDelete}
               aria-label="공지 삭제"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
             >
-              <IconDelete size={20} />
+              <IconOptionDelete width={24} height={24} />
             </button>
           )}
         </div>
 
         {/* 본문 */}
         {textNotice && isTextNoticeGuard(notice) && (
-          <p className="whitespace-pre-wrap break-words text-body text-text-primary">{notice.payload.content}</p>
+          <p className="whitespace-pre-wrap break-words text-body text-text-primary">{renderTextWithLinks(notice.payload.content)}</p>
         )}
 
         {imageNotice && imageUrl && (
@@ -97,7 +100,7 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
             }
             className="block w-full"
           >
-            <img src={imageUrl} alt="공지 이미지" className="w-full rounded-lg object-contain" />
+            <img src={imageUrl} alt="공지 이미지" className="w-full rounded-xl object-contain" />
           </button>
         )}
 
@@ -119,7 +122,7 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
             className="relative block w-full"
           >
             {videoThumbUrl && (
-              <img src={videoThumbUrl} alt="공지 동영상" className="w-full rounded-lg object-cover" />
+              <img src={videoThumbUrl} alt="공지 동영상" className="w-full rounded-xl object-cover" />
             )}
             <span className="absolute inset-0 flex items-center justify-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50">
@@ -135,13 +138,14 @@ export function NoticeDetailDialog({ notice, creatorName, isOwner, onDelete, onC
             target="_blank"
             rel="noopener noreferrer"
             download={fileParsed.fileName || undefined}
-            className="flex items-center gap-2 rounded-lg bg-surface-pressed px-3 py-2 transition-colors hover:opacity-80"
+            className="flex items-start gap-2 rounded-[10px] border border-gray-200 p-2.5 transition-opacity hover:opacity-80"
           >
-            <IconDescription size={20} className="shrink-0 text-primary" />
+            {/* RN 패리티 — 확장자 아이콘 28 + 파일명 2줄 + 용량 */}
+            <FileTypeIcon fileName={fileParsed.fileName || '파일'} size={28} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sub font-medium text-text-primary">{fileParsed.fileName || '파일'}</p>
+              <p className="line-clamp-2 break-all text-sub text-text-primary">{fileParsed.fileName || '파일'}</p>
               {fileParsed.fileSize > 0 && (
-                <p className="text-[11px] text-text-tertiary">{formatBytes(fileParsed.fileSize)}</p>
+                <p className="text-sub text-text-secondary">{formatBytes(fileParsed.fileSize)}</p>
               )}
             </div>
           </a>

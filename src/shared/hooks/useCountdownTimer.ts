@@ -2,56 +2,72 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const TIMER_DURATION = 300;
 
+const remainingSecondsUntil = (expiresAt: number | null) =>
+  expiresAt == null ? 0 : Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+
 /**
- * SMS 인증 카운트다운 타이머 훅
- * - 3분(180초) 카운트다운
- * - 포맷된 타이머 텍스트 제공 (예: "2:45")
- * - start()로 타이머 시작/재시작
+ * SMS 인증 카운트다운 타이머 훅 (RN 패리티 — wall-clock 기준).
+ * `prev - 1` 틱 누적은 창 최소화/백그라운드 스로틀링에서 실제보다 늦게 만료돼
+ * 서버 5분 만료와 어긋난다 — 절대 만료 시각 기준으로 매 틱 재계산하고,
+ * 창 복귀(visibility/focus) 시 즉시 재동기화한다.
  */
 export const useCountdownTimer = (duration = TIMER_DURATION) => {
   const [seconds, setSeconds] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
+  const expiresAtRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRunning = seconds > 0;
 
-  useEffect(() => {
-    if (!isRunning) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      setSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRunning]);
-
-  const [hasStarted, setHasStarted] = useState(false);
-
-  const start = useCallback(() => {
-    setHasStarted(true);
-    setSeconds(duration);
-  }, [duration]);
-
-  const stop = useCallback(() => {
-    setSeconds(0);
+  const clear = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
   }, []);
+
+  // 절대 만료 시각 기준으로 남은 초를 현재 시점에 맞춰 재계산한다.
+  const syncFromClock = useCallback(() => {
+    const next = remainingSecondsUntil(expiresAtRef.current);
+    setSeconds(next);
+    if (next <= 0) {
+      expiresAtRef.current = null;
+      clear();
+    }
+  }, [clear]);
+
+  useEffect(() => {
+    if (!isRunning) {
+      clear();
+      return;
+    }
+    timerRef.current = setInterval(syncFromClock, 1000);
+    return clear;
+  }, [isRunning, syncFromClock, clear]);
+
+  // 백그라운드 → 복귀 시 즉시 재동기화 (스로틀된 틱 보정 — RN AppState 대응)
+  useEffect(() => {
+    const onVisible = () => {
+      if (expiresAtRef.current != null) syncFromClock();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [syncFromClock]);
+
+  const start = useCallback(() => {
+    setHasStarted(true);
+    expiresAtRef.current = Date.now() + duration * 1000;
+    setSeconds(duration);
+  }, [duration]);
+
+  const stop = useCallback(() => {
+    expiresAtRef.current = null;
+    setSeconds(0);
+    clear();
+  }, [clear]);
 
   const formattedTime =
     seconds > 0

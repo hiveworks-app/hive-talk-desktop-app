@@ -12,6 +12,8 @@ interface CalendarPopoverProps {
   minDate?: Date | null;
   /** 대화가 있는 날짜(YYYY-MM-DD)만 선택 가능 — RN activeDates 패리티. null이면 게이팅 없음(조회 실패 폴백) */
   activeDates?: Set<string> | null;
+  /** 직전에 점프한 날짜 — 재오픈 시 하이라이트 (RN selectedDateKey 복원 패리티) */
+  selectedDate?: Date | null;
 }
 
 const toDateKey = (d: Date) =>
@@ -25,7 +27,7 @@ const stripTime = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate
  * 채팅방 날짜 검색 달력 (RN CalendarBottomSheet 대응 — 데스크톱은 검색바 팝오버).
  * 월 그리드에서 날짜를 선택하면 해당 날짜 첫 메시지로 점프한다. 미래 날짜는 비활성.
  */
-export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDates }: CalendarPopoverProps) {
+export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDates, selectedDate }: CalendarPopoverProps) {
   const today = stripTime(new Date());
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -60,6 +62,13 @@ export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDa
   };
   // 이번 달 이후로는 이동 불필요 (미래 메시지 없음)
   const canGoNext = viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth());
+  // 과거 하한 — 첫 대화(또는 방 생성) 달 이전으론 이동 불가 (RN minYear/maxYear 경계 패리티)
+  const earliestKey = activeDates && activeDates.size > 0 ? [...activeDates].sort()[0] : null;
+  const minBound = minDay ?? (earliestKey ? stripTime(new Date(earliestKey)) : null);
+  const canGoPrev =
+    !minBound ||
+    viewYear > minBound.getFullYear() ||
+    (viewYear === minBound.getFullYear() && viewMonth > minBound.getMonth());
 
   const cells: Array<Date | null> = [
     ...Array.from({ length: startWeekday }, () => null),
@@ -75,13 +84,52 @@ export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDa
         <button
           type="button"
           onClick={goPrevMonth}
-          className="flex h-7 w-7 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
+          disabled={!canGoPrev}
+          className="flex h-7 w-7 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-30"
           aria-label="이전 달"
         >
           <IconChevronLeft />
         </button>
-        <span className="text-sub font-bold text-text-primary">
-          {viewYear}년 {viewMonth + 1}월
+        {/* 연/월 빠른 이동 (RN WheelPicker 대응 — 데스크톱은 네이티브 셀렉트).
+            1년 전 대화로 12번 클릭하던 문제 해소, 범위는 첫 대화~이번 달로 제한 */}
+        <span className="flex items-center gap-0.5 text-sub font-bold text-text-primary">
+          <select
+            value={viewYear}
+            onChange={e => {
+              const y = Number(e.target.value);
+              // 연 변경 시 월을 경계 안으로 클램프
+              let m = viewMonth;
+              if (minBound && y === minBound.getFullYear() && m < minBound.getMonth()) m = minBound.getMonth();
+              if (y === today.getFullYear() && m > today.getMonth()) m = today.getMonth();
+              setViewYear(y);
+              setViewMonth(m);
+            }}
+            className="cursor-pointer appearance-none rounded bg-transparent py-0.5 pl-1 pr-0.5 text-sub font-bold text-text-primary outline-none hover:bg-gray-100"
+            aria-label="연도 선택"
+          >
+            {Array.from(
+              { length: today.getFullYear() - (minBound?.getFullYear() ?? today.getFullYear()) + 1 },
+              (_, i) => (minBound?.getFullYear() ?? today.getFullYear()) + i,
+            ).map(y => (
+              <option key={y} value={y}>{y}년</option>
+            ))}
+          </select>
+          <select
+            value={viewMonth}
+            onChange={e => setViewMonth(Number(e.target.value))}
+            className="cursor-pointer appearance-none rounded bg-transparent py-0.5 pl-1 pr-0.5 text-sub font-bold text-text-primary outline-none hover:bg-gray-100"
+            aria-label="월 선택"
+          >
+            {Array.from({ length: 12 }, (_, m) => m)
+              .filter(m => {
+                if (minBound && viewYear === minBound.getFullYear() && m < minBound.getMonth()) return false;
+                if (viewYear === today.getFullYear() && m > today.getMonth()) return false;
+                return true;
+              })
+              .map(m => (
+                <option key={m} value={m}>{m + 1}월</option>
+              ))}
+          </select>
         </span>
         <button
           type="button"
@@ -108,6 +156,7 @@ export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDa
           const isInactive = activeDates ? !activeDates.has(toDateKey(date)) : false;
           const disabled = isFuture || isBeforeMin || isInactive;
           const isToday = date.getTime() === today.getTime();
+          const isSelected = !!selectedDate && toDateKey(date) === toDateKey(selectedDate);
           return (
             <button
               key={date.getTime()}
@@ -123,6 +172,8 @@ export function CalendarPopover({ open, onClose, onSelectDate, minDate, activeDa
                   ? 'text-text-tertiary/40'
                   : 'text-text-primary hover:bg-gray-100',
                 isToday && !disabled && 'bg-[#E6F3FF] font-semibold text-primary',
+                // 직전 점프 날짜 강조 — today보다 우선 (RN selectedDateKey 패리티)
+                isSelected && !disabled && 'bg-primary font-semibold text-white hover:bg-primary',
               )}
             >
               {date.getDate()}

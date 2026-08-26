@@ -15,9 +15,10 @@ export default function FindAccountPage() {
   const [hideTabs, setHideTabs] = useState(false);
 
   const handleFoundEmail = useCallback((email: string) => {
+    // 비밀번호 찾기 탭 프리필만 준비 — 탭을 강제 전환하면 Radix Tabs가 결과 화면을
+    // 즉시 언마운트해 마스킹 이메일이 한 프레임도 보이지 않았다 (2026-08-26 감사, RN은 결과 유지)
     setPasswordTabEmail(email);
     setFindPasswordKey((prev) => prev + 1);
-    setSelectedTab("findPassword");
   }, []);
 
   const handleTabChange = useCallback(

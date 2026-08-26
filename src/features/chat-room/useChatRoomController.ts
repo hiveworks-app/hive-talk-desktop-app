@@ -53,7 +53,10 @@ export const useChatRoomController = () => {
         const roomId = useChatRoomRuntimeStore.getState().currentRoomId;
         const ct = useChatRoomInfo.getState().channelType;
         if (!roomId) return [];
-        return queryClient.getQueryData<ParticipantItemsType[]>(ROOM_PARTICIPANTS_KEY(roomId, ct)) ?? [];
+        const cached = queryClient.getQueryData<ParticipantItemsType[]>(ROOM_PARTICIPANTS_KEY(roomId, ct)) ?? [];
+        // 불완전 스냅샷(초대 직후 본인만 등)은 빈 배열 취급 → 파서의 totalUserCount 폴백 (RN 가드 패리티)
+        const expected = useChatRoomInfo.getState().totalUserCount ?? 0;
+        return expected > 0 && cached.length < expected ? [] : cached;
       },
       getTotalUserCount: () => useChatRoomInfo.getState().totalUserCount,
       consumeNextMyTags: useChatRoomRuntimeStore.getState().consumeNextMyTags,
@@ -67,6 +70,11 @@ export const useChatRoomController = () => {
     recalculateAllMessagesNotReadCount, isReconnectFetchRef, isInitialFetchRef, isMountedRef,
     // draft 백필용 — 첫 PUB 수신 시 생성 트랜잭션의 시스템 메시지(초대 공지) 1회 회수
     send, buildFetchBeforeMessage: builders.buildFetchBeforeMessage,
+    // 유령 구독 방지 재전송용 (RN CHANNEL_RETRY 패리티)
+    buildSubscribeMessage: builders.buildSubscribeMessage,
+    buildViewInMessageRoom: builders.buildViewInMessageRoom,
+    buildFetchAfterMessage: builders.buildFetchAfterMessage,
+    viewStateRef,
   });
   handleWsMessageRef.current = handleWsMessage;
 

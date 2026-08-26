@@ -1,6 +1,7 @@
 'use client';
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
+import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { useGetTagInfo } from '@/features/tag/queries';
 import type { TagListType } from '@/shared/types/tag';
 import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
@@ -98,6 +99,22 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
     resetSelectedTags();
     closeTagPanel();
   }, [resetSelectedTags, closeTagPanel]);
+
+  // ESC = 선택 폐기 후 닫기 + Electron 창 숨김 억제 (억제 없으면 ESC가 앱을 트레이로 숨긴다)
+  useEffect(() => {
+    const release = acquireEscSuppress();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      release();
+    };
+  }, [handleClose]);
 
   return (
     // 딤: 채팅 본문(메시지+입력창)만 덮음. 딤 클릭 시 선택 폐기 후 닫기.

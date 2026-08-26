@@ -36,8 +36,9 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
   const [department, setDepartment] = useState(user.department ?? '');
   const [job, setJob] = useState(user.job ?? '');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [newProfileKey, setNewProfileKey] = useState<string | null>(null);
-  const [newThumbKey, setNewThumbKey] = useState<string | null>(null);
+  // 선택 즉시 업로드하지 않고 [완료] 저장 시점에 업로드 (RN MyProfileEdit 패리티 —
+  // ←(편집 취소)로 나가면 스토리지에 고아 업로드본이 남던 문제)
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [imageStatus, setImageStatus] = useState<ImageStatus>('idle');
   const { data: currentPresignedUrl } = usePresignedUrl(user.profileUrl);
@@ -62,32 +63,15 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
     if (isOffline()) return;
 
     setRemoveImage(false);
+    setPendingFile(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setImageStatus('uploading');
-
-    try {
-      // RN MyProfileEdit 패리티 — 원본 압축(1MB 초과) + 128px 썸네일(0.4MB 이상) 생성 후 각각 업로드
-      const { original, thumbnail } = await prepareProfileImage(file);
-      const result = await uploadImage({ file: original });
-      const thumbResult = thumbnail ? await uploadImage({ file: thumbnail }) : null;
-      setNewProfileKey(result.fileKey);
-      setNewThumbKey(thumbResult?.fileKey ?? result.fileKey);
-      flashDone();
-    } catch (err) {
-      // 부분 성공(원본만 업로드)도 전체 실패로 취급 — 이전 선택까지 폐기해 미리보기·저장 값 불일치를 막는다
-      setPreviewUrl(null);
-      setNewProfileKey(null);
-      setNewThumbKey(null);
-      setImageStatus('idle');
-      showSnackbar({ message: getErrorMessage(err, '이미지 업로드에 실패했습니다.'), state: 'error' });
-    }
+    flashDone();
   };
 
   // 기본 이미지로 변경 — 저장 시 profileUrl/thumbnail을 null로 명시 전송한다.
   const handleUseDefault = () => {
     setPreviewUrl(null);
-    setNewProfileKey(null);
-    setNewThumbKey(null);
+    setPendingFile(null);
     setRemoveImage(true);
     flashDone();
   };
@@ -100,10 +84,20 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
     }
     if (isOffline()) return;
 
-    const profileKey = removeImage ? null : (newProfileKey ?? user.profileUrl ?? null);
-    const thumbKey = removeImage ? null : (newThumbKey ?? user.thumbnailProfileUrl ?? null);
+    let profileKey = removeImage ? null : (user.profileUrl ?? null);
+    let thumbKey = removeImage ? null : (user.thumbnailProfileUrl ?? null);
 
     try {
+      // 저장 시점 업로드 (RN 패리티) — 원본 압축(1MB 초과) + 128px 썸네일(0.4MB 이상)
+      if (!removeImage && pendingFile) {
+        setImageStatus('uploading');
+        const { original, thumbnail } = await prepareProfileImage(pendingFile);
+        const result = await uploadImage({ file: original });
+        const thumbResult = thumbnail ? await uploadImage({ file: thumbnail }) : null;
+        profileKey = result.fileKey;
+        thumbKey = thumbResult?.fileKey ?? result.fileKey;
+        setImageStatus('idle');
+      }
       await updateProfile({
         ...(isGuest && { companyName: companyName.trim() || null }),
         name: name.trim(),
@@ -119,6 +113,7 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
       // 성공 토스트는 useMyProfileUpdate onSuccess가 단일로 처리 (중복 방지)
       onDone();
     } catch (err) {
+      setImageStatus('idle');
       showSnackbar({ message: getErrorMessage(err, '프로필 수정에 실패했습니다.'), state: 'error' });
     }
   };

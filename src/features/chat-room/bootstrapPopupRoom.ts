@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { apiGetDMLastMessage, apiGetGMLastMessage } from '@/features/chat-room/api';
 import { fetchDMRoomList, fetchGMRoomList } from '@/features/chat-room-list/queries';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { countDMTotalUsers, countRoomListTotalUsers } from '@/shared/utils/roomUserCount';
 import { WS_CHANNEL_TYPE, type WebSocketChannelTypes } from '@/shared/types/websocket';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 
@@ -48,13 +49,17 @@ export async function bootstrapPopupRoom(roomId: string, queryClient: QueryClien
   const isOtherUserExit = roomModel.participantDetail?.isExit ?? false;
   useChatRoomInfo.getState().setChatRoomInfo({
     roomId,
-    roomName:
-      roomModel.title ||
-      roomModel.participantDetail?.name ||
-      roomModel.participants?.map(p => p.name).join(', ') ||
-      '채팅방',
+    // DM은 상대 이름 우선 (RN 패리티)
+    roomName: isDM
+      ? roomModel.participantDetail?.name || roomModel.title || '채팅방'
+      : roomModel.title ||
+        roomModel.participants?.map(p => p.name).join(', ') ||
+        '채팅방',
     channelType,
-    totalUserCount: roomModel.participants?.length ?? 2,
+    // GM 목록 participants는 본인 제외 — 단일 유틸로 총원 계산 (RN roomUserCount 패리티)
+    totalUserCount: isDM
+      ? countDMTotalUsers(isOtherUserExit)
+      : countRoomListTotalUsers(channelType, roomModel.participants),
     otherUserIsExit: isOtherUserExit,
     // 방 스코프 플래그 — partial merge라 미지정 시 이전 값이 잔존하므로 명시 재설정 (ChatRoomItem과 동일)
     otherUserIsRemoved: isDM ? (roomModel.participantDetail?.isRemoved ?? false) : false,

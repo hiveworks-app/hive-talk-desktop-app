@@ -46,11 +46,26 @@ export const roomFavoriteRank = (
 ): number => {
   if (channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE) {
     const userId = room.roomModel.participantDetail?.userId;
-    return userId ? rankMap.get(userId) ?? NO_PIN_RANK : NO_PIN_RANK;
+    // 키 정규화 — 맵 키가 String()으로 생성되므로 조회도 동일 정규화 (EM 버전과 규칙 통일)
+    return userId ? rankMap.get(String(userId)) ?? NO_PIN_RANK : NO_PIN_RANK;
   }
   let min = NO_PIN_RANK;
   for (const p of room.roomModel.participants ?? []) {
     const rank = rankMap.get(p.userId);
+    if (rank !== undefined && rank < min) min = rank;
+  }
+  return min;
+};
+
+/** EM 방의 관심멤버 rank — 참여자 중 최소 rank (GM 규칙과 동일, EM은 DM 분기 없음).
+ *  pinnedRankMap 키는 String(userId) 정규화 전제. */
+export const emRoomFavoriteRank = (
+  room: GetChatRoomListItemType,
+  rankMap: Map<string, number>,
+): number => {
+  let min = NO_PIN_RANK;
+  for (const p of room.roomModel.participants ?? []) {
+    const rank = rankMap.get(String(p.userId));
     if (rank !== undefined && rank < min) min = rank;
   }
   return min;

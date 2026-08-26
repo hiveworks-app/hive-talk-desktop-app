@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { formatBytes } from '@/shared/utils/fileUtils';
 
 export interface PendingFileItem {
@@ -12,15 +13,22 @@ interface FileConfirmDialogProps {
   items: PendingFileItem[];
   onConfirm: () => void;
   onCancel: () => void;
+  /** 개별 항목 제거 (RN 첨부 확인 단계 개별 해제 패리티) */
+  onRemoveItem?: (index: number) => void;
 }
 
-export function FileConfirmDialog({ items, onConfirm, onCancel }: FileConfirmDialogProps) {
+export function FileConfirmDialog({ items, onConfirm, onCancel, onRemoveItem }: FileConfirmDialogProps) {
   useEffect(() => {
+    // ESC=취소 + Electron 창 숨김 억제 (억제 없으면 다이얼로그가 닫히면서 창도 트레이로 숨는다)
+    const release = acquireEscSuppress();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      release();
+    };
   }, [onCancel]);
 
   if (items.length === 0) return null;
@@ -68,6 +76,16 @@ export function FileConfirmDialog({ items, onConfirm, onCancel }: FileConfirmDia
                     {formatBytes(item.file.size)}
                   </p>
                 </div>
+                {onRemoveItem && items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveItem(idx)}
+                    aria-label={`${item.file.name} 제외`}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>

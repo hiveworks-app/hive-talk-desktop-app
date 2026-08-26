@@ -19,9 +19,13 @@ import IconBottomEmChatDefault from "@assets/icons/bottom-em-chat-default.svg";
 import IconBottomSettingDefault from "@assets/icons/bottom-setting-default.svg";
 
 function useTotalUnreadCount() {
-  const { data: dmList } = useGetDMRoomList();
-  const { data: gmList } = useGetGMRoomList();
-  const { data: emList } = useGetEMRoomList();
+  const { data: dmList, isFetched: dmFetched } = useGetDMRoomList();
+  const { data: gmList, isFetched: gmFetched } = useGetGMRoomList();
+  const { data: emList, isFetched: emFetched } = useGetEMRoomList();
+  const isOrgMember = useAuthStore(s => s.user?.userType) === USER_TYPE.ORG_MEMBER;
+  // 콜드스타트 "가짜 0" 게이트 (RN useAppIconBadgeSync 패리티) — 목록 로드 전 0을
+  // Dock/트레이에 쓰면 뱃지가 0으로 깜빡였다 복구된다. 게스트는 EM만 판정.
+  const isBadgeReady = emFetched && (!isOrgMember || (dmFetched && gmFetched));
 
   const sumUnread = (list: typeof dmList) =>
     list?.reduce((sum, item) => sum + toSafeNumber(item.notReadCount, 0), 0) ??
@@ -33,7 +37,7 @@ function useTotalUnreadCount() {
   const companyChatBadge = dmUnread + gmUnread;
   const totalUnread = companyChatBadge + emUnread;
 
-  return { companyChatBadge, externalChatBadge: emUnread, totalUnread };
+  return { companyChatBadge, externalChatBadge: emUnread, totalUnread, isBadgeReady };
 }
 
 const NAV_ITEMS = [
@@ -70,14 +74,15 @@ export function AppNav() {
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const isOrgMember = useAuthStore(s => s.user?.userType) === USER_TYPE.ORG_MEMBER;
   const navItems = NAV_ITEMS.filter(item => !item.orgOnly || isOrgMember);
-  const { companyChatBadge, externalChatBadge, totalUnread } =
+  const { companyChatBadge, externalChatBadge, totalUnread, isBadgeReady } =
     useTotalUnreadCount();
 
   useEffect(() => {
+    if (!isBadgeReady) return; // 로드 전 가짜 0 쓰기 방지 (RN 패리티)
     const api = (window as unknown as { electronAPI?: { setBadgeCount?: (n: number) => void } })
       .electronAPI;
     api?.setBadgeCount?.(totalUnread);
-  }, [totalUnread]);
+  }, [totalUnread, isBadgeReady]);
 
   const getBadgeCount = (key: "company" | "external" | null) => {
     if (key === "company") return companyChatBadge;

@@ -1,10 +1,22 @@
-import { BrowserWindow, session, screen } from 'electron';
+import { BrowserWindow, session, screen, shell } from 'electron';
 import { getPreloadPath, getIconPath } from './utils';
 
 let escSuppressed = false;
 
 export function setEscSuppressed(value: boolean) {
   escSuppressed = value;
+}
+
+/** 렌더러의 target=_blank 링크를 OS 기본 브라우저로 위임 — 주소창 없는 앱 창에 임의
+ *  웹페이지가 로드되는 것을 막는다 (RN openLink 패리티, 2026-08-26 전수 감사).
+ *  앱 자체 팝업(멀티 채팅창)은 window.open이 아니라 IPC로 열리므로 영향 없음. */
+function delegateExternalLinks(win: BrowserWindow) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
 }
 
 /** 기본 창 폭 — 창 크기는 앱이 임의로 바꾸지 않는다.
@@ -45,6 +57,7 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
       nodeIntegration: false,
     },
   });
+  delegateExternalLinks(win);
   // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
   // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
   const showFallback = setTimeout(() => {
@@ -75,6 +88,13 @@ export function broadcastToChatWindows(channel: string, payload: unknown) {
 }
 
 /** 앱 종료/로그아웃 시 팝업 정리 — 팝업은 허브(메인 창)의 소켓에 의존하므로 혼자 남으면 죽은 창이 된다 */
+/** 특정 방의 팝업 창 닫기 — 방 관리 일괄 나가기 등에서 나간 방의 유령 창 방지 */
+export function closeChatWindow(roomId: string) {
+  const win = chatWindows.get(roomId);
+  if (win && !win.isDestroyed()) win.close();
+  chatWindows.delete(roomId);
+}
+
 export function closeAllChatWindows() {
   chatWindows.forEach(win => {
     if (!win.isDestroyed()) win.close();
@@ -115,6 +135,7 @@ export function createWindow(
           },
         }),
   });
+  delegateExternalLinks(win);
 
   // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
   // URL 필터를 사용하여 localhost 페이지/에셋 로딩에 영향을 주지 않음

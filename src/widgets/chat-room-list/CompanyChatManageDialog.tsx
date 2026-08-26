@@ -7,10 +7,8 @@ import { useGetDMRoomList, useGetGMRoomList } from '@/features/chat-room-list/qu
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { LEAVE_CONFIRM_DESCRIPTION } from '@/shared/config/constants';
-import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import { getLastMessagePreview } from '@/shared/utils/chatUtils';
-import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
-import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessageBuilder';
+import { apiBatchExitRooms } from '@/features/chat-room-list/api';
 import type { GroupAvatarUser } from '@/shared/ui/GroupProfileAvatar';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -39,10 +37,6 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
   const router = useAppRouter();
   const params = useParams();
   const queryClient = useQueryClient();
-  const { send } = useAppWebSocket();
-  // 나가기 메시지는 채널타입이 빌더에 고정 → DM/GM 각각의 빌더 필요 (혼재 일괄 나가기)
-  const dmBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.DIRECT_MESSAGE, channelId: '' });
-  const gmBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.GROUP_MESSAGE, channelId: '' });
 
   // DM/GM 합쳐 최신순 — 목록과 동일 정렬
   const tagged = [
@@ -63,11 +57,12 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
         .slice(0, 4)
         .map(p => ({ name: p.name, storageKey: p.thumbnailProfileUrl }));
     }
-    const displayName =
-      roomModel.title ||
-      roomModel.participantDetail?.name ||
-      roomModel.participants?.map(p => p.name).join(', ') ||
-      '채팅방';
+    // DM은 상대 이름 우선 — 서버가 DM에 title을 채워도 상대 이름을 보여준다 (RN ManagementListItem 패리티)
+    const displayName = isDM
+      ? roomModel.participantDetail?.name || roomModel.title || '채팅방'
+      : roomModel.title ||
+        roomModel.participants?.map(p => p.name).join(', ') ||
+        '채팅방';
     return {
       roomId: roomModel.roomId,
       displayName,
@@ -78,12 +73,15 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
 
   const handleLeave = (ids: string[]) => {
     const isDMRoom = (id: string) => dmRooms.some(r => r.roomModel.roomId === id);
+    const dmIds = ids.filter(isDMRoom);
+    const gmIds = ids.filter(id => !isDMRoom(id));
     ids.forEach(roomId => {
-      const builder = isDMRoom(roomId) ? dmBuilder : gmBuilder;
-      send(builder.buildExitMessageRoom({ channelIdOverride: roomId }));
       // 나간 방의 드래프트·실패 메시지 정리 (RN 패리티)
       useDraftStore.getState().clearDraft(roomId);
       useFailedMessagesStore.getState().removeRoom(roomId);
+      // REST 나가기는 WS EXIT ack가 없어 팝업 닫기 체인이 끊긴다 — 명시적으로 해당 방 팝업 닫기
+      (window as unknown as { electronAPI?: { closeChatWindow?: (id: string) => void } })
+        .electronAPI?.closeChatWindow?.(roomId);
     });
 
     // 내가 나갈 땐 WS가 목록을 갱신하지 않으므로 DM/GM 캐시에서 낙관적 제거
@@ -92,6 +90,13 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
       prev?.filter(r => !sel.has(r.roomModel.roomId)) ?? [];
     queryClient.setQueryData<GetChatRoomListItemType[]>(DM_ROOM_LIST_KEY, removeLeft);
     queryClient.setQueryData<GetChatRoomListItemType[]>(GM_ROOM_LIST_KEY, removeLeft);
+
+    // 일괄 나가기는 전용 REST (RN 패리티) — WS EXIT 연발 대신 단건 요청, 실패 시 invalidate 롤백
+    void apiBatchExitRooms({ dmRoomIds: dmIds, gmRoomIds: gmIds, emRoomIds: [] }).catch(err => {
+      console.warn('[ChatRoomMgmt] 일괄 나가기 API 실패 → 목록 재조회 롤백:', err);
+      if (dmIds.length > 0) queryClient.invalidateQueries({ queryKey: DM_ROOM_LIST_KEY });
+      if (gmIds.length > 0) queryClient.invalidateQueries({ queryKey: GM_ROOM_LIST_KEY });
+    });
 
     const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
     if (openRoomId && sel.has(openRoomId)) router.push('/chat');

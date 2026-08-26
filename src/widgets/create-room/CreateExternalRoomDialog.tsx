@@ -1,7 +1,6 @@
 'use client';
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
-import { Button } from '@/shared/ui/Button';
 import { Chip } from '@/shared/ui/Chip';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -33,7 +32,8 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
   const noSearchResult = r.hasAnyMember && r.pinnedSection.length === 0 && r.memberSection.length === 0;
   const memberSectionLabel = r.activeTab === 'external' ? '협력멤버' : '사내멤버';
   const emptyMessage =
-    r.activeTab === 'external' ? '아직 함께할 협력멤버가 없어요.' : '함께할 사내멤버가 없어요.';
+    // RN 단일 문구 패리티 (CreateExternalRoomStep1 — 탭 무관)
+    '아직 함께할 멤버가 없어요.';
 
   return (
     <div className="electron-no-drag fixed inset-0 z-50 flex items-center justify-center">
@@ -45,12 +45,24 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
 
         {r.step === 1 ? (
           <>
-            {/* 헤더: 대화상대 선택(좌) / X(우) — 확인은 하단 버튼으로 */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
-              <h2 className="text-heading-md font-bold text-gray-900">대화상대 선택</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
-                <IconCloseStroke width={20} height={20} />
-              </button>
+            {/* 헤더: X(좌) / 대화상대 선택(중앙) / {N} 확인(우 텍스트 버튼) — RN CreateExternalRoomScreen·사내 다이얼로그와 동일 패턴 */}
+            <div className="relative h-[52px] shrink-0 border-b border-gray-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+                <h2 className="truncate text-heading-md font-medium text-gray-900">대화상대 선택</h2>
+              </div>
+              <div className="flex h-full items-center justify-between px-4">
+                <button onClick={r.close} aria-label="닫기" className="flex h-8 w-8 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+                  <IconCloseStroke width={20} height={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={r.handleStep1Confirm}
+                  disabled={!r.canConfirmStep1 || r.isChecking}
+                  className="px-1 text-heading-sm font-medium text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 disabled:text-text-tertiary"
+                >
+                  {r.isChecking ? '확인 중...' : `${r.count > 0 ? `${r.count} ` : ''}확인`}
+                </button>
+              </div>
             </div>
 
             {/* 협력멤버 / 사내멤버 탭 칩 */}
@@ -101,7 +113,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
               ) : !r.hasAnyMember ? (
                 <EmptyState message={emptyMessage} className="py-10" />
               ) : noSearchResult ? (
-                <div className="py-8 text-center text-sub-sm text-text-tertiary">검색 결과가 없어요.</div>
+                <EmptyState variant="search" message="검색 결과가 없어요." className="py-10" />
               ) : (
                 <>
                   {r.pinnedSection.length > 0 && (
@@ -136,30 +148,30 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                 </>
               )}
             </div>
-
-            {/* 하단 확인 버튼 */}
-            <div className="shrink-0 border-t border-gray-100 p-4">
-              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep1 || r.isChecking} onClick={r.handleStep1Confirm}>
-                {r.isChecking ? '확인 중...' : `${r.count > 0 ? `${r.count} ` : ''}확인`}
-              </Button>
-            </div>
           </>
         ) : (
           <>
-            {/* 헤더: ←(좌) / 채팅방 정보 설정 / X(우) — 확인은 하단 버튼으로 */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3.5 pt-1">
-              <button onClick={r.goBack} aria-label="뒤로" className="text-gray-700 hover:text-gray-900">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <h2 className="text-heading-md font-bold text-gray-900">채팅방 정보 설정</h2>
-              <button onClick={r.close} aria-label="닫기" className="text-gray-900">
-                <IconCloseStroke width={20} height={20} />
-              </button>
+            {/* 헤더: X(좌 — Step1 복귀) / 채팅방 정보 설정(중앙) / 확인(우) — RN Info 화면·사내 Step2와 동일 패턴 */}
+            <div className="relative h-[52px] shrink-0 border-b border-gray-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+                <h2 className="truncate text-heading-md font-medium text-gray-900">채팅방 정보 설정</h2>
+              </div>
+              <div className="flex h-full items-center justify-between px-4">
+                <button onClick={r.goBack} aria-label="뒤로" className="flex h-8 w-8 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
+                  <IconCloseStroke width={20} height={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={r.handleStep2Confirm}
+                  disabled={!r.canConfirmStep2}
+                  className="px-1 text-heading-sm font-medium text-gray-900 transition-opacity hover:opacity-70 active:opacity-60 disabled:text-text-tertiary"
+                >
+                  확인
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-1 flex-col items-center gap-3.5 overflow-y-auto px-4 pt-5">
+            <div className="flex flex-1 flex-col items-center gap-3.5 overflow-y-auto px-4 pb-6 pt-5">
               {/* 참여자 아바타 — 최대 4명, 1~4명 조합 레이아웃 (RN GroupProfileAvatar 패리티) */}
               <GroupProfileAvatar
                 size="lg"
@@ -187,13 +199,6 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
                   채팅시작 전, 설정한 채팅방 이름은 모든 대화상대에게 동일하게 적용돼요.
                 </p>
               </div>
-            </div>
-
-            {/* 하단 확인 버튼 */}
-            <div className="shrink-0 border-t border-gray-100 p-4">
-              <Button variant="primary" size="lg" fullWidth disabled={!r.canConfirmStep2} onClick={r.handleStep2Confirm}>
-                확인
-              </Button>
             </div>
           </>
         )}

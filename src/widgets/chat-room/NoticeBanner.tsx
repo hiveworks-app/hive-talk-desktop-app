@@ -21,6 +21,7 @@ import type { ParticipantItemsType } from '@/shared/types/chatRoom';
 import { WebSocketChannelTypes } from '@/shared/types/websocket';
 import { IconPlay } from '@/shared/ui/icons';
 import { IconNoticeDefault, IconNoticeNew } from '@assets/icons';
+import { renderTextWithLinks } from './MessageContent';
 import { useNoticeReadStore } from '@/store/chat/noticeReadStore';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
@@ -55,7 +56,9 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
   const { mutate: deleteNotice } = useDeleteNoticeMutation(roomId, channelType);
   const { mutate: updateDisplay } = useUpdateNoticeDisplayMutation(roomId, channelType);
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  // 펼침 상태는 noticeId에 귀속 — 새 공지로 교체되면 자동으로 접힌다 (RN expandedNoticeId 패리티)
+  const [expandedNoticeId, setExpandedNoticeId] = useState<number | null>(null);
+  const isExpanded = notice ? expandedNoticeId === notice.noticeId : false;
   const [detailOpen, setDetailOpen] = useState(false);
 
   // 공지 읽음 dot — 미확인 공지는 빨간 dot 아이콘, 상세 열람 시 읽음 처리 (RN 패리티)
@@ -83,6 +86,7 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
   const imageNotice = !!notice && isImageNotice(notice);
   const mediaNotice = !!notice && isMediaNotice(notice);
   const fileNotice = !!notice && isFileNotice(notice);
+  const textNotice = !!notice && isTextNotice(notice);
   const { data: imageUrl } = usePresignedUrl(imageNotice && notice ? notice.payload.path : null);
   const { data: videoThumbUrl } = usePresignedUrl(
     mediaNotice && notice ? (notice.payload.meta?.thumbnail ?? null) : null,
@@ -196,12 +200,15 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
             className="flex min-w-0 flex-1 items-start gap-1 text-left"
           >
             <NoticeIcon width={24} height={24} className="shrink-0" />
-            <span className="line-clamp-2 flex-1 text-sub font-medium text-gray-900">{previewText}</span>
+            {/* min-h-6(아이콘 높이) + 세로 중앙 — 1줄이면 아이콘과 수직 중앙, 2줄이면 상단 정렬 (RN 패리티) */}
+            <span className="flex min-h-6 min-w-0 flex-1 flex-col justify-center">
+              <span className="line-clamp-2 text-sub font-medium text-gray-900">{textNotice ? renderTextWithLinks(previewText) : previewText}</span>
+            </span>
           </button>
           <button
-            onClick={() => setIsExpanded(true)}
+            onClick={() => setExpandedNoticeId(notice.noticeId)}
             aria-label="공지 펼치기"
-            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
+            className="flex h-6 shrink-0 items-center justify-center text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
           >
             <ChevronIcon />
           </button>
@@ -222,17 +229,17 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
             className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
           >
             <NoticeIcon width={24} height={24} className="shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="line-clamp-2 text-sub font-medium text-gray-900">{previewText}</span>
+            <span className="flex min-h-6 min-w-0 flex-1 flex-col justify-center">
+              <span className="line-clamp-3 text-sub font-medium text-gray-900">{textNotice ? renderTextWithLinks(previewText) : previewText}</span>
               {!imageNotice && !mediaNotice && !!creatorName && (
                 <span className="mt-1 block text-sub-sm text-gray-600">{creatorName}</span>
               )}
             </span>
           </button>
           <button
-            onClick={() => setIsExpanded(false)}
+            onClick={() => setExpandedNoticeId(null)}
             aria-label="공지 접기"
-            className="shrink-0 text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
+            className="flex h-6 shrink-0 items-center justify-center text-gray-600 transition-opacity hover:opacity-70 active:opacity-60"
           >
             <ChevronIcon up />
           </button>
@@ -240,16 +247,19 @@ function NoticeBannerComponent({ roomId, channelType }: NoticeBannerProps) {
 
         {/* 이미지/영상 공지: 썸네일 (탭 시 상세) */}
         {imageNotice && imageUrl && (
-          <button onClick={openDetail} className="block w-full">
-            <img src={imageUrl} alt="공지 이미지" className="max-h-40 w-full rounded-lg object-cover" />
+          <button onClick={openDetail} className="block w-full px-2.5">
+            {/* RN 패리티 — h-148 고정 · rounded-xl · black/10 플레이스홀더 박스 */}
+            <span className="block h-[148px] w-full overflow-hidden rounded-xl bg-black/10">
+              <img src={imageUrl} alt="공지 이미지" className="h-full w-full object-cover" />
+            </span>
             {!!creatorName && <span className="mt-1 block text-left text-sub-sm text-gray-600">{creatorName}</span>}
           </button>
         )}
         {mediaNotice && (
-          <button onClick={openDetail} className="block w-full text-left">
-            <span className="relative block">
+          <button onClick={openDetail} className="block w-full px-2.5 text-left">
+            <span className="relative block h-[148px] w-full overflow-hidden rounded-xl bg-black/10">
               {videoThumbUrl && (
-                <img src={videoThumbUrl} alt="공지 동영상" className="max-h-40 w-full rounded-lg object-cover" />
+                <img src={videoThumbUrl} alt="공지 동영상" className="h-full w-full object-cover" />
               )}
               <span className="absolute inset-0 flex items-center justify-center">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">

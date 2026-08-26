@@ -77,14 +77,10 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
       <div className="flex flex-1 flex-col px-4">
         <div className="flex-1 space-y-[30px] pt-[30px]">
           <div className="space-y-2">
-            <h2 className="text-heading-lg font-semibold text-text-primary">
-              새 비밀번호 설정
+            {/* RN ResetPasswordScreen 헤드라인 정본 */}
+            <h2 className="whitespace-pre-line text-heading-lg font-semibold text-text-primary">
+              {'안전한 서비스 이용을 위해\n새 비밀번호를 설정해주세요.'}
             </h2>
-            <p className="text-sub text-text-tertiary">
-              본인인증이 완료되었습니다.
-              <br />
-              새로운 비밀번호를 입력해주세요.
-            </p>
           </div>
 
           {/* 규칙 위반 시 인라인 에러 + 빨강 보더 (RN getPasswordError 패리티) */}
@@ -133,7 +129,7 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
             onClick={handleResetPassword}
             disabled={!canResetPassword}
           >
-            {isResetting ? '변경 중...' : '비밀번호 변경'}
+            {isResetting ? '변경 중...' : '새 비밀번호로 변경'}
           </Button>
         </div>
       </div>

@@ -18,6 +18,7 @@ import { useWebSocketMessageBuilder } from '@/shared/websocket/useWebSocketMessa
 import { useDraftStore } from '@/store/chat/draftStore';
 import { useFailedMessagesStore } from '@/store/chat/failedMessagesStore';
 import { useUIStore } from '@/store/uiStore';
+import { setLastCompanyChatChip } from '@/widgets/chat-room-list/ChatRoomListSidebar';
 
 /**
  * 채팅방 목록 개별 나가기 (RN SwipeableChatListItem onLeave 대응 — 데스크톱은 hover 액션).
@@ -63,9 +64,17 @@ export function useLeaveRoom() {
         prev?.filter(r => r.roomModel.roomId !== roomId) ?? [],
       );
 
-      // 열려 있던 방이면 목록으로 이탈
+      // 그 방을 띄운 팝업 창 정리 — EXIT ack relay에 의존하지 않는 명시적 닫기 (Electron 아니면 no-op)
+      (window as unknown as { electronAPI?: { closeChatWindow?: (id: string) => void } })
+        .electronAPI?.closeChatWindow?.(roomId);
+
+      // 열려 있던 방이면 목록으로 이탈 — 복귀 칩을 방 종류에 맞춘다 (RN 패리티:
+      // GM 방을 나갔는데 '1:1 채팅' 칩이 유지된 화면으로 복귀하는 것 방지)
       const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
       if (openRoomId === roomId) {
+        if (channelType !== WS_CHANNEL_TYPE.EXTERNAL_MESSAGE) {
+          setLastCompanyChatChip(channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? 'dm' : 'gm');
+        }
         router.push(channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat');
       }
 

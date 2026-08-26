@@ -37,6 +37,8 @@ export function MemberSearchOverlay({ onClose }: MemberSearchOverlayProps) {
   const isOrgMember = user?.userType === USER_TYPE.ORG_MEMBER;
 
   const inputRef = useRef<HTMLInputElement>(null);
+  // 칩 전환 시 결과 리스트 최상단으로 (RN scrollToOffset(0) 패리티)
+  const resultListRef = useRef<HTMLDivElement>(null);
   const [displayValue, setDisplayValue] = useState('');
   const [filterValue, setFilterValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -156,9 +158,9 @@ export function MemberSearchOverlay({ onClose }: MemberSearchOverlayProps) {
         <div className="mt-3.5 flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-surface pt-3.5 shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
           {isOrgMember && (
             <div className="flex items-center gap-1.5 px-4 pb-3.5">
-              <Chip label="전체" active={activeChip === 'all'} onClick={() => setActiveChip('all')} />
-              <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => setActiveChip('company')} />
-              <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => setActiveChip('external')} />
+              <Chip label="전체" active={activeChip === 'all'} onClick={() => { setActiveChip('all'); resultListRef.current?.scrollTo({ top: 0 }); }} />
+              <Chip label="사내멤버" active={activeChip === 'company'} onClick={() => { setActiveChip('company'); resultListRef.current?.scrollTo({ top: 0 }); }} />
+              <Chip label="협력멤버" active={activeChip === 'external'} onClick={() => { setActiveChip('external'); resultListRef.current?.scrollTo({ top: 0 }); }} />
             </div>
           )}
 
@@ -169,7 +171,7 @@ export function MemberSearchOverlay({ onClose }: MemberSearchOverlayProps) {
           {displayMembers.length === 0 ? (
             <EmptyState variant="search" message="찾으시는 멤버가 없어요." className="flex-1" />
           ) : (
-            <div className="scrollbar-thin flex-1 overflow-y-auto">
+            <div ref={resultListRef} className="scrollbar-thin flex-1 overflow-y-auto">
               {/* 검색 결과 행은 우클릭 메뉴 미지원 (사용자 결정 — 클릭=프로필만) */}
               {displayMembers.map(item => (
                 <MemberListItem

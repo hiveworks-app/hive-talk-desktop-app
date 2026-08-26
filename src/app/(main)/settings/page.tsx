@@ -128,8 +128,11 @@ export default function SettingsPage() {
 
       {/* 콘텐츠 패널: 둥근 흰 영역 (멤버목록·채팅 패턴) */}
       <div className="scrollbar-thin flex-1 overflow-y-auto rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
-        {/* 프로필 카드 */}
-        <div className="flex items-center gap-3.5 px-4 py-3.5">
+        {/* 프로필 카드 — 행 전체 클릭으로도 내 프로필 진입 (RN 프로필 행 Pressable 패리티) */}
+        <div
+          onClick={() => setShowProfile(true)}
+          className="flex cursor-pointer items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-gray-50"
+        >
           <ProfileCircle name={user?.name ?? ''} size="lg" storageKey={user?.profileUrl} />
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-body font-semibold text-text-primary">
@@ -140,7 +143,10 @@ export default function SettingsPage() {
             )}
           </div>
           <button
-            onClick={() => setShowProfile(true)}
+            onClick={e => {
+              e.stopPropagation();
+              setShowProfile(true);
+            }}
             className="shrink-0 rounded-full border border-outline bg-surface px-2.5 py-1.5 text-sub-sm text-text-primary transition-colors hover:bg-surface-pressed"
           >
             프로필 관리

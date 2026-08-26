@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AccountSuspendedDialog } from "@/shared/ui/AccountSuspendedDialog";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { consumePendingSuspendedNotice, type PendingSuspendedNotice } from "@/shared/utils/pendingSuspendedNotice";
@@ -45,6 +46,12 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 클라이언트 전용 1회 동기화 (hydration 불일치 방지 위해 effect 사용)
     setPendingNotice(consumePendingSuspendedNotice());
   }, []);
+
+  // 이미 로그인 상태로 /login 진입 시 빈 화면으로 남지 않게 메인으로 리다이렉트 (RN 패리티)
+  const router = useRouter();
+  useEffect(() => {
+    if (accessToken && !isProcessing) router.replace('/');
+  }, [accessToken, isProcessing, router]);
 
   if (accessToken && !isProcessing) return null;
 

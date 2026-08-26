@@ -7,6 +7,8 @@ import { useFileDownload } from '@/features/chat-room-side-panel/useFileDownload
 import { cn } from '@/shared/lib/cn';
 import { IconDownload, IconPlay } from '@/shared/ui/icons';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
+import { PresignedImage } from '@/shared/ui/PresignedImage';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { Spinner } from '@/shared/ui/Spinner';
 import type { MediaListType } from '@/shared/types/media';
 import type { FileSenderItem } from '@/features/chat-room-side-panel/type';
@@ -100,10 +102,6 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
     return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
   }
 
-  if (allMedia.length === 0 && !isFilterMode) {
-    return <div className="px-4 py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없어요.</div>;
-  }
-
   return (
     <div className="flex h-full flex-col">
       {/* 보낸사람 검색 줄 (RN 검색 모드 패리티 — 드롭다운 + 칩 단일 선택) */}
@@ -148,7 +146,12 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
 
       <div className="flex-1 py-2">
         {bundled.length === 0 ? (
-          <div className="py-8 text-center text-sub-sm text-text-tertiary">사진/동영상이 없어요.</div>
+          /* RN SidePanelSelectItemList 패리티 — EmptyContainer + 검색 중 '찾는 ' 접두 */
+          <EmptyState
+            variant={isFilterMode ? 'search' : 'sad'}
+            message={`${isFilterMode ? '찾는 ' : ''}사진/동영상이 없어요.`}
+            className="py-10"
+          />
         ) : (
           /* RN 패리티 — 날짜 헤더(px-4) 아래 full-width 그리드 */
           grouped.map(group => (
@@ -162,10 +165,9 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
                   const isBlocked = !!media.senderId && isBlockedUser(String(media.senderId));
                   const isVideo = media.messageContentType === WS_MESSAGE_CONTENT_TYPE.MEDIA;
                   const thumb = (
-                    <img
-                      src={media.thumbnailPresignedUrl || media.presignedUrl || media.path}
-                      alt=""
-                      loading="lazy"
+                    <PresignedImage
+                      storageKey={media.thumbnailPath || media.path}
+                      fallbackUrl={media.thumbnailPresignedUrl || media.presignedUrl}
                       className="h-full w-full object-cover"
                     />
                   );

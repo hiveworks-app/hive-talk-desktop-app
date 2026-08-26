@@ -31,8 +31,14 @@ import {
   isBroadcastCompanyMemberRemoved,
   isInitCompanyMemberRemoved,
   isInitProfileUpdated,
+  isReportedMessageBroadcast,
+  isReportHiddenBroadcast,
   parseSocketResponseType,
+  WS_MESSAGE_CONTENT_TYPE,
 } from '@/shared/types/websocket';
+import { updateChatRoomListWithReport } from '@/features/chat-room-list/updater';
+import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { setPendingDismissedToast } from '@/shared/utils/pendingDismissedToast';
 import { handleForceLogout } from '@/shared/api/refreshAccessToken';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
@@ -72,6 +78,11 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
     return;
   }
 
+  // 진단(2026-08-26 읽음 미갱신 추적) — 전체 수신 프레임 타입 로그, 원인 확정 후 제거.
+  // 신규 방에서 타 계정 READ가 "다른 모양으로 오는지" vs "아예 안 오는지"를 판별한다.
+  const diagMsg = (envelope as { response?: { message?: unknown } }).response?.message;
+  console.info('[WS][RX]', envelope.socketResponseType, typeof diagMsg === 'string' && diagMsg ? `— ${diagMsg}` : '');
+
   let globalChannelType: WebSocketChannelTypes | undefined;
 
   if (isBroadcast(envelope)) {
@@ -97,8 +108,9 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   if (isBroadcastMemberInvite(envelope)) {
     const payload = envelope.response.payload;
     if (payload.result === 'CANCELLED') {
+      // 열린 수락/거절 컨펌을 닫고 만료 안내는 모달로 (정책 member-invite.md "알럿 표시" — 스낵바 강도 부족, RN 패리티)
       useMemberInviteStore.getState().setPendingInvite(null);
-      useUIStore.getState().showSnackbar({ message: '만료된 초대입니다. 소속 회사 관리자에게 문의해 주세요.', state: 'error' });
+      useMemberInviteStore.getState().requestExpiredNotice();
     } else {
       useMemberInviteStore.getState().setPendingInvite(payload);
     }
@@ -188,6 +200,8 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   }
 
   if (isReadMessage(envelope)) {
+    // 진단(2026-08-25 읽음 미갱신 추적) — 수신 계층 도달 확인용, 원인 확정 후 제거
+    console.info('[WS][READ] 브로드캐스트 수신:', (envelope.response.payload as { items?: unknown[] })?.items?.length ?? 0, '건');
     handleReadMessage(envelope, globalChannelType, deps);
     return;
   }
@@ -223,6 +237,23 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
   if (isExitMessageRoomBroadcast(envelope)) {
     handleExitRoom(envelope, deps);
     return;
+  }
+
+  // 신고 마스킹 — 목록 캐시 미리보기 즉시 갱신 (RN 패리티). REPORTED엔 channelType이 없어
+  // 3개 목록 전부에 적용(roomId 일치 방만 변경). 방 내부 반영은 아래 room listener가 담당하므로
+  // return 없이 통과시킨다.
+  if (isReportedMessageBroadcast(envelope) || isReportHiddenBroadcast(envelope)) {
+    const { roomId, messageId, content } = envelope.response.payload;
+    const maskType = isReportedMessageBroadcast(envelope)
+      ? WS_MESSAGE_CONTENT_TYPE.REPORTED_MASK
+      : WS_MESSAGE_CONTENT_TYPE.SYSTEM_REPORTED;
+    if (roomId && messageId) {
+      for (const key of [DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY]) {
+        deps.queryClient.setQueryData<GetChatRoomListItemType[]>(key, prev =>
+          prev ? updateChatRoomListWithReport(prev, roomId, messageId, content ?? '', maskType) : prev,
+        );
+      }
+    }
   }
 
   // 기타 메시지

@@ -33,11 +33,15 @@ const initState = {
   currentSearchIndex: 0,
   scrollToBottomTrigger: 0,
   pendingRemoveTagMessageId: null as string | null,
+  // 방 화면 실제 마운트 여부 — currentRoomId는 목록 복귀 후에도 남으므로(재입장 캐시 복원용)
+  // "지금 방을 보고 있다" 판정에는 이 플래그를 함께 써야 한다 (목록 unread 클램프 오작동 방지)
+  isRoomViewActive: false,
 };
 
 export const useChatRoomRuntimeStore = create<ChatRoomRuntimeTypes>((set, get) => ({
   ...initState,
   setRoomId: roomId => set({ currentRoomId: roomId }),
+  setRoomViewActive: active => set({ isRoomViewActive: active }),
   setMessages: updater => set(state => ({ messages: updater(state.messages) })),
   replaceMessages: next => set({ messages: next }),
   deleteMessageById: messageId =>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { isOffline } from '@/shared/utils/offlineGuard';
@@ -38,6 +38,19 @@ interface ChatRoomManageOverlayProps {
 export function ChatRoomManageOverlay({ open, onClose, rooms, onLeave, leaveNotice, resolveLeaveNotice }: ChatRoomManageOverlayProps) {
   useDimmed(open);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 실시간으로 목록에서 사라진 방(다른 기기 나감 등)의 선택 제거 — 선택 수 과다 표기 방지 (RN 패리티).
+  // setState는 setTimeout(0)으로 이연 (react-hooks/set-state-in-effect — 코드베이스 공통 패턴)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSelectedIds(prev => {
+        const valid = new Set(rooms.map(r => r.roomId));
+        const next = new Set([...prev].filter(id => valid.has(id)));
+        return next.size === prev.size ? prev : next;
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [rooms]);
   const [isLeaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   if (!open) return null;

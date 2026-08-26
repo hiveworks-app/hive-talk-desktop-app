@@ -63,7 +63,7 @@ function copyPhoneNumber(phone: string) {
  * 텍스트 내 URL/전화번호/이메일을 자동 링크로, 나머지는 일반 텍스트로 렌더한다.
  * (RN parseTextWithLinks 토크나이저 공유 — 국내 번호체계 화이트리스트 + 이메일)
  */
-function renderTextWithLinks(text: string, keyword: string | null = null): ReactNode {
+export function renderTextWithLinks(text: string, keyword: string | null = null): ReactNode {
   if (!text) return text;
   const tokens = parseTextWithLinks(text);
   if (tokens.length === 1 && tokens[0].type === 'text') {
@@ -192,11 +192,11 @@ export function MessageContent({ message, onOpenMedia, onExpandFullText }: Messa
     );
   }
 
-  // 장문 접힘 — 500자 또는 15줄 초과 시 슬라이스 + [전체보기] (RN bubbleTextLimits 패리티)
+  // 장문 접힘 — 500자 이상 단일 조건 (RN MeBubble/UserBubble 패리티: >=500, 15줄은 접힘 시
+  // 표시 상한일 뿐 트리거가 아니다. 줄수 트리거를 걸면 200자 30줄 메시지가 오접힘된다)
   const text = message.text ?? '';
   const textLines = text.split('\n');
-  const isTruncated =
-    text.length > BUBBLE_TEXT_TRUNCATE_CHARS || textLines.length > BUBBLE_TEXT_TRUNCATE_LINES;
+  const isTruncated = text.length >= BUBBLE_TEXT_TRUNCATE_CHARS;
   if (isTruncated) {
     const lineLimited = textLines.slice(0, BUBBLE_TEXT_TRUNCATE_LINES).join('\n');
     const sliced = lineLimited.slice(0, BUBBLE_TEXT_DISPLAY_SLICE_CHARS);
