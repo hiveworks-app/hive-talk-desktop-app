@@ -19,9 +19,13 @@ export const useChatFileUpload = () => {
       }
 
       const fileName = file.name;
+      const contentLength = file.size;
+      if (!contentLength || contentLength <= 0) {
+        throw new Error('파일 크기를 확인할 수 없습니다.');
+      }
 
-      // 1) Presigned URL 요청
-      const res = await uploadApi({ fileName });
+      // 1) Presigned URL 요청 (contentLength 필수 QueryString — RN 패리티)
+      const res = await uploadApi({ fileName, contentLength });
       const payload = res.payload;
       const { putPresignedUrl } = payload;
 

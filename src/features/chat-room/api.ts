@@ -13,10 +13,11 @@ export const apiGetDMLastMessage = (roomId: string) =>
   });
 
 export const apiDMFileUpload = (data: ChatFileUploadRequestProps) =>
-  request<ChatFileUploadResponsePayload>(`/app/dm/file-upload/${data.fileName}`, {
-    method: 'POST',
-    body: data,
-  });
+  request<ChatFileUploadResponsePayload>(
+    // contentLength 쿼리 필수 — 누락 시 서버 400 "유효하지 않은 데이터" (RN 패리티)
+    `/app/dm/file-upload/${data.fileName}?contentLength=${data.contentLength}`,
+    { method: 'POST' },
+  );
 
 /* ==================== GM ==================== */
 
@@ -26,10 +27,11 @@ export const apiGetGMLastMessage = (roomId: string) =>
   });
 
 export const apiGMFileUpload = (data: ChatFileUploadRequestProps) =>
-  request<ChatFileUploadResponsePayload>(`/app/gm/file-upload/${data.fileName}`, {
-    method: 'POST',
-    body: data,
-  });
+  request<ChatFileUploadResponsePayload>(
+    // contentLength 쿼리 필수 — 누락 시 서버 400 "유효하지 않은 데이터" (RN 패리티)
+    `/app/gm/file-upload/${data.fileName}?contentLength=${data.contentLength}`,
+    { method: 'POST' },
+  );
 
 /** GM 채팅방 제목 변경 (1~50자) */
 export const apiUpdateGMRoomTitle = (roomId: string, title: string) =>
@@ -43,10 +45,11 @@ export const apiGetEMLastMessage = (roomId: string) =>
   });
 
 export const apiEMFileUpload = (data: ChatFileUploadRequestProps) =>
-  request<ChatFileUploadResponsePayload>(`/app/em/file-upload/${data.fileName}`, {
-    method: 'POST',
-    body: data,
-  });
+  request<ChatFileUploadResponsePayload>(
+    // contentLength 쿼리 필수 — 누락 시 서버 400 "유효하지 않은 데이터" (RN 패리티)
+    `/app/em/file-upload/${data.fileName}?contentLength=${data.contentLength}`,
+    { method: 'POST' },
+  );
 
 /** EM(협력) 채팅방 제목 변경 (1~50자) */
 export const apiUpdateEMRoomTitle = (roomId: string, title: string) =>

@@ -54,14 +54,35 @@ export function ChatInput({ onSend, onFilesSelected, onEditTag }: ChatInputProps
 
   // DOM 레이아웃 동기화 — 입력값이 바뀔 때마다 내용 높이를 다시 재 1~8줄 사이로 맞춘다.
   // 타이핑·드래프트 복원·방 전환·전송 후 비우기가 전부 text 변경이라 이 하나로 수렴한다.
-  useIsomorphicLayoutEffect(() => {
+  const resizeToContent = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
+    // 빈 값은 측정 없이 최소 높이 고정 — 마운트 직후 폭이 확정되기 전엔 placeholder가
+    // 여러 줄로 감기며 scrollHeight가 부풀어(실측 116px) 초기 높이가 커진다 (2026-08-27 QA)
+    if (el.value === '') {
+      el.style.height = `${INPUT_MIN_HEIGHT}px`;
+      el.style.overflowY = 'hidden';
+      return;
+    }
     // 줄이 줄어든 경우에도 다시 측정되도록 먼저 높이를 해제한다 (scrollHeight는 줄어들지 않음)
     el.style.height = 'auto';
     el.style.height = `${Math.min(Math.max(el.scrollHeight, INPUT_MIN_HEIGHT), INPUT_MAX_HEIGHT)}px`;
     el.style.overflowY = el.scrollHeight > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
-  }, [text]);
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
+    resizeToContent();
+  }, [text, resizeToContent]);
+
+  // 폭 변화(마운트 직후 레이아웃 확정·창 리사이즈·패널 여닫이) 시 재측정 — 줄바꿈 수가 달라진다.
+  // 드래프트가 있는 방을 좁은 폭 시점에 열어도 폭 확정 후 올바른 높이로 수렴한다.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => resizeToContent());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [resizeToContent]);
 
   // 10,000자 초과 시 잘라내고 안내 (네이티브 maxLength 대신 명시적 피드백 — RN 패리티)
   const handleChange = useCallback(

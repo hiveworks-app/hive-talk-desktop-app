@@ -5,14 +5,19 @@ import { useUploadProgressStore } from '@/store/chat/uploadProgressStore';
 interface UploadDimOverlayProps {
   fileId?: string;
   dimmed?: boolean;
+  /** 실패 상태 — dim만 유지하고 스피너·진행률·취소 X는 숨긴다 (재전송/삭제 버튼과 중복 표시 방지) */
+  failed?: boolean;
   /** 업로드 중 취소 (전송대기중 X — 정책 chat-room.md, RN 패리티). 없으면 X 미표시. */
   onCancel?: () => void;
 }
 
-export function UploadDimOverlay({ fileId, dimmed, onCancel }: UploadDimOverlayProps) {
+export function UploadDimOverlay({ fileId, dimmed, failed, onCancel }: UploadDimOverlayProps) {
   const progress = useUploadProgressStore(s => (fileId ? s.byFileId[fileId] : undefined));
 
   if (!dimmed) return null;
+
+  // 실패한 버블은 "전송 중" 표식(스피너/카운터)을 함께 그리면 안 된다 (2026-08-27 QA)
+  if (failed) return <div className="absolute inset-0 rounded-lg bg-black/30" />;
 
   const label = progress && progress.total > 0 ? `${progress.done}/${progress.total}` : undefined;
 

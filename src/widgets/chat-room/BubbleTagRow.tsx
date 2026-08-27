@@ -32,7 +32,9 @@ function BubbleTagRowComponent({ tags, onClick, className }: BubbleTagRowProps) 
         const SvgIcon = TAG_ICON_MAP[tag.title as TagName] ?? null;
         return (
           <span
-            key={tag.taggingId ?? `${tag.tagId}-${index}`}
+            // taggingId는 키로 못 쓴다 — 서버 PUB 에코가 -1 플레이스홀더를 실어와 전부 겹친다.
+            // RN도 `${title}${index}` 조합 키 사용 (BubbleTagRow 패리티)
+            key={`${tag.tagId}-${index}`}
             className="flex shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-[#FAFAFA]"
             style={{ width: CHIP_SIZE, height: CHIP_SIZE }}
           >

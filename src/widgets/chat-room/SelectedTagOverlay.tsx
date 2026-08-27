@@ -28,11 +28,12 @@ export function SelectedTagOverlay() {
     <div className="relative z-10 h-0">
       {/* px-3 = ChatInput 좌우 패딩 — 배지가 입력창 첫 글자에 맞춰 선다 */}
       <div className="absolute bottom-1 left-0 flex items-center gap-1 px-3">
-        {selectedTags.map(item => {
+        {selectedTags.map((item, index) => {
           const SvgIcon = TAG_ICON_MAP[item.title as TagName];
           return (
             <button
-              key={item.taggingId ?? item.tagId}
+              // taggingId는 서버가 -1 플레이스홀더를 줄 수 있어 키로 부적합 (BubbleTagRow와 동일 원칙)
+              key={`${item.tagId}-${index}`}
               type="button"
               onClick={() => toggleTag(item)}
               title={`${item.title} 태그 해제`}

@@ -28,6 +28,7 @@ function attachmentToEntry(media: MediaListType): ViewerEntry {
     createdAt: media.createdAt,
     senderId: media.senderId,
     poster: media.thumbnailPresignedUrl,
+    bundleId: media.messageId,
     createdAtMs: Date.parse(media.createdAt) || 0,
   };
 }
@@ -62,6 +63,7 @@ export function useMediaViewer(messages: ChatMessageUI[], room?: MediaViewerRoom
           createdAt: msg.createdAt,
           senderId: msg.senderId,
           poster: file.meta?.thumbnailPresignedUrl,
+          bundleId: msg.id,
           createdAtMs: Date.parse(msg.createdAt) || 0,
         });
       }

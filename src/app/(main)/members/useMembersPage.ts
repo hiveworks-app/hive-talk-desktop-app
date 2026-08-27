@@ -82,13 +82,19 @@ export function useMembersPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // 초대장 도착 모달 '확인하기' → 멤버목록 진입 시 초대현황 자동 오픈 (1회 소비, RN 패리티)
+  // 초대장 도착 모달 '확인하기' → 초대현황 자동 오픈 (1회 소비, RN 패리티).
+  // 마운트 1회 소비가 아니라 요청 플래그에 반응해야 한다 — 이미 멤버목록에 떠 있는 상태에서
+  // 확인하기를 누르면 같은 경로 push라 리마운트가 없어 열리지 않던 결함 (2026-08-27 QA)
+  // 소비(consume)는 반드시 타이머 콜백 안에서 — effect 본문에서 소비하면 플래그 변화가
+  // 동일 effect를 재실행시켜 cleanup이 타이머를 죽인다 (StrictMode 이중 마운트에도 동일 원리)
+  const inviteStatusRequested = useMemberInviteStore(s => s.openInviteStatusRequested);
   useEffect(() => {
-    if (useMemberInviteStore.getState().consumeOpenInviteStatus()) {
-      const timer = setTimeout(() => setIsStatusOpen(true), 0);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    if (!inviteStatusRequested) return;
+    const timer = setTimeout(() => {
+      if (useMemberInviteStore.getState().consumeOpenInviteStatus()) setIsStatusOpen(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [inviteStatusRequested]);
 
   // 멤버목록 단일 소스: /app/users 가 사내·협력 멤버를 isExternal 로 함께 응답한다.
   // (/app/externals 는 초대 관리 전용이라 멤버목록 소스로 쓰지 않는다)
