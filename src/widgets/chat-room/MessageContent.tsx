@@ -144,6 +144,7 @@ export function MessageContent({ message, onOpenMedia, onExpandFullText }: Messa
           <UploadDimOverlay
             fileId={message.fileId}
             dimmed={message.dimmed}
+            failed={message.localStatus === 'failed'}
             onCancel={message.localStatus === 'uploading' ? () => cancelMediaUpload(message.id) : undefined}
           />
         </div>
@@ -185,6 +186,7 @@ export function MessageContent({ message, onOpenMedia, onExpandFullText }: Messa
           <UploadDimOverlay
             fileId={message.fileId}
             dimmed={message.dimmed}
+            failed={message.localStatus === 'failed'}
             onCancel={message.localStatus === 'uploading' ? () => cancelMediaUpload(message.id) : undefined}
           />
         )}

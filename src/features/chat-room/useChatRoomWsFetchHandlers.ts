@@ -32,8 +32,8 @@ export function useChatRoomWsFetchHandlers({
 
   const handleFetchBeforeHistory = useCallback(
     (payload: WebSocketPublishItem[], roomId: string) => {
-      // ⚠️ 서버가 빈 히스토리를 null로 내려줄 수 있음 → arraySpread null 크래시 방어 (RN useChatRoomController 패리티)
-      const reverse = [...(payload ?? [])].reverse();
+      // ⚠️ 서버가 빈 히스토리를 null로, 에러 응답을 비배열(객체/문자열)로 내려줄 수 있음 → 크래시 방어
+      const reverse = (Array.isArray(payload) ? [...payload] : []).reverse();
       // defensive: 서버가 비정상 envelope(message 누락)을 보낼 가능성 차단
       const filtered = reverse.filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
@@ -88,8 +88,8 @@ export function useChatRoomWsFetchHandlers({
 
   const handleFetchAfterHistory = useCallback(
     (payload: WebSocketPublishItem[], roomId: string) => {
-      // 빈 히스토리 null 방어 + 비정상 envelope(message 누락) 방어 (RN 패리티)
-      const filtered = (payload ?? []).filter(item => item?.message?.roomId === roomId);
+      // 빈 히스토리 null·에러 응답 비배열(객체/문자열) 방어 + 비정상 envelope(message 누락) 방어
+      const filtered = (Array.isArray(payload) ? payload : []).filter(item => item?.message?.roomId === roomId);
       const mapped = filtered.map(item => parseWsMessage({ item })).filter((m): m is Message => m !== null);
 
       // 불완전 참여자 스냅샷은 빈 배열 취급 → totalUserCount 폴백 (RN 가드 패리티)

@@ -85,7 +85,12 @@ export const useChatRoomController = () => {
     isReconnectFetchRef, lastMessage, builders,
     getLastLocalMessageId: () => {
       const { messages } = useChatRoomRuntimeStore.getState();
-      return messages[messages.length - 1]?.id;
+      // 앵커는 서버 메시지만 — 로컬(전송중/실패) uuidv7 id를 보내면 서버가
+      // "유효하지 않은 메시지 ID 형식" 에러를 반환한다 (VIEW-IN catch-up 앵커와 동일 규칙)
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (!messages[i].isLocal) return messages[i].id;
+      }
+      return undefined;
     },
   });
 
