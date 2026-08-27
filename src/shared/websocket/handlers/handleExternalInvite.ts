@@ -43,9 +43,16 @@ export function handleBroadcastExternalInvite(
   const { inviteId, user, result } = payload;
 
   if (result === 'PENDING') {
+    // 카운터는 목록 캐시에 실제로 추가됐을 때만 +1 — 중복 BROADCAST(재연결 리플레이 등)로
+    // 목록은 dedupe되는데 카운터만 부풀던 드리프트 방지 (취소 핸들러의 receivedHadEntry와 동일 패턴).
+    // 캐시 미로딩(prev 없음) 시엔 판단 불가 → 증가 허용, 이후 INIT 절대값이 보정한다.
+    let inserted = true;
     queryClient.setQueryData<ReceivedInviteItem[]>(RECEIVED_INVITES_KEY, prev => {
       if (!prev) return prev;
-      if (prev.some(item => String(item.userId) === String(user.userId))) return prev;
+      if (prev.some(item => String(item.userId) === String(user.userId))) {
+        inserted = false;
+        return prev;
+      }
       return [
         {
           inviteId: inviteId ?? String(user.userId),
@@ -58,8 +65,10 @@ export function handleBroadcastExternalInvite(
         ...prev,
       ];
     });
-    const store = useMemberInviteStore.getState();
-    store.setExternalReceivedCount(store.externalReceivedCount + 1);
+    if (inserted) {
+      const store = useMemberInviteStore.getState();
+      store.setExternalReceivedCount(store.externalReceivedCount + 1);
+    }
     // 포그라운드 안내는 인앱 모달(ExternalInviteArrivalNotice)이 전담 — 시스템 알림 이중 표시 금지 (RN 7/20 QA).
     // 창이 뒤에 있으면(비포커스) 시스템 알림으로 보강 — RN의 백그라운드 FCM 푸시 대응 (정책 external-invite.md)
     if (typeof document !== 'undefined' && !document.hasFocus() && !deps.suppressNotification) {
