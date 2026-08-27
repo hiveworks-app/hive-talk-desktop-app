@@ -500,8 +500,8 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               );
             })}
 
-            {/* 채팅방 나가기 */}
-            <div className="px-4 py-6">
+            {/* 채팅방 나가기 — 참여자 목록과의 구분선 포함 (RN 보관함+대화상대 섹션 border-b 패리티) */}
+            <div className="mt-3 border-t border-divider px-4 py-6">
               {/* RN SidePanelBottomMenu 패리티 — 솔리드 레드 버튼 */}
               <button
                 onClick={handleExitRoom}
