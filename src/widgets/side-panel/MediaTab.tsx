@@ -25,6 +25,8 @@ interface MediaTabProps {
   roomId: string;
   channelType: WebSocketChannelTypes;
   lastMessageId: string;
+  /** 현재 표시 중인 탭인지 — 탭 이탈 시 선택 모드 해제 (RN 탭 전환 리셋 패리티) */
+  active: boolean;
 }
 
 /** 저장 파일명 — 서버 저장 키(UUID)가 아니라 읽을 수 있는 이름으로 (카톡 PC 관례, 전송 시각 기준).
@@ -38,7 +40,7 @@ const mediaSaveName = (media: MediaListType) => {
   return `HiveTalk_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}${ext}`;
 };
 
-export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) {
+export function MediaTab({ roomId, channelType, lastMessageId, active }: MediaTabProps) {
   // 보낸사람 필터 — RN처럼 단일 선택(칩 1개), 서버(GET /app/chat/files)에서 처리. 없으면 base 캐시
   const [selectedSender, setSelectedSender] = useState<FileSenderItem | null>(null);
   const senderIds = selectedSender ? [String(selectedSender.userId)] : [];
@@ -63,6 +65,17 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
   const { download, downloadingId, downloadMany, bulkDownloading } = useFileDownload();
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 탭 이탈 시 선택 모드 해제 + 선택 초기화 — RN handleTypeChange의 setIsSelectMode(false) 패리티.
+  // 검색어·필터는 유지 (RN도 선택 상태만 리셋). 렌더 중 상태 보정 패턴 (ChatInput 방 전환과 동일)
+  const [prevActive, setPrevActive] = useState(active);
+  if (active !== prevActive) {
+    setPrevActive(active);
+    if (!active) {
+      setSelectMode(false);
+      setSelected(new Set());
+    }
+  }
 
   const allMedia: MediaListType[] = data?.pages.flatMap(p => p.items) ?? [];
   const totalItems = data?.pages[0]?.pagination.totalItems ?? 0;
@@ -144,7 +157,8 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
         </button>
       </div>
 
-      <div className="flex-1 py-2">
+      {/* 목록만 내부 스크롤 — 하단 다운로드 바가 콘텐츠 길이와 무관하게 패널 바닥에 붙는다 */}
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto py-2">
         {bundled.length === 0 ? (
           /* RN SidePanelSelectItemList 패리티 — EmptyContainer + 검색 중 '찾는 ' 접두 */
           <EmptyState
@@ -253,13 +267,14 @@ export function MediaTab({ roomId, channelType, lastMessageId }: MediaTabProps) 
 
       {/* 선택 모드 하단 일괄 다운로드 바 — 0개면 회색 비활성 (RN SidePanelSelectItemDownload 패리티) */}
       {selectMode && (
-        <div className="sticky bottom-0 border-t border-divider bg-background p-3">
+        <div className="shrink-0 border-t border-divider bg-background p-3">
           <button
             type="button"
             onClick={handleBulkDownload}
             disabled={bulkDownloading || selected.size === 0}
             className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-body font-medium text-white',
+              // rounded-xl — 사이드패널 '채팅방 나가기' 솔리드 버튼과 동일 스케일 (RN rounded-2xl은 h-56 모바일 기준)
+              'flex w-full items-center justify-center gap-2 rounded-xl py-3 text-body font-medium text-white',
               selected.size === 0 ? 'bg-gray-400' : 'bg-primary',
             )}
           >

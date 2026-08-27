@@ -24,11 +24,13 @@ interface FilesTabProps {
   roomId: string;
   channelType: WebSocketChannelTypes;
   lastMessageId: string;
+  /** 현재 표시 중인 탭인지 — 탭 이탈 시 선택 모드 해제 (RN 탭 전환 리셋 패리티) */
+  active: boolean;
 }
 
 const fileNameOf = (file: MediaListType) => file.path.split('/').pop() || '파일';
 
-export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) {
+export function FilesTab({ roomId, channelType, lastMessageId, active }: FilesTabProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   // 보낸사람 필터 — RN처럼 단일 선택(칩 1개). 칩과 키워드는 공존하지 않는다
@@ -66,6 +68,17 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
   const { download, downloadingId, downloadMany, bulkDownloading } = useFileDownload();
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 탭 이탈 시 선택 모드 해제 + 선택 초기화 — RN handleTypeChange의 setIsSelectMode(false) 패리티.
+  // 검색어·필터는 유지 (RN도 선택 상태만 리셋). 렌더 중 상태 보정 패턴 (ChatInput 방 전환과 동일)
+  const [prevActive, setPrevActive] = useState(active);
+  if (active !== prevActive) {
+    setPrevActive(active);
+    if (!active) {
+      setSelectMode(false);
+      setSelected(new Set());
+    }
+  }
 
   const allFiles: MediaListType[] = data?.pages.flatMap(p => p.items) ?? [];
   const q = effectiveFileName.toLowerCase(); // 파일명 하이라이트는 실제 필터 중일 때만
@@ -142,7 +155,8 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
         </button>
       </div>
 
-      <div className="flex-1 py-1">
+      {/* 목록만 내부 스크롤 — 하단 다운로드 바가 콘텐츠 길이와 무관하게 패널 바닥에 붙는다 */}
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto py-1">
         {filtered.length === 0 && (
           /* RN SidePanelSelectItemList 패리티 — EmptyContainer + 검색 중 '찾는 ' 접두 */
           <EmptyState
@@ -232,13 +246,14 @@ export function FilesTab({ roomId, channelType, lastMessageId }: FilesTabProps) 
 
       {/* 선택 모드 하단 일괄 다운로드 바 — 0개면 회색 비활성 (RN SidePanelSelectItemDownload 패리티) */}
       {selectMode && (
-        <div className="sticky bottom-0 border-t border-divider bg-background p-3">
+        <div className="shrink-0 border-t border-divider bg-background p-3">
           <button
             type="button"
             onClick={handleBulkDownload}
             disabled={bulkDownloading || selected.size === 0}
             className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-body font-medium text-white',
+              // rounded-xl — 사이드패널 '채팅방 나가기' 솔리드 버튼과 동일 스케일 (RN rounded-2xl은 h-56 모바일 기준)
+              'flex w-full items-center justify-center gap-2 rounded-xl py-3 text-body font-medium text-white',
               selected.size === 0 ? 'bg-gray-400' : 'bg-primary',
             )}
           >

@@ -515,7 +515,9 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
         ) : (
           // 보관함: 상단 pill로 사진/동영상 ↔ 파일 즉시 전환 (RN SidePanelSelectItemTitle 패리티).
           // 두 탭을 언마운트하지 않고 hidden 전환 — 각 탭의 검색어·선택 상태가 유지된다 (RN 유지 정책)
-          <div className="flex min-h-0 flex-1 flex-col">
+          // h-full 고정 — 스크롤을 탭 내부로 옮겨 일괄 다운로드 바가 콘텐츠 길이와 무관하게
+          // 패널 하단에 붙는다 (RN 화면 푸터 패리티, 2026-08-27 QA)
+          <div className="flex h-full flex-col">
             <div className="flex shrink-0 items-center gap-1.5 px-4 pb-1 pt-2">
               {([['media', '사진/동영상'], ['files', '파일']] as const).map(([key, label]) => (
                 <button
@@ -534,10 +536,10 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               ))}
             </div>
             <div className={view === 'media' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
+              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'media'} />
             </div>
             <div className={view === 'files' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} />
+              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'files'} />
             </div>
           </div>
         )}
