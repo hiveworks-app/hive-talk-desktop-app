@@ -1,8 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiGetStorage } from '@/features/storage/api';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
+import { chooseDownloadDirectory, downloadFileSilently } from '@/shared/utils/downloadFile';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
+import { isOffline } from '@/shared/utils/offlineGuard';
+import { useUIStore } from '@/store/uiStore';
 import type { MediaViewerItem } from './MediaViewer';
 
 const MIN_SCALE = 1;
@@ -16,6 +20,20 @@ interface ViewState {
 }
 
 const INITIAL_VIEW: ViewState = { scale: 1, tx: 0, ty: 0 };
+
+/** HiveTalk_Photo_2026-08-27-11-30-00 형식 — 단건 저장 파일명과 동일 규칙 */
+function buildDownloadBaseName(type: 'image' | 'video'): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  return `HiveTalk_${type === 'video' ? 'Video' : 'Photo'}_${ts}`;
+}
+
+function extractExt(item: MediaViewerItem): string {
+  const source = item.storageKey || item.url;
+  return ((source.split('/').pop()?.split('?')[0] || '').split('.').pop() || '')
+    || (item.type === 'video' ? 'mp4' : 'jpg');
+}
 
 export function useMediaViewerControls(
   items: MediaViewerItem[],
@@ -134,11 +152,7 @@ export function useMediaViewerControls(
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      const ext = ((item.storageKey || displayUrl).split('/').pop()?.split('?')[0] || '').split('.').pop() || (item.type === 'video' ? 'mp4' : 'jpg');
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-      a.download = `HiveTalk_${item.type === 'video' ? 'Video' : 'Photo'}_${ts}.${ext}`;
+      a.download = `${buildDownloadBaseName(item.type)}.${extractExt(item)}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -157,6 +171,52 @@ export function useMediaViewerControls(
     }
   }, [item?.storageKey, refetchUrl]);
 
+  // 묶음(같은 메시지) 항목들 — 2개 이상이면 다운로드 버튼이 '전체 저장/이 사진만' 메뉴가 된다 (RN 액션시트 패리티)
+  const bundleItems = item?.bundleId ? items.filter(i => i.bundleId === item.bundleId) : [];
+  const [isBundleDownloading, setIsBundleDownloading] = useState(false);
+
+  /** 묶음 전체 저장 — 사이드패널 일괄 다운로드와 동일 관례: 저장 폴더 선택 → 순차 저장 → 스낵바 요약 */
+  const handleDownloadBundle = useCallback(async () => {
+    if (isBundleDownloading || bundleItems.length < 2) return;
+    if (isOffline()) return;
+
+    // 데스크톱 관례 — 어디에 저장할지 먼저 묻는다 (취소하면 아무 것도 받지 않음)
+    const directory = await chooseDownloadDirectory();
+    if (directory === null) return; // 사용자 취소
+
+    setIsBundleDownloading(true);
+    const baseName = buildDownloadBaseName('image');
+    let failed = 0;
+    for (let i = 0; i < bundleItems.length; i++) {
+      const target = bundleItems[i];
+      try {
+        // 목록 presigned URL은 만료됐을 수 있다 — 키로 재발급 후 실패 시 목록 URL 폴백 (사이드패널과 동일)
+        let url = target.url;
+        if (target.storageKey) {
+          try {
+            url = (await apiGetStorage(target.storageKey)).payload.key;
+          } catch { /* 재발급 실패 — 목록 URL 폴백 */ }
+        }
+        if (!url) { failed++; continue; }
+        await downloadFileSilently(url, `${baseName}_${i + 1}.${extractExt(target)}`, directory);
+        await new Promise(resolve => setTimeout(resolve, 250));
+      } catch {
+        failed++;
+      }
+    }
+    setIsBundleDownloading(false);
+
+    const ok = bundleItems.length - failed;
+    const showSnackbar = useUIStore.getState().showSnackbar;
+    if (failed === 0) {
+      showSnackbar({ message: `사진 ${ok}장을 저장했어요.`, state: 'success' });
+    } else if (ok === 0) {
+      showSnackbar({ message: '다운로드에 실패했습니다.', state: 'error' });
+    } else {
+      showSnackbar({ message: `${ok}장 저장, ${failed}장 실패`, state: 'warning' });
+    }
+  }, [isBundleDownloading, bundleItems]);
+
   return {
     videoRef, contentRef,
     view, isLoading, setIsLoading, hasError, isFetchingUrl,
@@ -164,5 +224,6 @@ export function useMediaViewerControls(
     hasPrev, hasNext, isZoomed,
     goPrev, goNext,
     handleDoubleClick, handleMouseDown, handleDownload, handleMediaError,
+    bundleItems, isBundleDownloading, handleDownloadBundle,
   };
 }

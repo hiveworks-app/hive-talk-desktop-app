@@ -52,5 +52,6 @@ function toViewerItem(media: MediaListType): MediaViewerItem {
     createdAt: media.createdAt,
     senderId: media.senderId,
     poster: media.thumbnailPresignedUrl,
+    bundleId: media.messageId,
   };
 }

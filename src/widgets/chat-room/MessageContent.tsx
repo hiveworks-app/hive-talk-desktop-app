@@ -165,6 +165,7 @@ export function MessageContent({ message, onOpenMedia, onExpandFullText }: Messa
       url: file.presignedUrl || file.path,
       storageKey: file.path,
       author: message.name,
+      bundleId: message.id,
     }));
 
     return (

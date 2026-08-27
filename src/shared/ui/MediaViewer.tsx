@@ -1,5 +1,6 @@
 'use client';
 
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { cn as cnHeader } from '@/shared/lib/cn';
 import { formatDotDate } from '@/shared/utils/formatTimeUtils';
@@ -19,6 +20,8 @@ export interface MediaViewerItem {
   senderId?: string;
   /** 비디오 로드 전 보여줄 정지 이미지(썸네일). presigned 만료 허용. */
   poster?: string;
+  /** 같은 메시지(묶음)에 속한 항목끼리 공유하는 식별자 — 묶음 전체 저장 판정용 (RN 묶음 사진 패리티) */
+  bundleId?: string;
 }
 
 interface MediaViewerProps {
@@ -33,6 +36,14 @@ interface MediaViewerProps {
   showDownload?: boolean;
   /** 삭제 액션 — 내 프로필 사진 뷰어에서만 (RN ProfileImageViewerScreen [삭제] 대응) */
   onDelete?: () => void;
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
 }
 
 /** Outer shell: dimmed 관리 + visible 가드 */
@@ -50,6 +61,7 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
     hasPrev, hasNext, isZoomed,
     goPrev, goNext,
     handleDoubleClick, handleMouseDown, handleDownload, handleMediaError,
+    bundleItems, isBundleDownloading, handleDownloadBundle,
   } = useMediaViewerControls(items, currentIndex, onIndexChange, onClose);
 
   if (!item) return null;
@@ -97,11 +109,47 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
             </button>
           )}
           {showDownload && (
-            <button onClick={handleDownload} className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
+            bundleItems.length > 1 ? (
+              /* 묶음 사진 — 다운로드 버튼이 '전체 저장/이 사진만' 메뉴가 된다 (RN 액션시트의 데스크톱 번역) */
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    disabled={isBundleDownloading}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
+                  >
+                    {isBundleDownloading ? (
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white/90" />
+                    ) : (
+                      <DownloadIcon />
+                    )}
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={6}
+                    className="motion-menu z-[60] w-52 overflow-hidden rounded-xl bg-white py-1 shadow-[0px_2px_15px_rgba(0,0,0,0.15)] focus:outline-none"
+                  >
+                    <DropdownMenu.Item
+                      onSelect={() => void handleDownloadBundle()}
+                      className="flex h-[46px] cursor-pointer items-center border-b border-gray-200 p-3 text-body text-text-primary outline-none data-[highlighted]:bg-gray-200"
+                    >
+                      묶음 사진 전체 저장 ({bundleItems.length}장)
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={handleDownload}
+                      className="flex h-[46px] cursor-pointer items-center p-3 text-body text-text-primary outline-none data-[highlighted]:bg-gray-200"
+                    >
+                      이 사진만 저장
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            ) : (
+              <button onClick={handleDownload} className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
+                <DownloadIcon />
+              </button>
+            )
           )}
           {/* 내 프로필 사진 삭제 (RN ProfileImageViewerScreen [삭제] 패리티) */}
           {onDelete && (
