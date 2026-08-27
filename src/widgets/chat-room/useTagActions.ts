@@ -4,16 +4,21 @@ import { useCallback, useEffect } from 'react';
 import type { ChatMessageUI } from '@/shared/types/websocket';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAuthStore } from '@/store/auth/authStore';
+import { optimisticTagRemoveGuard } from '@/features/chat-room/optimisticTagRemoveGuard';
+import { isConfirmedTaggingId, pendingTagRemoveRegistry } from '@/features/chat-room/pendingTagRemoveRegistry';
 import { pendingTagUpdateRegistry } from '@/features/chat-room/pendingTagUpdateRegistry';
 import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 import { useSelectedTagStore, useTagStore } from '@/store/tag/tagStore';
+import { useUIStore } from '@/store/uiStore';
 
 interface UseTagActionsOptions {
   roomId: string;
   sendTextMessage: (content: string, tagList?: string[]) => void;
   addTagToMessage: (params: { messageId: string; tagIdList: string[] }) => void;
   removeTagFromMessage: (params: { messageId: string; taggingIdList: string[] }) => void;
+  /** 미확정 taggingId(-1) 해소용 재조회 — 해제 예약 후 호출해 확정값 도착을 앞당긴다 */
+  refreshMessageTags: (messageId: string) => void;
 }
 
 export function useTagActions({
@@ -21,6 +26,7 @@ export function useTagActions({
   sendTextMessage,
   addTagToMessage,
   removeTagFromMessage,
+  refreshMessageTags,
 }: UseTagActionsOptions) {
   const { isTagOpen, tagActionType, selectedMessage: tagSelectedMessage, openAddMode, openUpdateMode, closeTagPanel } = useTagStore();
   const { selectedTags, resetSelectedTags } = useSelectedTagStore();
@@ -75,10 +81,22 @@ export function useTagActions({
       }
 
       const removedTagIdSet = new Set(removedTagIds);
-      const taggingIdList = tagSelectedMessage.originalTags
-        .filter(t => removedTagIdSet.has(String(t.tagId)))
-        .map(t => String(t.taggingId))
-        .filter(Boolean);
+      const removedOriginalTags = tagSelectedMessage.originalTags.filter(t =>
+        removedTagIdSet.has(String(t.tagId)),
+      );
+      // 전송 직후 PUB 에코의 taggingId는 -1 플레이스홀더 — 확정된 것만 즉시 REMOVE,
+      // 미확정분은 확정 브로드캐스트 도착 시 발사하도록 예약 (2026-08-27 QA)
+      const taggingIdList = removedOriginalTags
+        .filter(t => isConfirmedTaggingId(t.taggingId))
+        .map(t => String(t.taggingId));
+      const unconfirmedRemovals = removedOriginalTags.filter(t => !isConfirmedTaggingId(t.taggingId));
+      unconfirmedRemovals.forEach(t =>
+        pendingTagRemoveRegistry.mark(tagSelectedMessage.id, Number(t.tagId), list =>
+          removeTagFromMessage({ messageId: tagSelectedMessage.id, taggingIdList: list }),
+        ),
+      );
+      // 서버는 확정 브로드캐스트를 안 주므로(실측) 재조회로 확정 taggingId 도착을 앞당긴다
+      if (unconfirmedRemovals.length > 0) refreshMessageTags(tagSelectedMessage.id);
       const hasRemove = taggingIdList.length > 0;
       const hasAdd = addedTagIds.length > 0;
 
@@ -93,10 +111,24 @@ export function useTagActions({
         if (hasAdd) addTagToMessage({ messageId: tagSelectedMessage.id, tagIdList: addedTagIds });
         if (hasRemove) removeTagFromMessage({ messageId: tagSelectedMessage.id, taggingIdList });
       }
+
+      // 실패 안전망 — 순수 해제(추가 없음)일 때, 제한 시간 내 REMOVE 브로드캐스트가 없으면
+      // 스냅샷 복구 + 안내 (2026-08-27 UX 결정: 즉시 제거 + 실패 시 안내 복구)
+      if ((hasRemove || unconfirmedRemovals.length > 0) && !hasAdd) {
+        const messageId = tagSelectedMessage.id;
+        const snapshotTags = tagSelectedMessage.originalTags;
+        optimisticTagRemoveGuard.arm(messageId, () => {
+          pendingTagRemoveRegistry.cancel(messageId);
+          useChatRoomRuntimeStore
+            .getState()
+            .setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, tags: snapshotTags } : m)));
+          useUIStore.getState().showSnackbar({ message: '태그 해제에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
+        });
+      }
       resetSelectedTags();
       closeTagPanel();
     }
-  }, [tagActionType, tagSelectedMessage, selectedTags, addTagToMessage, removeTagFromMessage, resetSelectedTags, closeTagPanel]);
+  }, [tagActionType, tagSelectedMessage, selectedTags, addTagToMessage, removeTagFromMessage, refreshMessageTags, resetSelectedTags, closeTagPanel]);
 
   const handleSendWithTags = useCallback((content: string) => {
     const tagList = selectedTags.map(t => String(t.tagId));

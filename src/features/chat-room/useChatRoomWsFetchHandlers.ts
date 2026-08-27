@@ -5,6 +5,7 @@ import { createWsMessageParser } from '@/features/chat-room/createWsMessageParse
 import { ParticipantsManager, readCountCalculator } from '@/features/chat-room/domain';
 import { mergeFetchedReadState } from '@/features/chat-room/mergeFetchedReadState';
 import { pendingReadRegistry } from '@/features/chat-room/pendingReadRegistry';
+import { pendingTagRemoveRegistry } from '@/features/chat-room/pendingTagRemoveRegistry';
 import { applyReconciliation, extractDeletedMessageIds } from '@/features/chat-room/reconcileDeletedMessages';
 import { CHAT_BEFORE_SIZE, CHAT_AFTER_SIZE } from '@/shared/config/constants';
 import { Message, WebSocketPublishItem, WebSocketChannelTypes } from '@/shared/types/websocket';
@@ -82,6 +83,10 @@ export function useChatRoomWsFetchHandlers({
       if (mapped.length < CHAT_BEFORE_SIZE || mapped.length === 0) {
         setLoading({ hasMoreBefore: false });
       }
+
+      // 미확정(-1) 태그 해제 예약 — 조회 응답의 서버 확정 taggingId로 지금 발사
+      // (서버는 태그 부착 전송 후 확정 브로드캐스트를 보내지 않아 FETCH만이 확정값 소스)
+      for (const m of mapped) pendingTagRemoveRegistry.consumeOnTagBroadcast(m.id, m.tags ?? []);
     },
     [parseWsMessage, setMessages, replaceMessages, setLoading, isInitialFetchRef, participantsManager, channelType],
   );
@@ -109,6 +114,9 @@ export function useChatRoomWsFetchHandlers({
       if (mapped.length < CHAT_AFTER_SIZE || mapped.length === 0) {
         setLoading({ hasMoreAfter: false });
       }
+
+      // 미확정(-1) 태그 해제 예약 — 조회 응답의 서버 확정 taggingId로 지금 발사
+      for (const m of mapped) pendingTagRemoveRegistry.consumeOnTagBroadcast(m.id, m.tags ?? []);
 
       if (isReconnectFetchRef.current) {
         isReconnectFetchRef.current = false;

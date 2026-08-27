@@ -13,6 +13,8 @@ import { useCreateNoticeMutation } from '@/features/chat-room/notice/queries';
 import { toNoticeRequestMeta } from '@/features/chat-room/notice/noticeUtils';
 import type { NoticeRequest } from '@/features/chat-room/notice/type';
 import { ROOM_NOTICE_KEY } from '@/shared/config/queryKeys';
+import { optimisticTagRemoveGuard } from '@/features/chat-room/optimisticTagRemoveGuard';
+import { isConfirmedTaggingId, pendingTagRemoveRegistry } from '@/features/chat-room/pendingTagRemoveRegistry';
 import { useChatRoomActions } from '@/features/chat-room/useChatRoomActions';
 import { useChatRoomController } from '@/features/chat-room/useChatRoomController';
 import { useChatRoomSearch } from '@/features/chat-room/useChatRoomSearch';
@@ -77,7 +79,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
 
   useChatRoomController();
 
-  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, loadMoreAfterMessage, deleteMessage, addTagToMessage, removeTagFromMessage, retryTextMessage, removeFailedMessage } =
+  const { sendTextMessage, sendMediaMessage, sendDocumentMessage, loadMoreBeforeMessage, loadMoreAfterMessage, deleteMessage, addTagToMessage, removeTagFromMessage, refreshMessageTags, retryTextMessage, removeFailedMessage } =
     useChatRoomActions();
   const messages = useChatRoomRuntimeStore(s => s.messages);
   const runtimeRoomId = useChatRoomRuntimeStore(s => s.currentRoomId);
@@ -197,8 +199,36 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
   const handleQuickTagToggle = useCallback((message: ChatMessageUI, tagName: string) => {
     if (isOffline()) return;
     const existing = message.tags?.find(t => t.title === tagName);
-    if (existing?.taggingId) {
-      removeTagFromMessage({ messageId: message.id, taggingIdList: [String(existing.taggingId)] });
+    if (existing) {
+      // 낙관적 제거 — 서버 왕복(미확정 태그면 재조회 포함 2회)을 기다리지 않고 칩을 즉시 내린다.
+      // 서버 처리는 뒤에서 진행되고, REMOVE 브로드캐스트 병합이 최종 상태를 확정한다
+      // (태그 패널 UPDATE 경로의 기존 낙관적 반영과 동일 원칙).
+      const snapshotTags = message.tags ?? [];
+      useChatRoomRuntimeStore.getState().setMessages(prev =>
+        prev.map(m =>
+          m.id === message.id
+            ? { ...m, tags: (m.tags ?? []).filter(t => String(t.tagId) !== String(existing.tagId)) }
+            : m,
+        ),
+      );
+      // 실패 안전망 — 제한 시간 내 REMOVE 브로드캐스트가 없으면 복구 + 안내 (2026-08-27 UX 결정)
+      optimisticTagRemoveGuard.arm(message.id, () => {
+        pendingTagRemoveRegistry.cancel(message.id);
+        useChatRoomRuntimeStore.getState().setMessages(prev =>
+          prev.map(m => (m.id === message.id ? { ...m, tags: snapshotTags } : m)),
+        );
+        showSnackbar({ message: '태그 해제에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
+      });
+      if (isConfirmedTaggingId(existing.taggingId)) {
+        removeTagFromMessage({ messageId: message.id, taggingIdList: [String(existing.taggingId)] });
+      } else {
+        // 전송 직후 미확정(-1) 창 — 서버는 확정 브로드캐스트를 안 주므로(실측),
+        // 이 메시지 앵커로 히스토리를 재조회해 확정 taggingId 도착 시 제거를 발사한다
+        pendingTagRemoveRegistry.mark(message.id, Number(existing.tagId), taggingIdList =>
+          removeTagFromMessage({ messageId: message.id, taggingIdList }),
+        );
+        refreshMessageTags(message.id);
+      }
     } else {
       if ((message.tags?.length ?? 0) >= 3) {
         showSnackbar({ message: '태그는 최대 3개까지 선택 가능해요.', state: 'warning' });
@@ -209,10 +239,10 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
       addTagToMessage({ messageId: message.id, tagIdList: [String(tag.tagId)] });
     }
     useRecentTagUsageStore.getState().record(tagName);
-  }, [tagList, addTagToMessage, removeTagFromMessage, showSnackbar]);
+  }, [tagList, addTagToMessage, removeTagFromMessage, refreshMessageTags, showSnackbar]);
 
   const { isTagOpen, handleOpenAddTag, handleOpenUpdateTag, handleTagConfirm, handleSendWithTags } =
-    useTagActions({ roomId: effectiveRoomId, sendTextMessage, addTagToMessage, removeTagFromMessage });
+    useTagActions({ roomId: effectiveRoomId, sendTextMessage, addTagToMessage, removeTagFromMessage, refreshMessageTags });
   const { pendingItems, removePendingItem, clearPendingItems, handleFileConfirm, handleFilesSelected, dragHandlers } =
     useFileDragDrop({ onMediaSend: sendMediaMessage, onDocSend: sendDocumentMessage });
   const { viewerIndex, setViewerIndex, viewerVisible, allMediaItems, openMediaViewer, closeMediaViewer } =

@@ -468,6 +468,21 @@ export const useChatRoomActions = () => {
     [send, buildRemoveTagToMessage],
   );
 
+  /**
+   * 미확정 taggingId(-1) 해소 — 해당 메시지를 앵커로 히스토리를 재조회해 서버 확정값을 받아온다.
+   * 서버는 태그 부착 전송 후 확정 브로드캐스트를 보내지 않아(2026-08-27 실측), FETCH 응답만이
+   * 실제 taggingId의 소스다. 응답은 handleFetchBeforeHistory를 타고 pendingTagRemoveRegistry를 소비한다.
+   */
+  const refreshMessageTags = useCallback(
+    (messageId: string) => {
+      if (isOffline()) return;
+      const roomId = useChatRoomRuntimeStore.getState().currentRoomId;
+      if (!roomId) return;
+      send(buildFetchBeforeMessage({ currentMessage: messageId, isInclusive: true, channelIdOverride: roomId }));
+    },
+    [send, buildFetchBeforeMessage],
+  );
+
   return {
     sendTextMessage,
     loadMoreBeforeMessage,
@@ -477,6 +492,7 @@ export const useChatRoomActions = () => {
     deleteMessage,
     addTagToMessage,
     removeTagFromMessage,
+    refreshMessageTags,
     retryTextMessage,
     removeFailedMessage,
   };

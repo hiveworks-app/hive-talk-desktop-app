@@ -7,6 +7,8 @@ import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { createWsMessageParser } from '@/features/chat-room/createWsMessageParser';
 import { consumeDraftBackfill } from '@/features/chat-room/draftBackfill';
 import { mergeTagsPreservingOrder } from '@/features/chat-room/mergeTagsPreservingOrder';
+import { optimisticTagRemoveGuard } from '@/features/chat-room/optimisticTagRemoveGuard';
+import { pendingTagRemoveRegistry } from '@/features/chat-room/pendingTagRemoveRegistry';
 import { pendingTagUpdateRegistry } from '@/features/chat-room/pendingTagUpdateRegistry';
 import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { ParticipantsManager } from '@/features/chat-room/domain';
@@ -89,6 +91,8 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
         m.id === targetMessageId ? { ...m, tags: mergeTagsPreservingOrder(m.tags, dedup) } : m,
       ),
     );
+    // 미확정(-1) 창에서 예약된 태그 해제가 있으면, 확정된 실제 taggingId로 지금 발사
+    pendingTagRemoveRegistry.consumeOnTagBroadcast(targetMessageId, dedup);
   }, [setMessages]);
 
   // 신고 마스킹: REPORTED → 마스킹 텍스트(TEXT) / REPORT_HIDDEN → 시스템 안내(SYSTEM_REPORTED)
@@ -278,6 +282,8 @@ export const useChatRoomWsHandlers = (params: UseChatRoomWsHandlersParams) => {
       const p = data.response.payload;
       const pendingId = useChatRoomRuntimeStore.getState().pendingRemoveTagMessageId;
       const target = extractTagTarget(p) ?? pendingId;
+      // 낙관적 해제 성공 신호 — 실패 복구 타이머 해제
+      if (target) optimisticTagRemoveGuard.disarm(target);
       // REMOVE→ADD 콤보 진행 중 — 중간 상태(유지분만 남음)는 화면에 반영하지 않고
       // 대기 중이던 ADD를 발사한다 (TA003 회피, RN pendingTagUpdateRegistry 패리티)
       if (target && pendingTagUpdateRegistry.consumeOnRemoveBroadcast(target)) {
