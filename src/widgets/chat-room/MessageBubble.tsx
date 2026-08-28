@@ -199,8 +199,10 @@ export function MessageBubble({
           'flex min-w-0 flex-col',
           isMe ? 'items-end' : 'items-start',
           // 폭 제한은 말풍선 자체(bubbleStyle)에 적용 — 시간 컬럼 유무와 무관하게 동일 지점 줄바꿈.
-          // 이미지는 그리드+시간 공간 확보용 고정폭 유지
-          isImageType ? 'max-w-[304px]' : 'max-w-full',
+          // 이미지는 그리드+시간 공간 확보용 고정폭 유지.
+          // 파일은 cqw 상한 — 좁은 창(메인 최소 440·팝업 400)에서 카드가 축소되며 우측 여백 확보
+          // (RN은 화면폭 62% 비례 BUBBLE_OTHER_FILE_W라 같은 문제가 없음)
+          isImageType ? 'max-w-[304px]' : isFileMessage ? 'max-w-[min(304px,80cqw)]' : 'max-w-full',
         )}
       >
         {/* RN 패리티 — 이름 regular, 차단 아이콘은 이름 뒤 */}
