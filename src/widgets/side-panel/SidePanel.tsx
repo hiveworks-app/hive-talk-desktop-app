@@ -5,6 +5,7 @@ import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
+import type { FileSenderItem } from '@/features/chat-room-side-panel/type';
 import { useChangeRoomTitle } from '@/features/chat-room/useChangeRoomTitle';
 import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
 import { cn } from '@/shared/lib/cn';
@@ -57,6 +58,9 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId }: SidePanelProps) {
   const [view, setView] = useState<SidePanelView>('main');
+  // 보관함 보낸사람 필터 — 탭(사진/동영상↔파일) 공유. RN은 화면 레벨 단일 상태로
+  // "즉시 비교 탐색"을 위해 탭 전환에도 유지한다 (RN ChatRoomSidePanelSelectItemScreen 패리티)
+  const [storageSender, setStorageSender] = useState<FileSenderItem | null>(null);
   const router = useAppRouter();
   // 차단 목록 변경 시 참여자 차단 표기 즉시 반영 (구독 목적 — 값 미사용)
   useBlockedMembersStore(s => s.items);
@@ -117,6 +121,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setView('main');
       setIsEditingTitle(false);
+      setStorageSender(null);
     }
   }, [isOpen]);
 
@@ -525,10 +530,11 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                   type="button"
                   onClick={() => setView(key)}
                   className={cn(
+                    // RN SidePanelSelectItemTitle 패리티 — 선택: primary/on-primary, 비선택: gray-50/text-secondary
                     'rounded-full px-3 py-1.5 text-sub font-medium transition-colors',
                     view === key
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-gray-50 text-text-secondary hover:bg-gray-100',
                   )}
                 >
                   {label}
@@ -536,10 +542,10 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               ))}
             </div>
             <div className={view === 'media' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'media'} />
+              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'media'} selectedSender={storageSender} onSenderChange={setStorageSender} />
             </div>
             <div className={view === 'files' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'files'} />
+              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'files'} selectedSender={storageSender} onSenderChange={setStorageSender} />
             </div>
           </div>
         )}

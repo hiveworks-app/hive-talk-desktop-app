@@ -26,16 +26,18 @@ interface FilesTabProps {
   lastMessageId: string;
   /** 현재 표시 중인 탭인지 — 탭 이탈 시 선택 모드 해제 (RN 탭 전환 리셋 패리티) */
   active: boolean;
+  /** 보낸사람 필터 — 보관함 레벨 공유 상태 (탭 전환에도 유지, RN 화면 레벨 패리티) */
+  selectedSender: FileSenderItem | null;
+  onSenderChange: (sender: FileSenderItem | null) => void;
 }
 
 const fileNameOf = (file: MediaListType) => file.path.split('/').pop() || '파일';
 
-export function FilesTab({ roomId, channelType, lastMessageId, active }: FilesTabProps) {
+export function FilesTab({ roomId, channelType, lastMessageId, active, selectedSender, onSenderChange }: FilesTabProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   // 보낸사람 필터 — RN처럼 단일 선택(칩 1개). 칩과 키워드는 공존하지 않는다
   // (타이핑 시작 시 SenderSearchBar가 칩을 제거 — RN 동일)
-  const [selectedSender, setSelectedSender] = useState<FileSenderItem | null>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query.trim()), 250); // RN KEYWORD_DEBOUNCE_MS 동일
     return () => clearTimeout(t);
@@ -118,7 +120,7 @@ export function FilesTab({ roomId, channelType, lastMessageId, active }: FilesTa
           channelType={channelType}
           contentType={['FILE']}
           selectedSender={selectedSender}
-          onChange={setSelectedSender}
+          onChange={onSenderChange}
           placeholder="보낸사람 · 파일명 검색"
           keyword={query}
           onKeywordChange={setQuery}
