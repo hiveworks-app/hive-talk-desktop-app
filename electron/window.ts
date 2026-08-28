@@ -1,4 +1,4 @@
-import { BrowserWindow, session, screen, shell } from 'electron';
+import { BrowserWindow, Menu, session, screen, shell } from 'electron';
 import { getPreloadPath, getIconPath } from './utils';
 
 let escSuppressed = false;
@@ -16,6 +16,27 @@ function delegateExternalLinks(win: BrowserWindow) {
       void shell.openExternal(url);
     }
     return { action: 'deny' };
+  });
+}
+
+/** 입력란 우클릭 시 네이티브 편집 메뉴 — Electron은 브라우저와 달리 기본 컨텍스트 메뉴가 없다.
+ *  입력 가능한 요소(isEditable)로 한정 — 메시지 버블의 커스텀 우클릭 메뉴(태그/공지)와 이중 노출 방지.
+ *  라벨은 macOS 앱 메뉴(main.ts '편집')와 동일 표기, 활성/비활성은 우클릭 시점의 editFlags를 따른다. */
+function attachEditableContextMenu(win: BrowserWindow) {
+  win.webContents.on('context-menu', (_event, params) => {
+    if (!params.isEditable) return;
+    const { editFlags } = params;
+    const menu = Menu.buildFromTemplate([
+      { role: 'undo', label: '실행 취소', enabled: editFlags.canUndo },
+      { role: 'redo', label: '다시 실행', enabled: editFlags.canRedo },
+      { type: 'separator' },
+      { role: 'cut', label: '잘라내기', enabled: editFlags.canCut },
+      { role: 'copy', label: '복사', enabled: editFlags.canCopy },
+      { role: 'paste', label: '붙여넣기', enabled: editFlags.canPaste },
+      { type: 'separator' },
+      { role: 'selectAll', label: '전체 선택', enabled: editFlags.canSelectAll },
+    ]);
+    menu.popup({ window: win });
   });
 }
 
@@ -58,6 +79,7 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
     },
   });
   delegateExternalLinks(win);
+  attachEditableContextMenu(win);
   // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
   // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
   const showFallback = setTimeout(() => {
@@ -136,6 +158,7 @@ export function createWindow(
         }),
   });
   delegateExternalLinks(win);
+  attachEditableContextMenu(win);
 
   // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
   // URL 필터를 사용하여 localhost 페이지/에셋 로딩에 영향을 주지 않음
