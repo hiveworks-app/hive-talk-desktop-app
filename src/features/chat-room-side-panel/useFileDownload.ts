@@ -55,14 +55,18 @@ export function useFileDownload() {
     }
   };
 
-  /** 선택 항목 일괄 다운로드 — 저장 폴더를 먼저 물어본 뒤 순차 저장 (Electron). 웹은 anchor 폴백 */
-  const downloadMany = async (items: BulkDownloadItem[]) => {
-    if (bulkDownloading || downloadingId || items.length === 0) return;
-    if (isOffline()) return;
+  /**
+   * 선택 항목 일괄 다운로드 — 저장 폴더를 먼저 물어본 뒤 순차 저장 (Electron). 웹은 anchor 폴백.
+   * 성공 개수를 반환한다 — 호출부는 1건 이상 성공 시에만 선택 모드를 해제한다 (RN onDownloadComplete 조건).
+   * null 은 다운로드가 시작조차 안 된 경우 (중복 호출·오프라인·폴더 선택 취소) — 선택 유지.
+   */
+  const downloadMany = async (items: BulkDownloadItem[]): Promise<number | null> => {
+    if (bulkDownloading || downloadingId || items.length === 0) return null;
+    if (isOffline()) return null;
 
     // 데스크톱 관례 — 어디에 저장할지 먼저 묻는다 (취소하면 아무 것도 받지 않음)
     const directory = await chooseDownloadDirectory();
-    if (directory === null) return; // 사용자 취소
+    if (directory === null) return null; // 사용자 취소
 
     setBulkDownloading(true);
     let failed = 0;
@@ -90,6 +94,7 @@ export function useFileDownload() {
     } else {
       showSnackbar({ message: `${ok}개 저장, ${failed}개 실패`, state: 'warning' });
     }
+    return ok;
   };
 
   return { download, downloadingId, downloadMany, bulkDownloading };

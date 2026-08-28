@@ -100,11 +100,17 @@ export function FilesTab({ roomId, channelType, lastMessageId, active, selectedS
     setSelectMode(prev => !prev);
     setSelected(new Set());
   };
-  const handleBulkDownload = () => {
+  const handleBulkDownload = async () => {
     const items = filtered
       .filter(f => selected.has(f.id))
       .map(f => ({ url: f.presignedUrl, storageKey: f.path, filename: fileNameOf(f) }));
-    downloadMany(items);
+    const ok = await downloadMany(items);
+    // 1건 이상 저장 성공 시 선택 모드 자동 해제 (RN 패리티 + 정책 chat-room.md "초기 상태 복귀").
+    // 전체 실패·폴더 선택 취소(null)면 선택 유지 — 같은 선택으로 재시도 가능해야 한다.
+    if (ok !== null && ok > 0) {
+      setSelectMode(false);
+      setSelected(new Set());
+    }
   };
 
   if (isLoading) {
