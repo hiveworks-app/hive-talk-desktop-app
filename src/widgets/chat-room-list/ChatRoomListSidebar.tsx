@@ -6,11 +6,13 @@ import {
   useGetGMRoomList,
 } from "@/features/chat-room-list/queries";
 import { useGetPinnedMembers } from "@/features/pinned-members/queries";
+import { USER_TYPE } from "@/shared/types/user";
 import { WS_CHANNEL_TYPE } from "@/shared/types/websocket";
 import { Chip } from "@/shared/ui/Chip";
 import { useUIStore } from "@/store/uiStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Spinner } from "@/shared/ui/Spinner";
+import { useAuthStore } from "@/store/auth/authStore";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import IconSearchDefault from "@assets/icons/search-default.svg";
@@ -51,9 +53,10 @@ export function ChatRoomListSidebar() {
   const [showManageDialog, setShowManageDialog] = useState(false);
   // 검색은 별도 풀스크린 화면(ChatSearchOverlay) — RN CompanyChatSearchScreen 패리티
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { data: dmRooms = [], isLoading: dmLoading } = useGetDMRoomList();
-  const { data: gmRooms = [], isLoading: gmLoading } = useGetGMRoomList();
+  const { data: dmRooms = [], isPending: dmPending } = useGetDMRoomList();
+  const { data: gmRooms = [], isPending: gmPending } = useGetGMRoomList();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
+  const user = useAuthStore(s => s.user);
 
   // 관심멤버 userId → 등록 순서 rank (관심멤버 순 정렬용)
   const pinnedRankMap = useMemo(() => {
@@ -88,12 +91,18 @@ export function ChatRoomListSidebar() {
     return sorted;
   }, [dmRooms, gmRooms, activeChip, sortType, pinnedRankMap]);
 
-  const isLoading =
+  // 새로고침 직후 SSR·스토어 복원 전에는 user가 없어 목록 쿼리가 비활성(enabled:false)인데,
+  // v5의 isLoading은 비활성 쿼리를 로딩으로 안 잡아 "아직 채팅방이 없어요"가 잠깐 새어 나온다.
+  // → user 미복원 구간 + 데이터 미도착(isPending)을 로딩으로 취급해 빈 상태 깜빡임 제거.
+  //   게스트는 사내 쿼리가 영구 비활성이라 isPending이 안 풀리므로 user 확정 후엔 제외 (무한 스피너 방지)
+  const isOrgMember = user?.userType === USER_TYPE.ORG_MEMBER;
+  const chipPending =
     activeChip === "dm"
-      ? dmLoading
+      ? dmPending
       : activeChip === "gm"
-        ? gmLoading
-        : dmLoading || gmLoading;
+        ? gmPending
+        : dmPending || gmPending;
+  const isLoading = !user || (isOrgMember && chipPending);
 
   // 검색 진입 — 빈 목록이면 가드 (RN 패리티)
   const openSearch = () => {
