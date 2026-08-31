@@ -91,7 +91,6 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="이름"
           error={!!sendErrorMessage}
-        className="h-10"
         />
 
         <div className="space-y-2">
@@ -103,7 +102,7 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
             inputMode="numeric"
             maxLength={11}
             error={!!sendErrorMessage}
-            className="h-10 pr-24"
+            className="pr-24"
           />
           <button
             type="button"

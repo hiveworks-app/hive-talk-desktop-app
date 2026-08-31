@@ -43,12 +43,13 @@ const variantStyles: Record<ButtonVariant, string> = {
     'bg-yellow-300 text-gray-900 hover:bg-yellow active:bg-yellow disabled:bg-gray-400 disabled:text-white',
 };
 
-/* 데스크톱 크기 체계 (RN은 터치 기준 lg 56/md 48/sm 40 — 마우스 기준으로 축소):
- * lg 40px(주요 CTA), md 36px(다이얼로그 버튼), sm 32px(보조) — 모두 medium */
+/* 중간 스케일 (2026-08-31 사용자 확정): RN(56/48/40)과 구 데스크톱(40/36/32)의 중간.
+ * lg 48px(주요 CTA)/md 40px(다이얼로그 버튼)/sm 36px(보조).
+ * RN 동일 56px로 갔다가 "데스크톱에선 너무 크다"로 한 단계 하향 — 텍스트는 데스크톱 타이포 유지 */
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-sub rounded-md',
-  md: 'h-9 px-4 text-body rounded-lg',
-  lg: 'h-10 px-5 text-body rounded-[10px]',
+  sm: 'h-9 px-3.5 text-sub rounded-md',
+  md: 'h-10 px-4 text-body rounded-lg',
+  lg: 'h-12 px-5 text-body rounded-[10px]',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

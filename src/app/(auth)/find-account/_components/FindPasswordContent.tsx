@@ -93,7 +93,6 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="새 비밀번호"
                 error={!!passwordError}
-              className="h-10"
               />
               {passwordError && (
                 <p className="text-sub-sm text-state-error">{passwordError}</p>
@@ -107,7 +106,6 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="새 비밀번호 확인"
                 error={!!confirmPasswordError}
-              className="h-10"
               />
               {confirmPasswordError && (
                 <p className="text-sub-sm text-state-error">{confirmPasswordError}</p>
@@ -146,7 +144,6 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
           onChange={(e) => handleEmailChange(e.target.value)}
           placeholder="이메일"
           error={!!sendErrorMessage}
-        className="h-10"
         />
 
         <div className="space-y-2">
@@ -158,7 +155,7 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
               inputMode="numeric"
               maxLength={11}
               error={!!sendErrorMessage}
-              className="h-10 pr-24"
+              className="pr-24"
             />
             <button
               type="button"
