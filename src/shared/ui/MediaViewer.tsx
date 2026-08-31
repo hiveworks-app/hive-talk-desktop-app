@@ -2,6 +2,7 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useTitleBarColor } from '@/shared/hooks/useTitleBarColor';
 import { cn as cnHeader } from '@/shared/lib/cn';
 import { formatDotDate } from '@/shared/utils/formatTimeUtils';
 import { isBlockedUser } from '@/store/blockedMembersStore';
@@ -47,6 +48,8 @@ export function MediaViewer(props: MediaViewerProps) {
 }
 
 function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, headerAction, showDownload = true, onDelete }: MediaViewerProps) {
+  // 검은 풀스크린 위에서 Windows 타이틀바 버튼 영역만 흰 네모로 뜨지 않게 동기화 (bg-black/95 근사)
+  useTitleBarColor('#111111');
   const {
     videoRef, contentRef,
     view, isLoading, setIsLoading, hasError, isFetchingUrl,
