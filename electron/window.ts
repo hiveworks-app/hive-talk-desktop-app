@@ -1,5 +1,5 @@
 import { BrowserWindow, Menu, session, screen, shell } from 'electron';
-import { getPreloadPath, getIconPath } from './utils';
+import { getPreloadPath, getIconPath, isDev } from './utils';
 
 let escSuppressed = false;
 
@@ -40,6 +40,17 @@ function attachEditableContextMenu(win: BrowserWindow) {
   });
 }
 
+/** 새로고침 단축키 (Ctrl+R / F5) — 윈도우·리눅스는 앱 메뉴가 없어 role 기반 단축키가 없다.
+ *  화면이 꼬였을 때 사용자가 스스로 복구할 수단 (macOS는 앱 메뉴의 ⌘R이 별도로 있다). */
+function attachReloadShortcut(win: BrowserWindow) {
+  win.webContents.on('before-input-event', (_event, input) => {
+    if (input.type !== 'keyDown') return;
+    if ((input.control && input.key.toLowerCase() === 'r') || input.key === 'F5') {
+      win.webContents.reload();
+    }
+  });
+}
+
 /** 기본 창 폭 — 창 크기는 앱이 임의로 바꾸지 않는다.
  *  채팅방 진입/이탈 자동 폭 조절(480↔960)은 제거됨 (사용자 결정 2026-08-21).
  *  시작 폭은 자동 조절 도입 이전의 원래 값(480)을 유지한다 — 임의 변경 금지. */
@@ -76,10 +87,13 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      // 배포 빌드에서 개발자 도구 원천 차단 — 메뉴·단축키·프로그램 호출 등 모든 경로 무력화
+      devTools: isDev,
     },
   });
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
+  attachReloadShortcut(win);
   // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
   // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
   const showFallback = setTimeout(() => {
@@ -144,6 +158,8 @@ export function createWindow(
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      // 배포 빌드에서 개발자 도구 원천 차단 — 메뉴·단축키·프로그램 호출 등 모든 경로 무력화
+      devTools: isDev,
     },
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
@@ -159,6 +175,7 @@ export function createWindow(
   });
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
+  attachReloadShortcut(win);
 
   // 요청 Origin 제거: 데스크톱은 내장 서버(localhost:23000, 점유 시 랜덤 포트)에서 UI를 띄우므로
   // 브라우저 엔진이 모든 API 요청에 Origin: http://localhost:<port> 를 자동으로 붙인다.
