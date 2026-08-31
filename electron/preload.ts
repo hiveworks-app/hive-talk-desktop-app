@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('set-tray-lock-state', isLocked),
   setTitleBarDimmed: (isDimmed: boolean) =>
     ipcRenderer.invoke('set-titlebar-dimmed', isDimmed),
+  // Windows 타이틀바 버튼 영역 배경색 — 현재 화면 상단 배경과 동기화 (hex 6자리)
+  setTitleBarColor: (color: string) =>
+    ipcRenderer.invoke('set-titlebar-color', color),
   focusWindow: () => ipcRenderer.invoke('focus-window'),
   onNotificationClicked: (callback: (meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, meta: { roomId: string; channelType: string; senderName: string; notReadCount?: number }) => callback(meta);

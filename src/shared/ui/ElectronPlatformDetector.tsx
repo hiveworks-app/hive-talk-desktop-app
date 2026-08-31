@@ -13,7 +13,9 @@ export function ElectronPlatformDetector() {
 
     if (api.platform === 'darwin') {
       document.documentElement.setAttribute('data-electron-mac', '');
-    } else if (api.platform === 'win32') {
+    } else if (api.platform === 'win32' || api.platform === 'linux') {
+      // linux도 titleBarOverlay(WCO) 버튼이 우상단에 그려진다(Electron 24+) —
+      // 보정 없이는 멤버 목록 검색/초대현황 아이콘과 겹침 (2026-08-31 QA). 동일 규칙 적용.
       document.documentElement.setAttribute('data-electron-win', '');
     }
   }, []);

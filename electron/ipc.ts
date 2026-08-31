@@ -216,13 +216,35 @@ export function setupIpcHandlers(
     closeAllChatWindows();
   });
 
-  ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {
+  /* Windows 타이틀바 오버레이(WCO) 색 동기화 — 버튼 사각형 영역만 지정색으로 그려지므로,
+     항상 흰색이면 gray-50 화면(설정 계열)이나 어두운 화면(미디어 뷰어)에서 버튼 부분만
+     흰 네모로 도드라진다 (2026-08-31 QA). 렌더러가 현재 화면 상단 배경색을 보내는 기본층 +
+     dim이 그 위에 우선 적용되는 2층 구조. 심볼(아이콘) 색은 배경 밝기로 자동 결정. */
+  let titleBarBase = { color: '#ffffff', symbolColor: '#333333' };
+  let titleBarDimmed = false;
+  const applyTitleBar = () => {
     const mainWindow = deps.getMainWindow();
-    if (process.platform !== 'win32' || !mainWindow) return;
-    mainWindow.setTitleBarOverlay(
-      isDimmed
-        ? { color: '#666666', symbolColor: '#ffffff' }
-        : { color: '#ffffff', symbolColor: '#333333' },
-    );
+    if ((process.platform !== 'win32' && process.platform !== 'linux') || !mainWindow) return;
+    // linux는 Electron 버전에 따라 setTitleBarOverlay 미지원일 수 있어 실패해도 무해하게
+    try {
+      mainWindow.setTitleBarOverlay(
+        titleBarDimmed ? { color: '#666666', symbolColor: '#ffffff' } : titleBarBase,
+      );
+    } catch { /* 미지원 플랫폼 — 생성 시점의 titleBarOverlay 색 유지 */ }
+  };
+
+  ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {
+    titleBarDimmed = isDimmed;
+    applyTitleBar();
+  });
+
+  ipcMain.handle('set-titlebar-color', (_event, color: unknown) => {
+    if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    titleBarBase = { color, symbolColor: luminance > 140 ? '#333333' : '#ffffff' };
+    applyTitleBar();
   });
 }
