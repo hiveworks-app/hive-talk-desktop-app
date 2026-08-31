@@ -7,7 +7,8 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
 import type { FileSenderItem } from '@/features/chat-room-side-panel/type';
 import { useChangeRoomTitle } from '@/features/chat-room/useChangeRoomTitle';
-import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { cn } from '@/shared/lib/cn';
 import { GroupProfileAvatar, type GroupAvatarUser } from '@/shared/ui/GroupProfileAvatar';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -187,8 +188,22 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
     useDraftStore.getState().clearDraft(roomId);
     useFailedMessagesStore.getState().removeRoom(roomId);
     pendingReadRegistry.removeRoom(roomId);
+    // 내가 나갈 땐 서버가 목록 갱신을 브로드캐스트하지 않는다 — 목록 캐시 낙관적 제거
+    // (useLeaveRoom과 동일 규칙. 이게 빠져 있어 나가기 후에도 목록에 방이 남던 문제 수정)
+    const listKey =
+      channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE
+        ? GM_ROOM_LIST_KEY
+        : channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE
+          ? EM_ROOM_LIST_KEY
+          : DM_ROOM_LIST_KEY;
+    queryClient.setQueryData<GetChatRoomListItemType[]>(listKey, prev =>
+      prev?.filter(r => r.roomModel.roomId !== roomId) ?? [],
+    );
     // 팝업(멀티 채팅창)은 돌아갈 목록이 없다 — 목록으로 라우팅하면 팝업이 앱 전체 창으로 바뀐다
     if (closeIfPopup()) return;
+    // 이 방을 띄운 팝업 창도 정리 (목록 개별 나가기와 동일 — Electron 아니면 no-op)
+    (window as unknown as { electronAPI?: { closeChatWindow?: (id: string) => void } })
+      .electronAPI?.closeChatWindow?.(roomId);
     const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
     router.push(routePrefix);
     onClose();
