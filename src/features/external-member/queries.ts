@@ -15,7 +15,6 @@ import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
 import {
   apiGetExternalMembers,
-  apiGetReceivedInvites,
   apiGetSentInvites,
   apiInviteExternalUser,
   apiInviteExternalByEmail,
@@ -26,6 +25,7 @@ import {
   apiRespondInvite,
   apiDeleteExternalContact,
 } from './api';
+import { fetchReceivedInvites, resyncReceivedInvitesFromServer } from './receivedInviteSync';
 import type { InviteExternalUserRequest, InviteResultType, ReceivedInviteItem, SentInviteItem } from './type';
 
 export const useGetExternalMembers = (search?: string) => {
@@ -136,17 +136,7 @@ export const useReceivedInvites = () => {
 
   return useQuery<ReceivedInviteItem[]>({
     queryKey: RECEIVED_INVITES_KEY,
-    queryFn: async () => {
-      const res = await apiGetReceivedInvites();
-      return res.payload.items.map(item => ({
-        inviteId: item.inviteId,
-        userId: item.userModel.userId,
-        name: item.userModel.name,
-        companyName: item.userModel.companyName,
-        profileUrl: item.userModel.profileUrl,
-        result: item.result,
-      }));
-    },
+    queryFn: fetchReceivedInvites,
     enabled: !!user?.id,
     // 진입마다 재조회 (RN staleTime 미지정 패리티) — WS 미수신 변동(만료 등) 반영 지연 방지
     staleTime: 0,
@@ -164,6 +154,9 @@ export const useRespondInvite = () => {
     onSuccess: (_res, { result }) => {
       queryClient.invalidateQueries({ queryKey: RECEIVED_INVITES_KEY });
       queryClient.invalidateQueries({ queryKey: EXTERNAL_MEMBERS_KEY() });
+      // 본인 응답은 WS 이벤트가 없어 카운터가 안 내려간다 — 실측으로 카운터·ack 동기화.
+      // 안 하면 ack 워터마크가 응답 전 건수에 고착돼 다음 초대 도착 모달이 영영 안 뜬다.
+      resyncReceivedInvitesFromServer(queryClient);
       if (result === 'ACCEPT') {
         // 수락 시 멤버/관심멤버 목록 갱신 (협력멤버로 추가됨)
         queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
