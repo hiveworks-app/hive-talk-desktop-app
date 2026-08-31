@@ -224,10 +224,13 @@ export function setupIpcHandlers(
   let titleBarDimmed = false;
   const applyTitleBar = () => {
     const mainWindow = deps.getMainWindow();
-    if (process.platform !== 'win32' || !mainWindow) return;
-    mainWindow.setTitleBarOverlay(
-      titleBarDimmed ? { color: '#666666', symbolColor: '#ffffff' } : titleBarBase,
-    );
+    if ((process.platform !== 'win32' && process.platform !== 'linux') || !mainWindow) return;
+    // linux는 Electron 버전에 따라 setTitleBarOverlay 미지원일 수 있어 실패해도 무해하게
+    try {
+      mainWindow.setTitleBarOverlay(
+        titleBarDimmed ? { color: '#666666', symbolColor: '#ffffff' } : titleBarBase,
+      );
+    } catch { /* 미지원 플랫폼 — 생성 시점의 titleBarOverlay 색 유지 */ }
   };
 
   ipcMain.handle('set-titlebar-dimmed', (_event, isDimmed: boolean) => {
