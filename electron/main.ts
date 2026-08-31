@@ -5,6 +5,7 @@ import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
 import { initializeAutoUpdater, registerUpdateIpc } from './autoUpdater';
+import { isDev } from './utils';
 
 // Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
 initMainSentry();
@@ -120,7 +121,8 @@ app.whenReady().then(async () => {
         label: '보기',
         submenu: [
           { role: 'reload', label: '새로고침' },
-          { role: 'toggleDevTools', label: '개발자 도구' },
+          // 개발자 도구는 dev 전용 — 배포 빌드는 webPreferences.devTools:false로 원천 차단과 한 쌍
+          ...(isDev ? [{ role: 'toggleDevTools' as const, label: '개발자 도구' }] : []),
           // 확대/축소(⌘+/−) 미제공 — 네이티브 데스크톱 앱처럼 고정 배율 (카톡 PC 관례)
         ],
       },
