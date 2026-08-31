@@ -1,5 +1,7 @@
 'use client';
 
+import { TitleBarColorSync } from '@/shared/ui/TitleBarColorSync';
+
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
@@ -57,6 +59,8 @@ export function ProfileDialogShell({ title, onClose, leftIcon = 'back', headerRi
   return createPortal(
     <div className="electron-no-drag fixed inset-0 z-50">
       <div className="animate-overlay-in flex h-full flex-col bg-gray-50">
+        {/* 창 버튼(WCO) 영역을 gray-50 상단과 동기화 */}
+        <TitleBarColorSync color="#F8F9FA" />
       {/* macOS 신호등 영역 확보용 드래그 바 */}
       <div className="electron-drag h-8 w-full shrink-0" />
 

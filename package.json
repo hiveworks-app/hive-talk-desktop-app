@@ -2,6 +2,7 @@
   "name": "hiveworks-web",
   "version": "0.1.8",
   "private": true,
+  "author": "HiveWorks <dawinsolution@gmail.com>",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev -p 23000",

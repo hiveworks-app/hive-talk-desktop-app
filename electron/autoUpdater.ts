@@ -7,6 +7,11 @@ export function initializeAutoUpdater(deps: {
   getMainWindow: () => BrowserWindow | null;
   setIsQuitting: (v: boolean) => void;
 }) {
+  // Linux(deb)는 electron-updater 업데이트 채널이 없다 — 기동 시 오류 로그만 남으므로 스킵
+  if (process.platform === 'linux') {
+    console.log('[AutoUpdater] Linux(deb)는 자동 업데이트 미지원 — 초기화 생략');
+    return;
+  }
   try {
     // 동적 require: 모듈이 없어도 앱이 크래시하지 않음
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -41,7 +46,9 @@ export function initializeAutoUpdater(deps: {
  *  initializeAutoUpdater는 패키징 빌드에서만 돌지만 렌더러는 항상 invoke할 수 있으므로
  *  핸들러는 무조건 등록한다 (미등록 시 'No handler registered' 에러가 콘솔로 샌다). */
 export function registerUpdateIpc(deps: { setIsQuitting: (v: boolean) => void }) {
-  ipcMain.handle('check-for-updates', async (): Promise<{ status: 'available' | 'up-to-date' | 'error'; version?: string }> => {
+  ipcMain.handle('check-for-updates', async (): Promise<{ status: 'available' | 'up-to-date' | 'unsupported' | 'error'; version?: string }> => {
+    // Linux(deb)는 업데이트 채널 자체가 없다 — 렌더러가 "릴리즈 페이지에서 재설치" 안내
+    if (process.platform === 'linux') return { status: 'unsupported' };
     // 개발 실행(비패키징)은 업데이트 채널이 없다 — 에러가 아니라 '최신'으로 안내.
     // 패키징인데 updater가 없으면(모듈 로드 실패) 실제 오류로 취급.
     if (!autoUpdater) return app.isPackaged ? { status: 'error' } : { status: 'up-to-date' };

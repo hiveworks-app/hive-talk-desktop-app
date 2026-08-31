@@ -47,7 +47,7 @@ export default function SettingsPage() {
     const api = (window as unknown as {
       electronAPI?: {
         isElectron?: boolean;
-        checkForUpdates?: () => Promise<{ status: 'available' | 'up-to-date' | 'error'; version?: string }>;
+        checkForUpdates?: () => Promise<{ status: 'available' | 'up-to-date' | 'unsupported' | 'error'; version?: string }>;
       };
     }).electronAPI;
     if (!api?.isElectron || !api.checkForUpdates) {
@@ -64,6 +64,9 @@ export default function SettingsPage() {
         });
       } else if (result.status === 'up-to-date') {
         showSnackbar({ message: '최신 버전을 사용 중이에요.', state: 'success' });
+      } else if (result.status === 'unsupported') {
+        // Linux(deb) — 자동 업데이트 채널 없음, 릴리즈 페이지 재설치 안내
+        showSnackbar({ message: '이 환경은 자동 업데이트를 지원하지 않아요. 다운로드 페이지에서 새 버전을 받아주세요.', state: 'error' });
       } else {
         // 일시적 실패(네트워크 등)만 안내 (RN 정책 패리티)
         showSnackbar({ message: '업데이트 확인에 실패했어요. 잠시 후 다시 시도해주세요.', state: 'error' });
