@@ -160,6 +160,32 @@ export function createWindow(
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
 
+  // 요청 Origin 제거: 데스크톱은 내장 서버(localhost:23000, 점유 시 랜덤 포트)에서 UI를 띄우므로
+  // 브라우저 엔진이 모든 API 요청에 Origin: http://localhost:<port> 를 자동으로 붙인다.
+  // 실서버는 이 출처가 CORS 허용 목록에 없어 문전 403으로 차단하므로(2026-08-31 실측:
+  // Origin 없으면 400 정상 도달, 붙이면 403), 모바일(RN)과 동일한 "Origin 없는 네이티브
+  // 클라이언트"로 요청한다. CORS는 브라우저-사용자 보호 장치라 자체 앱 요청에서 제거해도
+  // 서버 공격면은 변하지 않으며, 랜덤 포트 폴백 시 출처가 바뀌는 문제도 함께 해소된다.
+  // wss 패턴 별도 명시: match pattern의 `*://`는 http/https만 매칭 — WS 핸드셰이크도 커버.
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    {
+      urls: [
+        '*://*.hiveworks.co.kr/*',
+        '*://hiveworks.co.kr/*',
+        '*://*.ncloudstorage.com/*',
+        'wss://*.hiveworks.co.kr/*',
+        'wss://hiveworks.co.kr/*',
+      ],
+    },
+    (details, callback) => {
+      const requestHeaders = { ...details.requestHeaders };
+      for (const key of Object.keys(requestHeaders)) {
+        if (key.toLowerCase() === 'origin') delete requestHeaders[key];
+      }
+      callback({ requestHeaders });
+    },
+  );
+
   // CORS 우회: API 서버 + NCloud Object Storage 도메인에 대해 CORS 헤더 재설정
   // URL 필터를 사용하여 localhost 페이지/에셋 로딩에 영향을 주지 않음
   session.defaultSession.webRequest.onHeadersReceived(
