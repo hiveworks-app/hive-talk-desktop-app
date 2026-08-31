@@ -41,7 +41,8 @@ import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/c
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { setPendingDismissedToast } from '@/shared/utils/pendingDismissedToast';
 import { handleForceLogout } from '@/shared/api/refreshAccessToken';
-import { MEMBERS_KEY } from '@/shared/config/queryKeys';
+import { MEMBERS_KEY, PUSH_SETTINGS_KEY } from '@/shared/config/queryKeys';
+import type { PushSettingsResponse } from '@/features/notification-settings/type';
 import { useMemberInviteStore } from '@/store/memberInviteStore';
 import { useUIStore } from '@/store/uiStore';
 import type { MessageHandlerDeps } from './types';
@@ -113,6 +114,25 @@ export function routeMessage(rawData: string, deps: MessageHandlerDeps) {
       useMemberInviteStore.getState().requestExpiredNotice();
     } else {
       useMemberInviteStore.getState().setPendingInvite(payload);
+      // 창이 뒤(비포커스)면 시스템 알림 보강 — RN 백그라운드 FCM 푸시 대응 (member-invite.md "초대 발송 시 앱 푸시").
+      // 포커스 중엔 수락/거절 팝업이 즉시 보이므로 미발화 (RN 포그라운드 이중 알림 방지와 동일).
+      // 초대 알림 마스터 OFF면 억제, 설정 미로딩 시 표시 (협력초대·채팅 알림과 동일 정책)
+      if (typeof document !== 'undefined' && !document.hasFocus() && !deps.suppressNotification) {
+        const pushSettings = deps.queryClient.getQueryData<PushSettingsResponse>(PUSH_SETTINGS_KEY);
+        if (!pushSettings || pushSettings.allInvitesPushEnabled) {
+          const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+            | { isElectron?: boolean; showNotification?: (data: unknown) => void }
+            | undefined;
+          if (electronAPI?.isElectron && electronAPI.showNotification) {
+            electronAPI.showNotification({
+              title: '하이브톡',
+              // RN 서버 푸시 본문 패리티 (member-invite.md "OO회사에서 소속멤버로 초대했습니다.")
+              // meta 없음 — 클릭 시 창 포커스만으로 충분, 수락/거절 팝업이 이미 대기 중
+              body: `${payload.companyModel.companyName}에서 소속멤버로 초대했습니다.`,
+            });
+          }
+        }
+      }
     }
     return;
   }
