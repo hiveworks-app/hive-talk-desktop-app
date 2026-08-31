@@ -61,12 +61,12 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
   }, []);
 
   if (step === 'result') {
-    // RN AccountSuccessView 패리티 — 세로 중앙 정렬, 체크 이미지 50px + "아이디 찾기 완료" +
-    // gray-100 라운드 박스 안 마스킹 이메일, 하단 단일 버튼 "로그인 페이지로 가기"
+    // RN AccountSuccessView 패리티 — 아이콘·제목, 이메일 박스, 버튼이 한 덩어리로 세로 중앙 정렬
+    // (블록 간 gap-12, 아이콘-제목 gap-5). 버튼은 하단 고정이 아니라 콘텐츠를 따라간다.
     return (
-      <div className="flex flex-1 flex-col px-4">
-        <div className="flex flex-1 flex-col items-center justify-center gap-[30px]">
-          <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-1 flex-col items-center justify-center px-4">
+        <div className="flex w-full flex-col items-center gap-12">
+          <div className="flex flex-col items-center gap-5">
             <img src="/find-user-check.png" alt="" className="h-[50px] w-[50px]" />
             <h2 className="text-heading-md font-semibold text-text-primary">아이디 찾기 완료</h2>
           </div>
@@ -75,9 +75,6 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
               {maskEmail(foundEmail)}
             </p>
           </div>
-        </div>
-
-        <div className="pb-4">
           <Button variant="primary" size="lg" fullWidth onClick={handleGoToLogin}>
             로그인 페이지로 가기
           </Button>
@@ -94,7 +91,7 @@ export function FindIdContent({ onFoundEmail, onStepChange }: FindIdContentProps
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="이름"
           error={!!sendErrorMessage}
-          className="h-10"
+        className="h-10"
         />
 
         <div className="space-y-2">
