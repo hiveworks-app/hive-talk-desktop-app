@@ -6,6 +6,7 @@ import { cn as cnHeader } from '@/shared/lib/cn';
 import { formatDotDate } from '@/shared/utils/formatTimeUtils';
 import { isBlockedUser } from '@/store/blockedMembersStore';
 import IconBlock from '@assets/icons/block.svg';
+import { IconDownload, IconOptionDelete } from '@assets/icons';
 import { useMediaViewerControls } from './useMediaViewerControls';
 
 export interface MediaViewerItem {
@@ -36,14 +37,6 @@ interface MediaViewerProps {
   showDownload?: boolean;
   /** 삭제 액션 — 내 프로필 사진 뷰어에서만 (RN ProfileImageViewerScreen [삭제] 대응) */
   onDelete?: () => void;
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
 }
 
 /** Outer shell: dimmed 관리 + visible 가드 */
@@ -100,7 +93,7 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
         </div>
         <div className="z-10 flex items-center gap-2">
           {headerAction && (
-            /* RN 패리티 — h-38 rounded-lg bg-white/70 px-2.5, 어두운 배경 위 흰 pill */
+            /* RN ProfileImageViewerScreen [프로필 수정] 동일 스타일 — h-38 rounded-lg bg-white/70 px-2.5 */
             <button
               onClick={headerAction.onClick}
               className="flex h-[38px] items-center justify-center rounded-lg bg-white/70 px-2.5 text-body font-medium text-gray-900 transition-opacity hover:opacity-80 active:opacity-60"
@@ -108,19 +101,20 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
               {headerAction.label}
             </button>
           )}
-          {showDownload && (
+          {/* 내 프로필 사진 뷰어(onDelete 존재)는 다운로드가 하단 바로 내려간다 (RN 패리티) */}
+          {showDownload && !onDelete && (
             bundleItems.length > 1 ? (
               /* 묶음 사진 — 다운로드 버튼이 '전체 저장/이 사진만' 메뉴가 된다 (RN 액션시트의 데스크톱 번역) */
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button
                     disabled={isBundleDownloading}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
+                    className="flex h-9 items-center justify-center rounded-full bg-white/10 px-3.5 text-sub font-medium text-white/90 transition-colors hover:bg-white/20 active:bg-white/25 disabled:opacity-50"
                   >
                     {isBundleDownloading ? (
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white/90" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white/90" />
                     ) : (
-                      <DownloadIcon />
+                      '다운로드'
                     )}
                   </button>
                 </DropdownMenu.Trigger>
@@ -146,19 +140,13 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
             ) : (
-              <button onClick={handleDownload} className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-opacity hover:opacity-70 active:opacity-60">
-                <DownloadIcon />
+              <button
+                onClick={handleDownload}
+                className="flex h-9 items-center justify-center rounded-full bg-white/10 px-3.5 text-sub font-medium text-white/90 transition-colors hover:bg-white/20 active:bg-white/25"
+              >
+                다운로드
               </button>
             )
-          )}
-          {/* 내 프로필 사진 삭제 (RN ProfileImageViewerScreen [삭제] 패리티) */}
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="flex h-[38px] items-center justify-center rounded-lg bg-white/70 px-2.5 text-body font-medium text-state-error transition-opacity hover:opacity-80 active:opacity-60"
-            >
-              삭제
-            </button>
           )}
         </div>
       </div>
@@ -237,6 +225,31 @@ function MediaViewerContent({ items, currentIndex, onIndexChange, onClose, heade
           </button>
         )}
       </div>
+
+      {/* 하단 바: 다운로드(좌)·삭제(우) — RN ProfileImageViewerScreen 하단 바 패리티.
+          내 프로필 사진 뷰어에서만 노출, 상단 헤더에는 [프로필 수정]만 남는다 */}
+      {onDelete && (
+        <div className="z-10 flex h-14 shrink-0 items-center justify-between bg-black/90 px-2.5">
+          {showDownload ? (
+            <button
+              onClick={handleDownload}
+              aria-label="다운로드"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-white transition-opacity hover:opacity-70 active:opacity-60"
+            >
+              <IconDownload width={24} height={24} />
+            </button>
+          ) : (
+            <span className="h-11 w-11" />
+          )}
+          <button
+            onClick={onDelete}
+            aria-label="프로필 사진 삭제"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-white transition-opacity hover:opacity-70 active:opacity-60"
+          >
+            <IconOptionDelete width={24} height={24} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
