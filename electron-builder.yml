@@ -168,9 +168,14 @@ win:
   icon: resources/icon.ico
 
 nsis:
-  oneClick: false
+  # 원클릭 설치 (슬랙·디스코드식) — oneClick:false의 구식 NSIS 마법사 UI 제거 (2026-08-31 QA).
+  # 사용자별(AppData) 설치라 관리자 권한 불필요, 실행 즉시 설치 후 앱 자동 시작
+  oneClick: true
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  # 브랜딩 — 설치기·언인스톨러·원클릭 진행 창 헤더에 HIVE 로고 명시
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
 
 linux:
   target:
