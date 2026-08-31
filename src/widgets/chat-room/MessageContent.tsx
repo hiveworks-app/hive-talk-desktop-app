@@ -178,7 +178,8 @@ export function MessageContent({ message, onOpenMedia, onExpandFullText }: Messa
 
   if (message.messageContentType === WS_MESSAGE_CONTENT_TYPE.FILE) {
     return (
-      <div className="relative flex flex-col gap-1">
+      // min-w-0 — 좁은 창에서 카드(max-w-full)가 컬럼 폭에 맞춰 줄어들 수 있게 flex 축소 허용
+      <div className="relative flex min-w-0 flex-col gap-1">
         {message.files?.map((file, idx) => (
           // 로컬(업로드 중/실패) 파일은 다운로드 링크 비활성 — path가 파일명 placeholder라 링크가 죽은 참조
           <ChatFileCard key={file.path || idx} file={file} disabled={message.isLocal} highlightKeyword={keyword} />

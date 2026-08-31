@@ -1,6 +1,8 @@
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { updateChatRoomListWithDeletion } from '@/features/chat-room-list/updater';
-import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
+import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import type { ParticipantItemsType } from '@/shared/types/chatRoom';
+import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
 import type {
   WebSocketEnvelope,
   WebSocketChannelTypes,
@@ -86,6 +88,33 @@ export function handleExitRoom(envelope: WebSocketEnvelope, deps: MessageHandler
         };
       });
     });
+
+    // GM/EM: 목록 캐시 participants에서 나간 사람 제거 — "혼자 남음" dimmed UI(목록·사이드패널)가
+    // 재조회 없이 즉시 반영되도록 (RN WebSocketContext EXIT_ROOM 분기 패리티, Figma 1769:57917)
+    const exitChannelType = (envelope.response as { channelType?: WebSocketChannelTypes }).channelType;
+    if (
+      exitChannelType === WS_CHANNEL_TYPE.GROUP_MESSAGE ||
+      exitChannelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE
+    ) {
+      const groupKey = getTargetQueryKey(exitChannelType);
+      if (groupKey) {
+        queryClient.setQueryData<GetChatRoomListItemType[]>(groupKey, prev => {
+          if (!prev) return prev;
+          return prev.map(room => {
+            if (room.roomModel.roomId !== roomId) return room;
+            const nextParticipants = (room.roomModel.participants ?? []).filter(
+              p => String(p.userId) !== String(userId),
+            );
+            return { ...room, roomModel: { ...room.roomModel, participants: nextParticipants } };
+          });
+        });
+      }
+      // 사이드패널 participants 쿼리도 동기화 — 방 안에서 패널을 보고 있을 때 즉시 반영
+      queryClient.setQueryData<ParticipantItemsType[]>(
+        ROOM_PARTICIPANTS_KEY(roomId, exitChannelType),
+        prev => (prev ? prev.filter(p => String(p.userId) !== String(userId)) : prev),
+      );
+    }
 
     const currentChatRoomId = useChatRoomInfo.getState().roomId;
     if (currentChatRoomId === roomId) {

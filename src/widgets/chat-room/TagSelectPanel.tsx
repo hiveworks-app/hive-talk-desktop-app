@@ -6,6 +6,7 @@ import { useGetTagInfo } from '@/features/tag/queries';
 import type { TagListType } from '@/shared/types/tag';
 import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
 import { IconCloseFilled } from '@/shared/ui/icons';
+import { Spinner } from '@/shared/ui/Spinner';
 import { TagIcon } from '@/shared/ui/TagIcon';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
@@ -183,8 +184,8 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
         <div className="mx-auto mt-6 w-full max-w-[360px]">
           {recentTags.length > 0 && <p className="mb-3 text-sub text-text-secondary">전체 태그</p>}
           {isLoading ? (
-            <div className="flex h-[200px] items-center justify-center">
-              <span className="text-sub-sm text-text-tertiary">태그 불러오는 중...</span>
+            <div className="flex h-[200px] items-center justify-center text-text-tertiary">
+              <Spinner />
             </div>
           ) : !tags?.length ? (
             <div className="flex h-[200px] items-center justify-center">

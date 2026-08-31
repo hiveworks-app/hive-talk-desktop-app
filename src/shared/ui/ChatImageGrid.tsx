@@ -87,8 +87,10 @@ export function ChatImageGrid({
     return acc;
   }, []);
 
-  const cellSize = (columns: number) =>
-    (maxWidth - GAP_PX * (columns - 1)) / columns;
+  // 좁은 창(메인 최소 440·팝업 400) 대응 — 62cqw 상한으로 버블 컨테이너 폭에 비례 축소.
+  // RN의 BUBBLE_OTHER_MAX_W(화면폭 62%) 번역. 컨테이너가 충분히 넓으면 기존 px 그대로.
+  // (cqw는 메시지 행의 @container 기준 — 현재 유일한 사용처인 MessageContent가 보장)
+  const widthCap = `min(${maxWidth}px, 62cqw)`;
 
   // Single image → larger, not square-cropped
   if (count === 1) {
@@ -97,8 +99,8 @@ export function ChatImageGrid({
       <button
         type="button"
         onClick={() => onImageClick?.(0)}
-        className={cn("overflow-hidden rounded-2xl", dimmed && "opacity-50")}
-        style={{ maxWidth: maxWidth }}
+        className={cn("min-w-0 max-w-full overflow-hidden rounded-2xl", dimmed && "opacity-50")}
+        style={{ maxWidth: widthCap }}
       >
         <div className="relative">
           <GridImg
@@ -120,21 +122,17 @@ export function ChatImageGrid({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg" style={{ width: maxWidth, maxWidth }}>
+    // 셀은 px 계산 대신 flex 균등분할 + aspect-square — 컨테이너가 줄면 셀도 비율대로 축소
+    // (RN createGridMetrics(containerWidth)와 동일 결과를 CSS로)
+    <div className="min-w-0 max-w-full overflow-hidden rounded-lg" style={{ width: widthCap }}>
       {rows.map((row, rowIndex) => {
         const start = rowStartIndices[rowIndex];
         const rowItems = visibleSources.slice(start, start + row.length);
-        const size = cellSize(row.columns);
-
-        // 3장 레이아웃: 1행(전체 너비) 높이를 하단 셀과 맞춤
-        const height = count === 3 && row.columns === 1
-          ? cellSize(2)
-          : size;
 
         return (
           <div
             key={rowIndex}
-            className="flex"
+            className="flex gap-1"
             style={{ marginTop: rowIndex === 0 ? 0 : GAP_PX }}
           >
             {rowItems.map((item, colIndex) => {
@@ -145,14 +143,9 @@ export function ChatImageGrid({
                   type="button"
                   onClick={() => onImageClick?.(globalIndex)}
                   className={cn(
-                    'overflow-hidden',
+                    'aspect-square min-w-0 flex-1 overflow-hidden',
                     dimmed && 'opacity-50',
                   )}
-                  style={{
-                    width: size,
-                    height,
-                    marginRight: colIndex < row.columns - 1 ? GAP_PX : 0,
-                  }}
                 >
                   <div className="relative h-full w-full">
                     <GridImg

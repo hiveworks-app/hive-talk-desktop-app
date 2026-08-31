@@ -73,7 +73,6 @@ export default function LoginPage() {
                 autoComplete="email"
                 disabled={isProcessing}
                 error={loginErrorField === 'email'}
-                className="h-11"
               />
               {/* 필드별 인라인 에러 — 해당 Input 바로 아래 (RN LoginScreen 패리티) */}
               {loginErrorField === 'email' && loginError && (
@@ -92,7 +91,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 disabled={isProcessing}
                 error={loginErrorField === 'password'}
-                className={`h-11${passwordFocused && password.length > 0 ? " pr-16" : ""}`}
+                className={passwordFocused && password.length > 0 ? "pr-16" : undefined}
               />
               {passwordFocused && password.length > 0 && !isProcessing && (
                 <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">

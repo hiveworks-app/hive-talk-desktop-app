@@ -12,7 +12,8 @@ export async function startNextServer(): Promise<string> {
   const preferred = await isPortAvailable(DEV_PORT);
   const port = preferred ? DEV_PORT : await findFreePort();
 
-  const standaloneDir = path.join(process.resourcesPath, 'standalone', 'hiveworks', 'hive-talk-desktop-app');
+  // outputFileTracingRoot가 프로젝트 루트로 고정돼 standalone 바로 아래에 server.js가 생성된다
+  const standaloneDir = path.join(process.resourcesPath, 'standalone');
   const serverPath = path.join(standaloneDir, 'server.js');
 
   nextServer = utilityProcess.fork(serverPath, [], {

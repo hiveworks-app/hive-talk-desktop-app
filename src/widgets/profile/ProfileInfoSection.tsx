@@ -62,7 +62,8 @@ export function ProfileInfoSection({
           onClick={() => canZoom && setViewerOpen(true)}
           disabled={!canZoom}
           aria-label={canZoom ? '프로필 이미지 크게 보기' : undefined}
-          className={canZoom ? 'block cursor-zoom-in' : 'block cursor-default'}
+          // 클릭 가능 아바타는 앱 전역 관례대로 pointer — zoom-in(돋보기+)은 이 지점만 튀어 제거 (QA 2026-08-28)
+          className={canZoom ? 'block cursor-pointer' : 'block cursor-default'}
         >
           {/* RN PROFILE_IMAGE_SIZE=154 패리티 */}
           <ProfileCircle name={name} storageKey={storageKey} className="h-[154px] w-[154px]" />

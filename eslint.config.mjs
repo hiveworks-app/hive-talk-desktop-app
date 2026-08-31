@@ -21,6 +21,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Electron 빌드 결과물
     "dist-electron/**",
+    // electron-builder 패키징 산출물 (앱 번들 안의 standalone 빌드까지 통째로 들어있다)
+    "release/**",
+    // 빌드 스크립트 (afterPack 훅 — CJS require 사용)
+    "scripts/**",
   ]),
 ]);
 

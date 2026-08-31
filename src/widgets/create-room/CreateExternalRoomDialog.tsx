@@ -3,6 +3,7 @@
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { Chip } from '@/shared/ui/Chip';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { Spinner } from '@/shared/ui/Spinner';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
 import { IconClose } from '@/shared/ui/icons';
@@ -109,7 +110,7 @@ export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoom
             {/* 목록 */}
             <div className="scrollbar-thin mt-3.5 flex-1 overflow-y-auto pb-2">
               {r.isLoading ? (
-                <div className="py-8 text-center text-sub text-text-tertiary">로딩 중...</div>
+                <div className="flex justify-center py-8 text-text-tertiary"><Spinner /></div>
               ) : !r.hasAnyMember ? (
                 <EmptyState message={emptyMessage} className="py-10" />
               ) : noSearchResult ? (

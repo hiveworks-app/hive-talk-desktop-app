@@ -1,4 +1,5 @@
 import type { ReceivedInviteItem, SentInviteItem } from '@/features/external-member/type';
+import { resyncReceivedInvitesFromServer } from '@/features/external-member/receivedInviteSync';
 import { clampInviteNoticeAckCount } from '@/features/external-member/inviteArrivalNoticeStorage';
 import { apiDeletePinnedMember } from '@/features/pinned-members/api';
 import type { PushSettingsResponse } from '@/features/notification-settings/type';
@@ -69,6 +70,8 @@ export function handleBroadcastExternalInvite(
       const store = useMemberInviteStore.getState();
       store.setExternalReceivedCount(store.externalReceivedCount + 1);
     }
+    // 낙관 +1은 즉시 반응용 — 실제 표시 건수는 서버 실측으로 곧바로 덮어쓴다
+    resyncReceivedInvitesFromServer(queryClient);
     // 포그라운드 안내는 인앱 모달(ExternalInviteArrivalNotice)이 전담 — 시스템 알림 이중 표시 금지 (RN 7/20 QA).
     // 창이 뒤에 있으면(비포커스) 시스템 알림으로 보강 — RN의 백그라운드 FCM 푸시 대응 (정책 external-invite.md)
     if (typeof document !== 'undefined' && !document.hasFocus() && !deps.suppressNotification) {
@@ -150,6 +153,8 @@ export function handleExternalInviteCancelled(
     const store = useMemberInviteStore.getState();
     store.setExternalReceivedCount(Math.max(0, store.externalReceivedCount - 1));
   }
+  // 캐시 미로딩으로 감소를 스킵했더라도 서버 실측이 절대값을 맞춘다
+  resyncReceivedInvitesFromServer(queryClient);
 
   queryClient.setQueryData<SentInviteItem[]>(SENT_INVITES_KEY, prev =>
     prev ? prev.filter(item => String(item.userId) !== otherUserId) : prev,

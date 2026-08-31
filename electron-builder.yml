@@ -12,6 +12,9 @@ directories:
   output: release
   buildResources: resources
 
+# standalone/node_modules 수동 복사 — extraResources는 node_modules를 강제 제외 (스크립트 주석 참고)
+afterPack: scripts/afterPack.cjs
+
 files:
   - dist-electron/**/*
   - "!node_modules"
@@ -31,6 +34,77 @@ files:
   - node_modules/debug/**/*
   - node_modules/ms/**/*
   - node_modules/sax/**/*
+  # Sentry 메인 프로세스(@sentry/electron/main) 의존성 클로저 — 69개, 아래 명령으로 재생성:
+  #   node -e "const w=new Set();const f=p=>{if(w.has(p))return;try{const m=require(`./node_modules/${p}/package.json`);w.add(p);Object.keys(m.dependencies||{}).forEach(f)}catch{}};f('@sentry/electron');[...w].sort().forEach(p=>console.log(`  - node_modules/${p}/**/*`))"
+  - node_modules/@fastify/otel/**/*
+  - node_modules/@opentelemetry/api/**/*
+  - node_modules/@opentelemetry/api-logs/**/*
+  - node_modules/@opentelemetry/core/**/*
+  - node_modules/@opentelemetry/instrumentation/**/*
+  - node_modules/@opentelemetry/instrumentation-amqplib/**/*
+  - node_modules/@opentelemetry/instrumentation-connect/**/*
+  - node_modules/@opentelemetry/instrumentation-dataloader/**/*
+  - node_modules/@opentelemetry/instrumentation-fs/**/*
+  - node_modules/@opentelemetry/instrumentation-generic-pool/**/*
+  - node_modules/@opentelemetry/instrumentation-graphql/**/*
+  - node_modules/@opentelemetry/instrumentation-hapi/**/*
+  - node_modules/@opentelemetry/instrumentation-http/**/*
+  - node_modules/@opentelemetry/instrumentation-ioredis/**/*
+  - node_modules/@opentelemetry/instrumentation-kafkajs/**/*
+  - node_modules/@opentelemetry/instrumentation-knex/**/*
+  - node_modules/@opentelemetry/instrumentation-koa/**/*
+  - node_modules/@opentelemetry/instrumentation-lru-memoizer/**/*
+  - node_modules/@opentelemetry/instrumentation-mongodb/**/*
+  - node_modules/@opentelemetry/instrumentation-mongoose/**/*
+  - node_modules/@opentelemetry/instrumentation-mysql/**/*
+  - node_modules/@opentelemetry/instrumentation-mysql2/**/*
+  - node_modules/@opentelemetry/instrumentation-pg/**/*
+  - node_modules/@opentelemetry/instrumentation-redis/**/*
+  - node_modules/@opentelemetry/instrumentation-tedious/**/*
+  - node_modules/@opentelemetry/redis-common/**/*
+  - node_modules/@opentelemetry/resources/**/*
+  - node_modules/@opentelemetry/sdk-trace-base/**/*
+  - node_modules/@opentelemetry/semantic-conventions/**/*
+  - node_modules/@opentelemetry/sql-common/**/*
+  - node_modules/@prisma/instrumentation/**/*
+  - node_modules/@sentry-internal/browser-utils/**/*
+  - node_modules/@sentry-internal/feedback/**/*
+  - node_modules/@sentry-internal/replay/**/*
+  - node_modules/@sentry-internal/replay-canvas/**/*
+  - node_modules/@sentry/browser/**/*
+  - node_modules/@sentry/core/**/*
+  - node_modules/@sentry/electron/**/*
+  - node_modules/@sentry/node/**/*
+  - node_modules/@sentry/node-core/**/*
+  - node_modules/@sentry/opentelemetry/**/*
+  - node_modules/@types/connect/**/*
+  - node_modules/@types/mysql/**/*
+  - node_modules/@types/node/**/*
+  - node_modules/@types/pg/**/*
+  - node_modules/@types/pg-pool/**/*
+  - node_modules/@types/tedious/**/*
+  - node_modules/acorn/**/*
+  - node_modules/acorn-import-attributes/**/*
+  - node_modules/balanced-match/**/*
+  - node_modules/brace-expansion/**/*
+  - node_modules/cjs-module-lexer/**/*
+  - node_modules/concat-map/**/*
+  - node_modules/debug/**/*
+  - node_modules/forwarded-parse/**/*
+  - node_modules/import-in-the-middle/**/*
+  - node_modules/minimatch/**/*
+  - node_modules/module-details-from-path/**/*
+  - node_modules/ms/**/*
+  - node_modules/pg-int8/**/*
+  - node_modules/pg-protocol/**/*
+  - node_modules/pg-types/**/*
+  - node_modules/postgres-array/**/*
+  - node_modules/postgres-bytea/**/*
+  - node_modules/postgres-date/**/*
+  - node_modules/postgres-interval/**/*
+  - node_modules/require-in-the-middle/**/*
+  - node_modules/undici-types/**/*
+  - node_modules/xtend/**/*
   - "!src"
   - "!electron"
   - "!.next"
@@ -39,13 +113,18 @@ extraResources:
   - from: .next/standalone
     to: standalone
     filter:
+      # "**/*"는 숨김 항목(.next, .env.production)을 매칭하지 않고 node_modules는 기본 제외라
+      # 전부 명시해야 standalone 서버가 온전히 복사된다 (누락 시 부팅 실패 — 2026-08-31 QA)
       - "**/*"
+      - ".next/**"
+      - ".env.production"
+      - "node_modules/**"
   - from: .next/static
-    to: standalone/hiveworks/hive-talk-desktop-app/.next/static
+    to: standalone/.next/static
     filter:
       - "**/*"
   - from: public
-    to: standalone/hiveworks/hive-talk-desktop-app/public
+    to: standalone/public
     filter:
       - "**/*"
   - from: resources

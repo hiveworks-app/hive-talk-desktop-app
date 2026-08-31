@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { buildFallbackMember } from '@/features/members/fallbackMember';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
 import type { MemberItem } from '@/shared/types/user';
+import { Spinner } from '@/shared/ui/Spinner';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
 import { useCreateNoticeMutation } from '@/features/chat-room/notice/queries';
 import { toNoticeRequestMeta } from '@/features/chat-room/notice/noticeUtils';
@@ -409,8 +410,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
                     </div>
                   )}
                   {isBeforeLoading && (
-                    <div className="flex justify-center py-2">
-                      <span className="text-sub-sm text-text-tertiary">불러오는 중...</span>
+                    <div className="flex justify-center py-2 text-text-tertiary">
+                      <Spinner className="h-4 w-4" />
                     </div>
                   )}
                   {messages.map((msg, idx) => (

@@ -51,19 +51,20 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
 
   if (step === 'complete') {
     return (
-      <div className="flex flex-1 flex-col px-4">
-        <div className="flex flex-1 flex-col items-center justify-center gap-5">
-          <div className="flex size-[50px] items-center justify-center rounded-full bg-blue-100">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+      // RN AccountSuccessView 패리티 — 아이콘·문구·버튼이 한 덩어리로 세로 중앙 정렬 (아이디 찾기 완료와 동일)
+      <div className="flex flex-1 flex-col items-center justify-center px-4">
+        <div className="flex w-full flex-col items-center gap-12">
+          <div className="flex flex-col items-center gap-5">
+            <div className="flex size-[50px] items-center justify-center rounded-full bg-blue-100">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-heading-md font-semibold text-text-primary">비밀번호 변경 완료</p>
+              <p className="text-sub text-text-tertiary">새 비밀번호로 로그인해주세요.</p>
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <p className="text-heading-md font-semibold text-text-primary">비밀번호 변경 완료</p>
-            <p className="text-sub text-text-tertiary">새 비밀번호로 로그인해주세요.</p>
-          </div>
-        </div>
-        <div className="pb-4">
           <Button variant="primary" size="lg" fullWidth onClick={() => { window.location.href = '/login'; }}>
             로그인 페이지로 가기
           </Button>
@@ -73,54 +74,45 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
   }
 
   if (step === 'reset') {
+    // RN ResetPasswordScreen 패리티 — 헤드라인 → 입력 2개(20px 간격) → 버튼 → 안내 박스가
+    // 모두 스크롤 흐름 안에 30px 간격으로 배치된다 (버튼 하단 고정 아님, 안내 박스가 버튼 아래)
     return (
-      <div className="flex flex-1 flex-col px-4">
-        <div className="flex-1 space-y-[30px] pt-[30px]">
-          <div className="space-y-2">
-            {/* RN ResetPasswordScreen 헤드라인 정본 */}
-            <h2 className="whitespace-pre-line text-heading-lg font-semibold text-text-primary">
-              {'안전한 서비스 이용을 위해\n새 비밀번호를 설정해주세요.'}
-            </h2>
-          </div>
+      <div className="flex flex-1 flex-col overflow-y-auto px-4">
+        <div className="space-y-[30px] pb-4 pt-[30px]">
+          {/* RN ResetPasswordScreen 헤드라인 정본 */}
+          <h2 className="whitespace-pre-line text-heading-lg font-semibold text-text-primary">
+            {'안전한 서비스 이용을 위해\n새 비밀번호를 설정해주세요.'}
+          </h2>
 
           {/* 규칙 위반 시 인라인 에러 + 빨강 보더 (RN getPasswordError 패리티) */}
-          <div className="space-y-2">
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="새 비밀번호"
-              error={!!passwordError}
-              className="h-10"
-            />
-            {passwordError && (
-              <p className="text-sub-sm text-state-error">{passwordError}</p>
-            )}
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="새 비밀번호"
+                error={!!passwordError}
+              />
+              {passwordError && (
+                <p className="text-sub-sm text-state-error">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="새 비밀번호 확인"
+                error={!!confirmPasswordError}
+              />
+              {confirmPasswordError && (
+                <p className="text-sub-sm text-state-error">{confirmPasswordError}</p>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="새 비밀번호 확인"
-              error={!!confirmPasswordError}
-              className="h-10"
-            />
-            {confirmPasswordError && (
-              <p className="text-sub-sm text-state-error">{confirmPasswordError}</p>
-            )}
-          </div>
-
-          {/* 비밀번호 정책 안내 (settings/password 안내 박스와 동일 스타일) */}
-          <div className="rounded-xl bg-gray-100 px-4 py-2.5">
-            <ul className="list-disc pl-5 text-sub text-gray-700">
-              <li>비밀번호는 영문 + 숫자 + 특수문자 3종류 조합, 8자리 이상 입력해주세요.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="pb-4">
           {/* 비활성 시 회색(dark variant) — 아이디 찾기 CTA와 동일 규칙 */}
           <Button
             variant={canResetPassword ? 'primary' : 'dark'}
@@ -131,6 +123,13 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
           >
             {isResetting ? '변경 중...' : '새 비밀번호로 변경'}
           </Button>
+
+          {/* 비밀번호 정책 안내 (settings/password 안내 박스와 동일 스타일) */}
+          <div className="rounded-xl bg-gray-100 px-4 py-2.5">
+            <ul className="list-disc pl-5 text-sub text-gray-700">
+              <li>비밀번호는 영문 + 숫자 + 특수문자 3종류 조합, 8자리 이상 입력해주세요.</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
@@ -145,7 +144,6 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
           onChange={(e) => handleEmailChange(e.target.value)}
           placeholder="이메일"
           error={!!sendErrorMessage}
-          className="h-10"
         />
 
         <div className="space-y-2">
@@ -157,7 +155,7 @@ export function FindPasswordContent({ initialEmail, onStepChange }: FindPassword
               inputMode="numeric"
               maxLength={11}
               error={!!sendErrorMessage}
-              className="h-10 pr-24"
+              className="pr-24"
             />
             <button
               type="button"

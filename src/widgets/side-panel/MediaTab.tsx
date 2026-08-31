@@ -27,6 +27,9 @@ interface MediaTabProps {
   lastMessageId: string;
   /** 현재 표시 중인 탭인지 — 탭 이탈 시 선택 모드 해제 (RN 탭 전환 리셋 패리티) */
   active: boolean;
+  /** 보낸사람 필터 — 보관함 레벨 공유 상태 (탭 전환에도 유지, RN 화면 레벨 패리티) */
+  selectedSender: FileSenderItem | null;
+  onSenderChange: (sender: FileSenderItem | null) => void;
 }
 
 /** 저장 파일명 — 서버 저장 키(UUID)가 아니라 읽을 수 있는 이름으로 (카톡 PC 관례, 전송 시각 기준).
@@ -40,9 +43,8 @@ const mediaSaveName = (media: MediaListType) => {
   return `HiveTalk_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}${ext}`;
 };
 
-export function MediaTab({ roomId, channelType, lastMessageId, active }: MediaTabProps) {
+export function MediaTab({ roomId, channelType, lastMessageId, active, selectedSender, onSenderChange }: MediaTabProps) {
   // 보낸사람 필터 — RN처럼 단일 선택(칩 1개), 서버(GET /app/chat/files)에서 처리. 없으면 base 캐시
-  const [selectedSender, setSelectedSender] = useState<FileSenderItem | null>(null);
   const senderIds = selectedSender ? [String(selectedSender.userId)] : [];
   const isFilterMode = senderIds.length > 0;
   const baseQuery = useInfiniteQuery({
@@ -104,15 +106,25 @@ export function MediaTab({ roomId, channelType, lastMessageId, active }: MediaTa
     setSelectMode(prev => !prev);
     setSelected(new Set());
   };
-  const handleBulkDownload = () => {
+  const handleBulkDownload = async () => {
     const items = filtered
       .filter(m => selected.has(m.id))
       .map(m => ({ url: m.presignedUrl, storageKey: m.path, filename: mediaSaveName(m) }));
-    downloadMany(items);
+    const ok = await downloadMany(items);
+    // 1건 이상 저장 성공 시 선택 모드 자동 해제 (RN 패리티 + 정책 chat-room.md "초기 상태 복귀").
+    // 전체 실패·폴더 선택 취소(null)면 선택 유지 — 같은 선택으로 재시도 가능해야 한다.
+    if (ok !== null && ok > 0) {
+      setSelectMode(false);
+      setSelected(new Set());
+    }
   };
 
   if (isLoading) {
-    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
+    return (
+      <div className="flex justify-center py-6 text-text-tertiary">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
@@ -124,7 +136,7 @@ export function MediaTab({ roomId, channelType, lastMessageId, active }: MediaTa
           channelType={channelType}
           contentType={['IMAGE', 'MEDIA']}
           selectedSender={selectedSender}
-          onChange={setSelectedSender}
+          onChange={onSenderChange}
         />
       </div>
 
@@ -260,7 +272,7 @@ export function MediaTab({ roomId, channelType, lastMessageId, active }: MediaTa
             disabled={isFetchingNextPage}
             className="mt-2 w-full py-2 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
           >
-            {isFetchingNextPage ? '로딩 중...' : '더 보기'}
+            {isFetchingNextPage ? <Spinner className="mx-auto block h-4 w-4" /> : '더 보기'}
           </button>
         )}
       </div>

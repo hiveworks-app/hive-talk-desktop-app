@@ -5,8 +5,10 @@ import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { getSidePanelBeforeAttachmentQuery, getSidePanelParticipantsQuery } from '@/features/chat-room-side-panel/queries';
+import type { FileSenderItem } from '@/features/chat-room-side-panel/type';
 import { useChangeRoomTitle } from '@/features/chat-room/useChangeRoomTitle';
-import { ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY, ROOM_PARTICIPANTS_KEY } from '@/shared/config/queryKeys';
+import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { cn } from '@/shared/lib/cn';
 import { GroupProfileAvatar, type GroupAvatarUser } from '@/shared/ui/GroupProfileAvatar';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -57,6 +59,9 @@ interface SidePanelProps {
 
 export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId }: SidePanelProps) {
   const [view, setView] = useState<SidePanelView>('main');
+  // 보관함 보낸사람 필터 — 탭(사진/동영상↔파일) 공유. RN은 화면 레벨 단일 상태로
+  // "즉시 비교 탐색"을 위해 탭 전환에도 유지한다 (RN ChatRoomSidePanelSelectItemScreen 패리티)
+  const [storageSender, setStorageSender] = useState<FileSenderItem | null>(null);
   const router = useAppRouter();
   // 차단 목록 변경 시 참여자 차단 표기 즉시 반영 (구독 목적 — 값 미사용)
   useBlockedMembersStore(s => s.items);
@@ -117,6 +122,7 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setView('main');
       setIsEditingTitle(false);
+      setStorageSender(null);
     }
   }, [isOpen]);
 
@@ -182,8 +188,22 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
     useDraftStore.getState().clearDraft(roomId);
     useFailedMessagesStore.getState().removeRoom(roomId);
     pendingReadRegistry.removeRoom(roomId);
+    // 내가 나갈 땐 서버가 목록 갱신을 브로드캐스트하지 않는다 — 목록 캐시 낙관적 제거
+    // (useLeaveRoom과 동일 규칙. 이게 빠져 있어 나가기 후에도 목록에 방이 남던 문제 수정)
+    const listKey =
+      channelType === WS_CHANNEL_TYPE.GROUP_MESSAGE
+        ? GM_ROOM_LIST_KEY
+        : channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE
+          ? EM_ROOM_LIST_KEY
+          : DM_ROOM_LIST_KEY;
+    queryClient.setQueryData<GetChatRoomListItemType[]>(listKey, prev =>
+      prev?.filter(r => r.roomModel.roomId !== roomId) ?? [],
+    );
     // 팝업(멀티 채팅창)은 돌아갈 목록이 없다 — 목록으로 라우팅하면 팝업이 앱 전체 창으로 바뀐다
     if (closeIfPopup()) return;
+    // 이 방을 띄운 팝업 창도 정리 (목록 개별 나가기와 동일 — Electron 아니면 no-op)
+    (window as unknown as { electronAPI?: { closeChatWindow?: (id: string) => void } })
+      .electronAPI?.closeChatWindow?.(roomId);
     const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
     router.push(routePrefix);
     onClose();
@@ -525,10 +545,11 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                   type="button"
                   onClick={() => setView(key)}
                   className={cn(
+                    // RN SidePanelSelectItemTitle 패리티 — 선택: primary/on-primary, 비선택: gray-50/text-secondary
                     'rounded-full px-3 py-1.5 text-sub font-medium transition-colors',
                     view === key
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-gray-50 text-text-secondary hover:bg-gray-100',
                   )}
                 >
                   {label}
@@ -536,10 +557,10 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
               ))}
             </div>
             <div className={view === 'media' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'media'} />
+              <MediaTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'media'} selectedSender={storageSender} onSenderChange={setStorageSender} />
             </div>
             <div className={view === 'files' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
-              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'files'} />
+              <FilesTab roomId={roomId} channelType={channelType} lastMessageId={lastMessageId} active={view === 'files'} selectedSender={storageSender} onSenderChange={setStorageSender} />
             </div>
           </div>
         )}

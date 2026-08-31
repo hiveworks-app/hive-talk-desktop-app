@@ -9,10 +9,11 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   inputSize?: InputHeight;
 }
 
+// 중간 스케일 (2026-08-31 사용자 확정) — Button과 동일한 48/40/36 체계 (RN과 구 데스크톱의 중간)
 const sizeStyles: Record<InputHeight, string> = {
-  sm: 'h-8 text-sub',
-  md: 'h-9 text-body',
-  lg: 'h-10 text-body',
+  sm: 'h-9 text-sub',
+  md: 'h-10 text-body',
+  lg: 'h-12 text-body',
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(

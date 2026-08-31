@@ -38,13 +38,16 @@ export function ExternalInviteArrivalNotice() {
     const userId = useAuthStore.getState().user?.id;
     if (userId == null) return;
 
-    // 감소 전이 — ack 하향 동기화 (INIT 절대값 클램프는 WS 핸들러가 수행)
+    // 감소 전이 — ack 하향 동기화 후 재예약으로 진행 (INIT 절대값 클램프는 WS 핸들러가 수행).
+    // 하향이 "서버 실측 보정"(낙관 +1 → 실제 건수)인 경우, 직전 증가가 걸어둔 예고 타이머는
+    // cleanup으로 취소되므로 보정된 건수로 다시 예약해야 안내가 유실되지 않는다.
+    // 전량 응답/취소로 0이 되거나 ack 이하면 아래 타이머의 ack 가드가 표시를 걸러낸다.
     if (count < prev) {
       const ack = getInviteNoticeAckCount(String(userId));
       if (ack > count) setInviteNoticeAckCount(String(userId), count);
+    } else if (count === prev) {
       return;
     }
-    if (count <= prev) return;
 
     const timer = setTimeout(() => {
       const ack = getInviteNoticeAckCount(String(userId));
