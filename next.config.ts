@@ -23,6 +23,10 @@ const packageJson = require('./package.json');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // standalone 출력 구조 고정 — 미지정 시 Next가 상위 폴더 락파일로 워크스페이스 루트를 "추론"해서
+  // 환경에 따라 standalone/server.js 위치가 달라진다 (hiveworks/... 중첩 ↔ 루트).
+  // electron-builder extraResources·electron/server.ts가 이 평평한 구조를 전제한다.
+  outputFileTracingRoot: path.join(__dirname),
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
