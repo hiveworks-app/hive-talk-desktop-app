@@ -1,5 +1,5 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
-import { getIconPath, getTrayIconPath } from './utils';
+import { getIconPath, getTrayIconPath, isDev } from './utils';
 
 let trayIsLoggedIn = false;
 let trayIsLocked = false;
@@ -45,14 +45,20 @@ export function updateTrayMenu(
       label: '종료',
       click: () => { deps.setIsQuitting(true); app.quit(); },
     },
-    { type: 'separator' },
-    {
-      label: '개발자 도구',
-      click: () => {
-        mainWindow?.show();
-        mainWindow?.webContents.toggleDevTools();
-      },
-    },
+    // 개발자 도구는 dev 전용 — 배포 빌드는 webPreferences.devTools:false 원천 차단과 한 쌍
+    // (항목을 남기면 눌러도 안 열리는 유령 메뉴가 된다 — 2026-08-31 QA)
+    ...(isDev
+      ? [
+          { type: 'separator' as const },
+          {
+            label: '개발자 도구',
+            click: () => {
+              mainWindow?.show();
+              mainWindow?.webContents.toggleDevTools();
+            },
+          },
+        ]
+      : []),
   ]);
 
   tray.setContextMenu(contextMenu);
