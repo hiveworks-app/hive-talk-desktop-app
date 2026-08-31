@@ -176,6 +176,11 @@ nsis:
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
   installerHeaderIcon: resources/icon.ico
+  # 바로가기 명시 — 시작 메뉴 바로가기가 생성되지 않는 사례 실측(2026-08-31 QA)으로 기본값에
+  # 맡기지 않는다. 바탕화면은 재설치 시에도 항상 재생성(always), 이름은 exe와 무관하게 HiveTalk
+  createStartMenuShortcut: true
+  createDesktopShortcut: always
+  shortcutName: HiveTalk
 
 linux:
   # deb 전환 (2026-08-31): AppImage는 chmod·libfuse 설치 등 실행까지 수작업이 많았다 —
