@@ -23,7 +23,7 @@ export default function PersonalSecurityPage() {
   const router = useAppRouter();
   const { showSnackbar } = useUIStore();
 
-  const { data: terms, refetch: refetchTerms } = useGetMyTerms();
+  const { data: terms, isPending: termsPending, refetch: refetchTerms } = useGetMyTerms();
   const marketing = useToggleMarketingConsent();
   const adInfo = useToggleAdInfoConsent();
 
@@ -87,6 +87,7 @@ export default function PersonalSecurityPage() {
             <ConsentToggleRow
               title="마케팅 목적 개인정보 이용 동의"
               checked={marketingAgreed}
+              loading={termsPending}
               disabled={marketing.isPending}
               onChange={handleToggle(marketing, 'marketing', '마케팅 목적 개인정보 이용')}
               onViewFullText={() => router.push('/settings/policy/marketing-consent')}
@@ -94,6 +95,7 @@ export default function PersonalSecurityPage() {
             <ConsentToggleRow
               title="광고성 정보 수신동의"
               checked={adAgreed}
+              loading={termsPending}
               disabled={adInfo.isPending}
               onChange={handleToggle(adInfo, 'adInfo', '광고성 정보 수신')}
               onViewFullText={() => router.push('/settings/policy/ad-consent')}
@@ -154,12 +156,15 @@ function LinkRow({
 function ConsentToggleRow({
   title,
   checked,
+  loading,
   disabled,
   onChange,
   onViewFullText,
 }: {
   title: string;
   checked: boolean;
+  /** 서버 동의 상태 도착 전 — OFF 기본값을 그렸다가 ON으로 뒤집히는 깜빡임 방지용 스켈레톤 표시 */
+  loading: boolean;
   disabled: boolean;
   onChange: (next: boolean) => void;
   onViewFullText: () => void;
@@ -176,7 +181,11 @@ function ConsentToggleRow({
           전문보기
         </button>
       </div>
-      <Toggle checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />
+      {loading ? (
+        <div className="h-6 w-10 shrink-0 animate-pulse rounded-full bg-gray-200" aria-hidden />
+      ) : (
+        <Toggle checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />
+      )}
     </div>
   );
 }

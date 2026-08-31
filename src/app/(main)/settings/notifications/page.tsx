@@ -15,7 +15,7 @@ import { SettingsOverlay } from '../_components/SettingsOverlay';
 export default function NotificationSettingsPage() {
   const router = useAppRouter();
   const { showSnackbar } = useUIStore();
-  const { data: settings, isLoading } = useGetPushSettings();
+  const { data: settings, isPending } = useGetPushSettings();
   const toggleChat = useToggleChatPush();
   const toggleInvite = useToggleInvitePush();
 
@@ -55,14 +55,16 @@ export default function NotificationSettingsPage() {
             title="채팅 알림"
             description="새 메시지가 왔을 때 푸쉬알림을 받게 돼요."
             checked={chatEnabled}
-            disabled={isLoading || toggleChat.isPending}
+            loading={isPending}
+            disabled={toggleChat.isPending}
             onChange={next => toggleChat.mutate(next, { onError: onChatError })}
           />
           <SettingToggleRow
             title="초대 알림"
             description="멤버초대에 대한 푸쉬알림을 받게 돼요."
             checked={inviteEnabled}
-            disabled={isLoading || toggleInvite.isPending}
+            loading={isPending}
+            disabled={toggleInvite.isPending}
             onChange={next => toggleInvite.mutate(next, { onError: onInviteError })}
           />
         </section>
@@ -75,12 +77,15 @@ function SettingToggleRow({
   title,
   description,
   checked,
+  loading,
   disabled,
   onChange,
 }: {
   title: string;
   description: string;
   checked: boolean;
+  /** 서버 설정 도착 전 — 기본값을 그렸다가 실제 값으로 뒤집히는 깜빡임 방지용 스켈레톤 표시 */
+  loading: boolean;
   disabled: boolean;
   onChange: (next: boolean) => void;
 }) {
@@ -91,7 +96,11 @@ function SettingToggleRow({
         <span className="text-heading-sm font-medium text-gray-800">{title}</span>
         <p className="mt-0.5 text-sub text-gray-600">{description}</p>
       </div>
-      <Toggle checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />
+      {loading ? (
+        <div className="h-6 w-10 shrink-0 animate-pulse rounded-full bg-gray-200" aria-hidden />
+      ) : (
+        <Toggle checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />
+      )}
     </div>
   );
 }
