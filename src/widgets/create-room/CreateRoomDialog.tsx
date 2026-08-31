@@ -2,6 +2,7 @@
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { Spinner } from '@/shared/ui/Spinner';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
 import { IconClose } from '@/shared/ui/icons';
@@ -97,7 +98,7 @@ export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoo
             {/* 목록 */}
             <div className="scrollbar-thin mt-3.5 flex-1 overflow-y-auto pb-2">
               {r.isLoading ? (
-                <div className="py-8 text-center text-sub text-text-tertiary">로딩 중...</div>
+                <div className="flex justify-center py-8 text-text-tertiary"><Spinner /></div>
               ) : !r.hasAnyMember ? (
                 <EmptyState message="아직 함께할 멤버가 없어요." className="py-10" />
               ) : noSearchResult ? (

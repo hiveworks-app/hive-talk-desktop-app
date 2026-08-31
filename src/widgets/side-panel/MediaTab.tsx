@@ -120,7 +120,11 @@ export function MediaTab({ roomId, channelType, lastMessageId, active, selectedS
   };
 
   if (isLoading) {
-    return <div className="px-4 py-3 text-sub-sm text-text-tertiary">로딩 중...</div>;
+    return (
+      <div className="flex justify-center py-6 text-text-tertiary">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
@@ -268,7 +272,7 @@ export function MediaTab({ roomId, channelType, lastMessageId, active, selectedS
             disabled={isFetchingNextPage}
             className="mt-2 w-full py-2 text-sub-sm text-primary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-50"
           >
-            {isFetchingNextPage ? '로딩 중...' : '더 보기'}
+            {isFetchingNextPage ? <Spinner className="mx-auto block h-4 w-4" /> : '더 보기'}
           </button>
         )}
       </div>

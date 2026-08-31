@@ -6,6 +6,7 @@ import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { USER_ROLE } from '@/shared/types/user';
 import { canCreateChatRoom } from '@/shared/utils/permissions';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { Spinner } from '@/shared/ui/Spinner';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
 import IconSearchDefault from '@assets/icons/search-default.svg';
@@ -104,8 +105,8 @@ export function ExternalChatSidebar() {
         {/* 목록 */}
         <div className="scrollbar-thin flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-sub text-text-tertiary">로딩 중...</p>
+            <div className="flex items-center justify-center py-8 text-text-tertiary">
+              <Spinner />
             </div>
           ) : visibleRooms.length === 0 ? (
             <EmptyState variant="sad" message="아직 채팅방이 없어요." className="py-10" />

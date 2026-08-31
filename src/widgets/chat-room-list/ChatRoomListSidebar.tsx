@@ -10,6 +10,7 @@ import { WS_CHANNEL_TYPE } from "@/shared/types/websocket";
 import { Chip } from "@/shared/ui/Chip";
 import { useUIStore } from "@/store/uiStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { Spinner } from "@/shared/ui/Spinner";
 import { CreateRoomDialog } from "@/widgets/create-room/CreateRoomDialog";
 import IconCreateChatFilled from "@assets/icons/create-chat-filled.svg";
 import IconSearchDefault from "@assets/icons/search-default.svg";
@@ -150,8 +151,8 @@ export function ChatRoomListSidebar() {
         {/* 목록 */}
         <div className="scrollbar-thin flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-sub text-text-tertiary">로딩 중...</p>
+            <div className="flex items-center justify-center py-8 text-text-tertiary">
+              <Spinner />
             </div>
           ) : visibleRooms.length === 0 ? (
             <EmptyState message="아직 채팅방이 없어요." className="py-10" />

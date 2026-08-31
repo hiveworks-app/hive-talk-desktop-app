@@ -7,6 +7,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { Button } from '@/shared/ui/Button';
+import { Spinner } from '@/shared/ui/Spinner';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { IconSearch } from '@/shared/ui/icons';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -150,7 +151,7 @@ export function InviteMemberDialog({ open, onClose, existingUserIds, onInvite, c
 
           <div className="flex-1 overflow-y-auto px-3 py-2">
             {isLoading ? (
-              <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
+              <div className="flex justify-center py-8 text-gray-400"><Spinner /></div>
             ) : filtered.length === 0 ? (
               <div className="py-8 text-center text-sm text-gray-400">
                 {candidates.length === 0 ? '초대할 멤버가 없어요.' : '검색 결과가 없어요.'}

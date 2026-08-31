@@ -6,6 +6,7 @@ import { getFileSendersInfiniteQuery } from '@/features/chat-room-side-panel/que
 import type { FileSenderContentType, FileSenderItem } from '@/features/chat-room-side-panel/type';
 import { cn } from '@/shared/lib/cn';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
+import { Spinner } from '@/shared/ui/Spinner';
 import { useAuthStore } from '@/store/auth/authStore';
 import { isBlockedUser } from '@/store/blockedMembersStore';
 import IconBlock from '@assets/icons/block.svg';
@@ -208,7 +209,7 @@ export function SenderSearchBar({
               disabled={isFetchingNextPage}
               className="w-full py-2 text-center text-sub-sm text-primary transition-opacity hover:opacity-70 disabled:opacity-50"
             >
-              {isFetchingNextPage ? '로딩 중...' : '더 보기'}
+              {isFetchingNextPage ? <Spinner className="mx-auto block h-4 w-4" /> : '더 보기'}
             </button>
           )}
         </div>
