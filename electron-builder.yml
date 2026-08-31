@@ -178,8 +178,11 @@ nsis:
   installerHeaderIcon: resources/icon.ico
 
 linux:
+  # deb 전환 (2026-08-31): AppImage는 chmod·libfuse 설치 등 실행까지 수작업이 많았다 —
+  # deb은 소프트웨어 센터 더블클릭 설치 + 메뉴 등록 + 샌드박스 권한 자동 설정.
+  # 단 electron-updater 자동 업데이트 채널 없음 (새 버전은 릴리즈 페이지에서 재설치)
   target:
-    - target: AppImage
+    - target: deb
       arch: [x64]
   category: Network
   icon: resources/icon.png
