@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
-import { getIconPath, getTrayIconPath, isDev } from './utils';
+import { getTrayIconPath, isDev } from './utils';
+import { getRoundedTrayIcon } from './trayIcon';
 
 let trayIsLoggedIn = false;
 let trayIsLocked = false;
@@ -78,7 +79,8 @@ export function createTray(deps: {
     icon = nativeImage.createFromPath(getTrayIconPath());
     icon.setTemplateImage(true);
   } else {
-    icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
+    // 모서리 둥근 16px (2026-09-01 QA — 정사각형 원본이 트레이에서 투박)
+    icon = getRoundedTrayIcon();
   }
 
   const tray = new Tray(icon);

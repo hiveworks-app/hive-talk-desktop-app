@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, session, Tray } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
+import { getTrayIconPath, getTrayBadgeIconPath } from './utils';
+import { getRoundedTrayIcon, getRoundedTrayBadgeIcon } from './trayIcon';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
 import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows, closeChatWindow } from './window';
@@ -15,6 +16,35 @@ const pendingDownloads = new Map<
   string,
   { filename: string; directory?: string; resolve: (ok: boolean) => void }
 >();
+
+/* ─── 작업 표시줄 안읽음 배지 (Windows) ─────────────────────────────
+   맥 dock 배지의 윈도우 대응물 — setOverlayIcon으로 아이콘 우하단에 빨간 점을 얹는다
+   (숫자 없이 점만, 사용자 결정 2026-09-01). 색은 트레이 점과 동일한 #FF3B30.
+   주의: 오버레이는 캔버스 전체가 고정 슬롯(약 16px)에 스케일되어 그려진다 — 구석에 작은
+   점만 그리면 반점처럼 찌그러진다(실측 2026-09-01). Teams식으로 32px 캔버스 중앙에
+   비례 큰 점(20px)을 그려 화면에서 ~10px 원이 되게 한다 (다운스케일이라 경계도 깔끔).
+   원시 버퍼는 BGRA 순서 + 프리멀티플라이드 알파(색상값×알파) — 경계 1px 안티앨리어싱. */
+let unreadOverlayIcon: Electron.NativeImage | null = null;
+function getUnreadOverlayIcon(): Electron.NativeImage {
+  if (unreadOverlayIcon) return unreadOverlayIcon;
+  const size = 32;
+  const buf = Buffer.alloc(size * size * 4); // 투명 배경
+  const radius = 10;
+  const center = (size - 1) / 2; // 중앙 정렬 — 슬롯 안에서 원이 통째로 보인다
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const alpha = Math.max(0, Math.min(1, radius + 0.5 - Math.hypot(x - center, y - center)));
+      if (alpha === 0) continue;
+      const offset = (y * size + x) * 4;
+      buf[offset] = Math.round(0x30 * alpha);     // B
+      buf[offset + 1] = Math.round(0x3b * alpha); // G
+      buf[offset + 2] = Math.round(0xff * alpha); // R
+      buf[offset + 3] = Math.round(255 * alpha);
+    }
+  }
+  unreadOverlayIcon = nativeImage.createFromBuffer(buf, { width: size, height: size });
+  return unreadOverlayIcon;
+}
 
 /** "이름 (1).ext" 식으로 중복을 피한 저장 경로 */
 function uniqueSavePath(dir: string, filename: string): string {
@@ -118,36 +148,20 @@ export function setupIpcHandlers(
           tray.setImage(originalIcon);
         }
       }
-    } else if (process.platform === 'win32' && tray) {
-      const baseIcon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
-      if (count > 0) {
-        const size = 16;
-        const raw = baseIcon.toBitmap();
-        const dotRadius = 5;
-        const dotCenterX = size - dotRadius;
-        const dotCenterY = size - dotRadius;
-        const borderRadius = dotRadius + 1;
-
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const dx = x - dotCenterX;
-            const dy = y - dotCenterY;
-            const dist = dx * dx + dy * dy;
-            const offset = (y * size + x) * 4;
-            if (dist <= dotRadius * dotRadius) {
-              raw[offset] = 0x30; raw[offset + 1] = 0x3B;
-              raw[offset + 2] = 0xFF; raw[offset + 3] = 0xFF;
-            } else if (dist <= borderRadius * borderRadius) {
-              raw[offset] = 0x00; raw[offset + 1] = 0x00;
-              raw[offset + 2] = 0x00; raw[offset + 3] = 0xFF;
-            }
-          }
+    } else if (process.platform === 'win32') {
+      // 작업 표시줄 아이콘 우하단 빨간 점 — 트레이가 없어도 동작하도록 트레이와 분리
+      const mainWindow = deps.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (count > 0) {
+          mainWindow.setOverlayIcon(getUnreadOverlayIcon(), `읽지 않은 메시지 ${count}개`);
+        } else {
+          mainWindow.setOverlayIcon(null, '');
         }
-
-        tray.setImage(nativeImage.createFromBuffer(raw, { width: size, height: size }));
-      } else {
-        tray.setImage(baseIcon);
       }
+
+      if (!tray) return;
+      // 둥근 아이콘 + 우하단 빨간 점(지름 7px) — 가공 로직은 trayIcon.ts (2026-09-01 QA)
+      tray.setImage(count > 0 ? getRoundedTrayBadgeIcon() : getRoundedTrayIcon());
     }
   });
 
