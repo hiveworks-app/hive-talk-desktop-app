@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useQueryClient } from '@tanstack/react-query';
 import { buildFallbackMember } from '@/features/members/fallbackMember';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
@@ -101,6 +102,8 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
   const [noticeReplaceConfirm, setNoticeReplaceConfirm] = useState<{ run: () => void } | null>(null);
   // 장문 전체보기 다이얼로그 (RN ChatRoomFullMessageScreen 대응)
   const [fullTextMessage, setFullTextMessage] = useState<ChatMessageUI | null>(null);
+  // 전체보기 스크림 동안 WCO 버튼 dim (팝업 창에서는 ElectronTrayHandler가 무시)
+  useDimmed(!!fullTextMessage);
   // 장문 전체보기 — ESC로 닫기 + Electron 창 숨김 억제 (억제 없으면 ESC가 앱을 트레이로 숨긴다)
   useEffect(() => {
     if (!fullTextMessage) return;
@@ -368,6 +371,7 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
           searchInputRef={searchInputRef}
           isSidePanelOpen={isSidePanelOpen}
           onToggleSidePanel={() => setIsSidePanelOpen(prev => !prev)}
+          isSidePanelDisabled={!effectiveRoomId}
           onCalendarDateSelect={date => void handleCalendarDateSelect(date)}
           isCalendarLoading={isCalendarLoading}
         />

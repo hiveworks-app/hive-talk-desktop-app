@@ -1,6 +1,5 @@
 'use client';
 
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { Chip } from '@/shared/ui/Chip';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -25,7 +24,6 @@ interface CreateExternalRoomDialogProps {
  * Step2 방 제목 설정 → 생성 후 입장. (Figma 1670-52577)
  */
 export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoomDialogProps) {
-  useDimmed(isOpen);
   const r = useCreateExternalRoom(onClose);
 
   if (!isOpen) return null;

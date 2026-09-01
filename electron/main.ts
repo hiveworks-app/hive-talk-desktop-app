@@ -7,6 +7,12 @@ import { setupIpcHandlers } from './ipc';
 import { initializeAutoUpdater, registerUpdateIpc } from './autoUpdater';
 import { isDev } from './utils';
 
+// 앱 이름은 무엇보다 먼저 고정 — userData 경로(%APPDATA%/<이름>)가 여기서 결정된다.
+// whenReady 안에서 늦게 부르면 싱글 인스턴스 락·Sentry·Chromium 프로필은 package.json
+// 이름(hiveworks-web) 폴더를 쓰고, 이후 코드는 HiveTalk 폴더를 봐서 두 갈래로 갈라진다
+// (window-state 저장이 존재하지 않는 HiveTalk 폴더에 쓰다 조용히 실패 — 2026-09-01 윈도우 실측)
+app.setName('HiveTalk');
+
 // Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
 initMainSentry();
 
@@ -39,6 +45,9 @@ if (!gotTheLock) {
 
 app.on('second-instance', () => {
   if (mainWindow) {
+    // 최소화 상태에서 바로가기 재실행 시 show()만으로는 윈도우에서 복원되지 않는다
+    // (Electron second-instance 공식 예제와 focus-window IPC 핸들러의 동일 규칙)
+    if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
   }
@@ -88,8 +97,6 @@ app.on('quit', () => {
 // ------------------------------------------------------------------
 
 app.whenReady().then(async () => {
-  app.setName('HiveTalk');
-
   // macOS 메뉴바
   if (process.platform === 'darwin') {
     const appMenu = Menu.buildFromTemplate([

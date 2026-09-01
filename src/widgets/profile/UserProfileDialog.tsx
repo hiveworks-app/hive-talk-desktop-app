@@ -18,7 +18,6 @@ import { ExternalInviteDialog } from '@/widgets/external-invite/ExternalInviteDi
 import { ProfileDialogShell } from './ProfileDialogShell';
 import { ProfileInfoSection } from './ProfileInfoSection';
 import { MemberItem, USER_ROLE } from '@/shared/types/user';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store/uiStore';
 import IconBlock from '@assets/icons/block.svg';
@@ -47,7 +46,6 @@ interface UserProfileDialogProps {
  * 관심멤버 "토글"은 지원하되, 목록 순서변경·일괄 편집은 모바일 전담(데스크톱 미지원).
  */
 export function UserProfileDialog({ isOpen, onClose, member, unregistered = false, disableDirectChat = false }: UserProfileDialogProps) {
-  useDimmed(isOpen);
   const myUserId = useAuthStore(s => s.user?.id);
   const viewerRole = useAuthStore(s => s.user?.role);
   const viewerCompanyId = useAuthStore(s => s.user?.companyId);
@@ -348,6 +346,10 @@ export function UserProfileDialog({ isOpen, onClose, member, unregistered = fals
         onChangeTitle={startMemberChat.setEmDraftTitle}
         onConfirm={startMemberChat.confirmEmDraft}
         onCancel={startMemberChat.cancelEmDraft}
+        duplicate={startMemberChat.emDuplicate}
+        onDuplicateCreateNew={startMemberChat.duplicateCreateNew}
+        onDuplicateGoExisting={startMemberChat.duplicateGoExisting}
+        onDuplicateClose={startMemberChat.closeEmDuplicate}
       />
 
       {/* 미등록 사용자 멤버초대 — 즉시 컨펌 (RN 패리티) */}

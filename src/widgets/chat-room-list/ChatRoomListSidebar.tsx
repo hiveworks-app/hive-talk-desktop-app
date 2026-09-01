@@ -125,7 +125,7 @@ export function ChatRoomListSidebar() {
             aria-label="채팅 검색"
             className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
           >
-            <IconSearchDefault width={24} height={24} />
+            <IconSearchDefault width={22} height={22} />
           </button>
           <button
             onClick={() => setShowCreateRoom(true)}
@@ -133,7 +133,7 @@ export function ChatRoomListSidebar() {
             aria-label="새 채팅"
             className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
           >
-            <IconCreateChatFilled width={24} height={24} />
+            <IconCreateChatFilled width={22} height={22} />
           </button>
           <ChatSettingsMenu
             sortType={sortType}

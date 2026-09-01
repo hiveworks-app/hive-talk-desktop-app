@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, session, Tray } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getIconPath, getTrayIconPath, getTrayBadgeIconPath } from './utils';
+import { getTrayIconPath, getTrayBadgeIconPath } from './utils';
+import { getRoundedTrayIcon, getRoundedTrayBadgeIcon } from './trayIcon';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
 import { setEscSuppressed, openChatWindow, broadcastToChatWindows, closeAllChatWindows, closeChatWindow } from './window';
@@ -15,6 +16,35 @@ const pendingDownloads = new Map<
   string,
   { filename: string; directory?: string; resolve: (ok: boolean) => void }
 >();
+
+/* ─── 작업 표시줄 안읽음 배지 (Windows) ─────────────────────────────
+   맥 dock 배지의 윈도우 대응물 — setOverlayIcon으로 아이콘 우하단에 빨간 점을 얹는다
+   (숫자 없이 점만, 사용자 결정 2026-09-01). 색은 트레이 점과 동일한 #FF3B30.
+   주의: 오버레이는 캔버스 전체가 고정 슬롯(약 16px)에 스케일되어 그려진다 — 구석에 작은
+   점만 그리면 반점처럼 찌그러진다(실측 2026-09-01). Teams식으로 32px 캔버스 중앙에
+   비례 큰 점(20px)을 그려 화면에서 ~10px 원이 되게 한다 (다운스케일이라 경계도 깔끔).
+   원시 버퍼는 BGRA 순서 + 프리멀티플라이드 알파(색상값×알파) — 경계 1px 안티앨리어싱. */
+let unreadOverlayIcon: Electron.NativeImage | null = null;
+function getUnreadOverlayIcon(): Electron.NativeImage {
+  if (unreadOverlayIcon) return unreadOverlayIcon;
+  const size = 32;
+  const buf = Buffer.alloc(size * size * 4); // 투명 배경
+  const radius = 10;
+  const center = (size - 1) / 2; // 중앙 정렬 — 슬롯 안에서 원이 통째로 보인다
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const alpha = Math.max(0, Math.min(1, radius + 0.5 - Math.hypot(x - center, y - center)));
+      if (alpha === 0) continue;
+      const offset = (y * size + x) * 4;
+      buf[offset] = Math.round(0x30 * alpha);     // B
+      buf[offset + 1] = Math.round(0x3b * alpha); // G
+      buf[offset + 2] = Math.round(0xff * alpha); // R
+      buf[offset + 3] = Math.round(255 * alpha);
+    }
+  }
+  unreadOverlayIcon = nativeImage.createFromBuffer(buf, { width: size, height: size });
+  return unreadOverlayIcon;
+}
 
 /** "이름 (1).ext" 식으로 중복을 피한 저장 경로 */
 function uniqueSavePath(dir: string, filename: string): string {
@@ -118,36 +148,20 @@ export function setupIpcHandlers(
           tray.setImage(originalIcon);
         }
       }
-    } else if (process.platform === 'win32' && tray) {
-      const baseIcon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 });
-      if (count > 0) {
-        const size = 16;
-        const raw = baseIcon.toBitmap();
-        const dotRadius = 5;
-        const dotCenterX = size - dotRadius;
-        const dotCenterY = size - dotRadius;
-        const borderRadius = dotRadius + 1;
-
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const dx = x - dotCenterX;
-            const dy = y - dotCenterY;
-            const dist = dx * dx + dy * dy;
-            const offset = (y * size + x) * 4;
-            if (dist <= dotRadius * dotRadius) {
-              raw[offset] = 0x30; raw[offset + 1] = 0x3B;
-              raw[offset + 2] = 0xFF; raw[offset + 3] = 0xFF;
-            } else if (dist <= borderRadius * borderRadius) {
-              raw[offset] = 0x00; raw[offset + 1] = 0x00;
-              raw[offset + 2] = 0x00; raw[offset + 3] = 0xFF;
-            }
-          }
+    } else if (process.platform === 'win32') {
+      // 작업 표시줄 아이콘 우하단 빨간 점 — 트레이가 없어도 동작하도록 트레이와 분리
+      const mainWindow = deps.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (count > 0) {
+          mainWindow.setOverlayIcon(getUnreadOverlayIcon(), `읽지 않은 메시지 ${count}개`);
+        } else {
+          mainWindow.setOverlayIcon(null, '');
         }
-
-        tray.setImage(nativeImage.createFromBuffer(raw, { width: size, height: size }));
-      } else {
-        tray.setImage(baseIcon);
       }
+
+      if (!tray) return;
+      // 둥근 아이콘 + 우하단 빨간 점(지름 7px) — 가공 로직은 trayIcon.ts (2026-09-01 QA)
+      tray.setImage(count > 0 ? getRoundedTrayBadgeIcon() : getRoundedTrayIcon());
     }
   });
 
@@ -220,16 +234,37 @@ export function setupIpcHandlers(
      항상 흰색이면 gray-50 화면(설정 계열)이나 어두운 화면(미디어 뷰어)에서 버튼 부분만
      흰 네모로 도드라진다 (2026-08-31 QA). 렌더러가 현재 화면 상단 배경색을 보내는 기본층 +
      dim이 그 위에 우선 적용되는 2층 구조. 심볼(아이콘) 색은 배경 밝기로 자동 결정. */
-  let titleBarBase = { color: '#ffffff', symbolColor: '#333333' };
+  let titleBarBaseColor = '#ffffff';
   let titleBarDimmed = false;
+
+  const hexToRgb = (hex: string): number[] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const rgbToHex = (rgb: number[]) =>
+    `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+
+  // 딤 색 = base색에 스크림(검정 30%)을 합성한 값 — 고정 #666은 흰 카드/스크림 위에서
+  // 이질적으로 도드라진다 (태그창 실측 2026-09-01). 화면이 무엇이든 스크림과 이어져 보인다.
+  const titleBarTarget = () =>
+    titleBarDimmed ? rgbToHex(hexToRgb(titleBarBaseColor).map(v => v * 0.7)) : titleBarBaseColor;
+
+  /* 딤 전환은 단일 스냅 — 스텝 트윈(4×45ms)을 시도했으나 setTitleBarOverlay가 호출마다
+     캡션 영역을 통째로 재도색해 흰색이 끼어드는 깜빡임으로 보였다 (2026-09-01 윈도우 실측).
+     색이 base×스크림 합성값이라 스냅 한 번이면 페이드와의 이질감이 최소다. */
   const applyTitleBar = () => {
     const mainWindow = deps.getMainWindow();
     if ((process.platform !== 'win32' && process.platform !== 'linux') || !mainWindow) return;
+    const hex = titleBarTarget();
+    const [r, g, b] = hexToRgb(hex);
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
     // linux는 Electron 버전에 따라 setTitleBarOverlay 미지원일 수 있어 실패해도 무해하게
     try {
-      mainWindow.setTitleBarOverlay(
-        titleBarDimmed ? { color: '#666666', symbolColor: '#ffffff' } : titleBarBase,
-      );
+      mainWindow.setTitleBarOverlay({
+        color: hex,
+        symbolColor: luminance > 140 ? '#333333' : '#ffffff',
+      });
     } catch { /* 미지원 플랫폼 — 생성 시점의 titleBarOverlay 색 유지 */ }
   };
 
@@ -240,11 +275,7 @@ export function setupIpcHandlers(
 
   ipcMain.handle('set-titlebar-color', (_event, color: unknown) => {
     if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    titleBarBase = { color, symbolColor: luminance > 140 ? '#333333' : '#ffffff' };
+    titleBarBaseColor = color.toLowerCase();
     applyTitleBar();
   });
 }

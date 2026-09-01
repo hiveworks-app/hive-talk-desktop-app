@@ -1,5 +1,7 @@
 'use client';
 
+import { useDimmed } from '@/shared/hooks/useDimmed';
+
 interface DuplicateRoomDialogProps {
   open: boolean;
   /** 선택한 멤버 이름들 (안내 문구에 표시). */
@@ -24,6 +26,7 @@ export function DuplicateRoomDialog({
   onGoExisting,
   onClose,
 }: DuplicateRoomDialogProps) {
+  useDimmed(open);
   if (!open) return null;
 
   return (

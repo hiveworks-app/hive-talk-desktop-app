@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { handleForceLogout } from '@/shared/api/refreshAccessToken';
 import { Button } from '@/shared/ui/Button';
 import { useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 /**
  * 중복 로그인(SC010) 강제 종료 안내 다이얼로그 (RN 패리티, Figma 3300:62648).
@@ -14,6 +15,7 @@ import { useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
  */
 export function DuplicateLoginLogoutDialog() {
   const visible = useSessionDisconnectStore(s => s.noticeVisible);
+  useDimmed(visible);
 
   const handleConfirm = useCallback(() => {
     useSessionDisconnectStore.getState().hideNotice();

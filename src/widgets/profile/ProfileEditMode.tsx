@@ -142,7 +142,8 @@ export function ProfileEditMode({ user, onDone, onValidityChange }: ProfileEditM
           <img src={avatarSrc} alt="" className="h-full w-full rounded-full object-cover" />
         ) : (
           <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-300">
-            <img src="/empty-profile.png" alt={user.name} className="h-full w-full rounded-full object-contain p-3" />
+            {/* 여백 p-8 — 보기 화면(ProfileCircle xl 기본 이미지)과 동일 비율, 두 화면의 꿀벌 크기 일치 */}
+            <img src="/empty-profile.png" alt={user.name} className="h-full w-full rounded-full object-contain p-8" />
           </span>
         )}
 

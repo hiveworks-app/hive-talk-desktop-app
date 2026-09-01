@@ -9,6 +9,7 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import type { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, type WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useUIStore } from '@/store';
 import { useChatRoomInfo } from '@/store/chat/chatRoomStore';
 import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 
@@ -16,6 +17,13 @@ import { useChatRoomRuntimeStore } from '@/store/chat/chatRoomRuntimeStore';
 export interface EMTitleDraft {
   member: MemberItem;
   title: string;
+}
+
+/** EM 중복 방 발견 상태 — [새로 만들기/기존 방 이동] 선택 대기 (RN DuplicateRoomBottomSheet 패리티) */
+export interface EMDuplicate {
+  member: MemberItem;
+  roomId: string;
+  existingTitle: string;
 }
 
 interface UseStartMemberChatOptions {
@@ -34,8 +42,11 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
   const queryClient = useQueryClient();
   const myUserId = useAuthStore(s => s.user?.id);
   const { mutateAsync: checkDuplicateEM, isPending: isCheckingEM } = useCheckDuplicateEM();
+  const showSnackbar = useUIStore(s => s.showSnackbar);
   // 협력멤버 1:1 EM 생성 — 방 제목 입력 단계 (RN 제목 입력 화면 대응)
   const [emTitleDraft, setEmTitleDraftState] = useState<EMTitleDraft | null>(null);
+  // 중복 방 발견 — 자동 이동하지 않고 [새로 만들기/기존 방 이동]을 묻는다 (RN 바텀시트 패리티)
+  const [emDuplicate, setEmDuplicate] = useState<EMDuplicate | null>(null);
 
   const navigateToDMRoom = (
     member: MemberItem,
@@ -98,16 +109,18 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
       const res = await checkDuplicateEM([String(member.userId), String(myUserId)].filter(Boolean));
       const { exists, roomIds } = res.payload;
       if (exists && roomIds[0]) {
-        // 기존 협력방으로 이동 — 캐시에서 제목 조회
+        // 중복 방 발견 — 자동 이동하지 않고 선택을 묻는다 (RN DuplicateRoomBottomSheet 패리티)
         const cached = queryClient.getQueryData<GetChatRoomListItemType[]>(EM_ROOM_LIST_KEY) ?? [];
         const found = cached.find(r => r.roomModel.roomId === roomIds[0]);
-        enterEMRoom(member, roomIds[0], found?.roomModel.title ?? member.name);
+        setEmDuplicate({ member, roomId: roomIds[0], existingTitle: found?.roomModel.title ?? member.name });
         return;
       }
     } catch {
-      // 검사 실패는 생성 시 서버가 재검증 (RN §7-C-6 정책) — 제목 입력으로 진행
+      // 검사 실패는 생성 시 서버가 재검증 (RN §7-C-6 정책) — 안내 후 제목 입력으로 진행
+      showSnackbar({ message: '잠시 후 다시 시도해주세요.', state: 'error' });
     }
-    setEmTitleDraftState({ member, title: member.name });
+    // 제목은 비워 시작 — placeholder가 상대 이름을 보여주고, 입력 전에는 [확인] 비활성 (RN 동일)
+    setEmTitleDraftState({ member, title: '' });
   };
 
   /** 1:1 채팅 시작 — 사내=DM, 협력=EM. 본인 대상은 무시 */
@@ -116,6 +129,21 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
     if (member.isExternal === true) void startEM(member);
     else startDM(member);
   };
+
+  // 중복 안내 선택지 (RN 바텀시트 두 버튼 대응)
+  const duplicateCreateNew = () => {
+    if (!emDuplicate) return;
+    const { member } = emDuplicate;
+    setEmDuplicate(null);
+    setEmTitleDraftState({ member, title: '' });
+  };
+  const duplicateGoExisting = () => {
+    if (!emDuplicate) return;
+    const { member, roomId, existingTitle } = emDuplicate;
+    setEmDuplicate(null);
+    enterEMRoom(member, roomId, existingTitle);
+  };
+  const closeEmDuplicate = () => setEmDuplicate(null);
 
   const setEmDraftTitle = (title: string) =>
     setEmTitleDraftState(prev => (prev ? { ...prev, title } : prev));
@@ -145,5 +173,16 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
     router.push('/external-chat/new');
   };
 
-  return { startChat, isCheckingEM, emTitleDraft, setEmDraftTitle, confirmEmDraft, cancelEmDraft };
+  return {
+    startChat,
+    isCheckingEM,
+    emTitleDraft,
+    setEmDraftTitle,
+    confirmEmDraft,
+    cancelEmDraft,
+    emDuplicate,
+    duplicateCreateNew,
+    duplicateGoExisting,
+    closeEmDuplicate,
+  };
 }

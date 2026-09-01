@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -47,6 +48,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   // 열려 있는 동안 Electron ESC→창 숨김 억제 (ESC는 Radix가 다이얼로그 닫기로 소비)
   useEscSuppress(open);
+  // 스크림이 타이틀바 대역까지 덮는 동안 WCO 버튼을 dim 색으로 동기화 (2026-09-01 QA)
+  useDimmed(open);
   return (
     <Dialog.Root open={open} onOpenChange={next => { if (!next && dismissible) onCancel(); }}>
       <Dialog.Portal>

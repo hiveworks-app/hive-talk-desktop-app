@@ -20,6 +20,7 @@ import { useMemberInviteStore } from '@/store/memberInviteStore';
 import { useUIStore } from '@/store/uiStore';
 import { apiAcceptMemberInvite, apiRejectMemberInvite } from './api';
 import type { MemberInvitePayload } from './type';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 /**
  * 🏢 사내(소속) 초대 수락/거절 다이얼로그 (RN useMemberInviteHandler 패리티).
@@ -114,6 +115,9 @@ export function MemberInviteConfirm() {
     setExpiredModalOpen(false);
     useMemberInviteStore.getState().clearExpiredNotice();
   };
+
+  // 만료 안내는 자체 스크림이라 직접 dim — 초대 확인 모달의 dim은 ConfirmDialog가 담당
+  useDimmed(isExpiredVisible);
 
   if (!pendingInvite && !isExpiredVisible) return null;
 

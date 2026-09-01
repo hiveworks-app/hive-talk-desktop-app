@@ -7,7 +7,8 @@ import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconExternalSymbol from '@assets/icons/external-symbol.svg';
 import { IconCalender } from '@assets/icons';
 import { CalendarPopover } from './CalendarPopover';
-import { IconChevronDown, IconChevronLeft, IconChevronUp, IconSearch, IconSidePanel } from '@/shared/ui/icons';
+import { IconChevronDown, IconChevronLeft, IconChevronUp, IconSidePanel } from '@/shared/ui/icons';
+import IconSearchDefault from '@assets/icons/search-default.svg';
 import type { UseChatRoomSearchReturn } from '@/features/chat-room/useChatRoomSearch';
 import { apiGetDMActiveDates, apiGetEMActiveDates, apiGetGMActiveDates } from '@/features/chat-room/api';
 import { WS_CHANNEL_TYPE } from '@/shared/types/websocket';
@@ -26,6 +27,8 @@ interface ChatRoomHeaderProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   isSidePanelOpen: boolean;
   onToggleSidePanel: () => void;
+  /** draft 방(첫 메시지 전, roomId 없음) — 방 생성 전이라 사이드패널 열기 비활성 (RN 패리티) */
+  isSidePanelDisabled?: boolean;
   /** 캘린더 날짜 검색 — 선택한 날짜 첫 메시지로 점프 (RN 패리티) */
   onCalendarDateSelect: (date: Date) => void;
   isCalendarLoading?: boolean;
@@ -41,6 +44,7 @@ export function ChatRoomHeader({
   searchInputRef,
   isSidePanelOpen,
   onToggleSidePanel,
+  isSidePanelDisabled = false,
   onCalendarDateSelect,
   isCalendarLoading,
 }: ChatRoomHeaderProps) {
@@ -102,8 +106,8 @@ export function ChatRoomHeader({
             </button>
           )}
           {/* RN 패리티 — 타이틀 heading-md(18) medium + 인원수 text-body(16) semibold 인라인 */}
-          {/* gap-1 = RN 각 요소의 ml-1(4px) */}
-          <div className="flex min-w-0 items-center gap-1">
+          {/* 간격 6px — RN은 ml-1(4px)이지만 데스크톱 가독성으로 소폭 넓힘 (사용자 결정 2026-09-01) */}
+          <div className="flex min-w-0 items-center gap-1.5">
             <h2 className="truncate text-heading-md font-medium leading-tight text-gray-900">{roomName || '채팅방'}</h2>
             {/* RN ChatRoomScreen 순서 — 제목 → 인원수 → ∞ (심볼이 뒤). 색도 RN과 동일한 text.primary */}
             {!isDM && totalUserCount > 0 && (
@@ -130,16 +134,20 @@ export function ChatRoomHeader({
               search.isSearchMode ? 'bg-black/10 text-gray-900' : 'text-gray-900 hover:opacity-70 active:opacity-60',
             )}
           >
-            <IconSearch />
+            {/* 디자인 에셋 22px — RN(24) 대비 데스크톱 헤더 밀도에 맞춰 소폭 축소 (사용자 결정 2026-09-01) */}
+            <IconSearchDefault width={22} height={22} />
           </button>
           <button
             onClick={onToggleSidePanel}
+            // RN 패리티 — draft 방(방 생성 전)은 사이드패널 열기 불가
+            disabled={isSidePanelDisabled}
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded transition-colors',
+              'flex h-8 w-8 items-center justify-center rounded transition-colors disabled:opacity-30',
               isSidePanelOpen ? 'bg-black/10 text-gray-900' : 'text-gray-900 hover:opacity-70 active:opacity-60',
             )}
           >
-            <IconSidePanel />
+            {/* 돋보기(22px 에셋)와 시각 균형 */}
+            <IconSidePanel size={22} />
           </button>
         </div>
       </div>

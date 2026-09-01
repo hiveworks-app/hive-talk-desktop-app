@@ -1,4 +1,6 @@
-import { BrowserWindow, Menu, session, screen, shell } from 'electron';
+import { app, BrowserWindow, Menu, session, screen, shell } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getPreloadPath, getIconPath, isDev } from './utils';
 
 let escSuppressed = false;
@@ -51,10 +53,64 @@ function attachReloadShortcut(win: BrowserWindow) {
   });
 }
 
-/** 기본 창 폭 — 창 크기는 앱이 임의로 바꾸지 않는다.
+/** 기본 창 크기 — 창 크기는 앱이 임의로 바꾸지 않는다.
  *  채팅방 진입/이탈 자동 폭 조절(480↔960)은 제거됨 (사용자 결정 2026-08-21).
- *  시작 폭은 자동 조절 도입 이전의 원래 값(480)을 유지한다 — 임의 변경 금지. */
-export const WINDOW_WIDTH_DEFAULT = 480;
+ *  첫 실행 기본 크기는 400×640 = 최소 크기와 동일 (사용자 결정 2026-09-01).
+ *  사용자가 직접 조절한 크기·위치는 기억해 다음 실행에서 복원한다(아래 WindowState) —
+ *  "앱이 임의로 바꾸지 않는다"와 상충하지 않는 사용자 주도 크기. */
+export const WINDOW_WIDTH_DEFAULT = 400;
+export const WINDOW_HEIGHT_DEFAULT = 640;
+
+/* ─── 창 크기·위치 기억 (메인 창 전용) ───────────────────────────────
+   종료·숨김 시 저장했다가 다음 실행에서 복원 (카톡 PC 관례). 첫 실행이나 파일 손상,
+   저장된 위치가 현재 모니터 구성 밖이면 기본값으로 폴백한다. */
+type WindowState = { x?: number; y?: number; width: number; height: number; isMaximized?: boolean };
+
+function getWindowStatePath() {
+  return path.join(app.getPath('userData'), 'window-state.json');
+}
+
+function loadWindowState(): WindowState | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(getWindowStatePath(), 'utf8')) as unknown;
+    if (typeof raw !== 'object' || raw === null) return null;
+    const s = raw as Record<string, unknown>;
+    if (typeof s.width !== 'number' || typeof s.height !== 'number') return null;
+    return {
+      width: s.width,
+      height: s.height,
+      x: typeof s.x === 'number' ? s.x : undefined,
+      y: typeof s.y === 'number' ? s.y : undefined,
+      isMaximized: s.isMaximized === true,
+    };
+  } catch {
+    return null; // 첫 실행 또는 파일 손상 — 기본 크기 사용
+  }
+}
+
+function saveWindowState(win: BrowserWindow) {
+  try {
+    // 최대화 상태면 getNormalBounds()가 최대화 이전 크기를 준다 — 해제 시 돌아갈 크기로 저장
+    const state: WindowState = { ...win.getNormalBounds(), isMaximized: win.isMaximized() };
+    const file = getWindowStatePath();
+    // userData 폴더가 아직 없으면 writeFileSync가 ENOENT로 조용히 죽는다 — 항상 보장
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(state));
+  } catch { /* 저장 실패는 무해 — 다음 실행이 기본 크기로 뜰 뿐 */ }
+}
+
+/** 저장된 위치가 현재 연결된 모니터 작업영역과 일부라도 겹치는지 — 모니터 분리·해상도 변경 후
+ *  화면 밖 유령 위치에 창이 뜨는 것을 방지 */
+function isStateVisible(state: WindowState): boolean {
+  if (state.x === undefined || state.y === undefined) return false;
+  return screen.getAllDisplays().some(d => {
+    const a = d.workArea;
+    return (
+      state.x! < a.x + a.width && state.x! + state.width > a.x &&
+      state.y! < a.y + a.height && state.y! + state.height > a.y
+    );
+  });
+}
 
 // ─── 멀티 채팅창 (프로토타입 2026-08-21) ───
 // 방별 팝업 창 레지스트리 — 같은 방은 새 창 대신 기존 창 포커스
@@ -144,12 +200,17 @@ export function createWindow(
 ): BrowserWindow {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
+  // 지난 실행에서 저장된 크기·위치 복원 (위치는 현재 모니터 안에 보일 때만)
+  const saved = loadWindowState();
+  const savedPosition = saved && isStateVisible(saved) ? { x: saved.x, y: saved.y } : {};
+
   const win = new BrowserWindow({
     // 작은 디스플레이에서 화면보다 커지지 않도록 작업영역으로 클램프.
-    width: Math.min(WINDOW_WIDTH_DEFAULT, screenWidth),
-    height: Math.min(800, screenHeight),
-    minWidth: Math.min(440, screenWidth),
-    minHeight: Math.min(600, screenHeight),
+    width: Math.max(400, Math.min(saved?.width ?? WINDOW_WIDTH_DEFAULT, screenWidth)),
+    height: Math.max(640, Math.min(saved?.height ?? WINDOW_HEIGHT_DEFAULT, screenHeight)),
+    ...savedPosition,
+    minWidth: Math.min(400, screenWidth),
+    minHeight: Math.min(640, screenHeight),
     maxWidth: screenWidth,
     maxHeight: screenHeight,
     title: 'HiveTalk',
@@ -238,12 +299,17 @@ export function createWindow(
     win.webContents.setZoomFactor(1);
   });
 
+  // 지난 종료가 최대화 상태였으면 그대로 복원 (표시 전에 걸어두면 최대화된 채로 뜬다)
+  if (saved?.isMaximized) win.maximize();
+
   win.once('ready-to-show', () => {
     win.show();
   });
 
   // Close → tray (채팅앱이므로 트레이 최소화)
   win.on('close', (e) => {
+    // 숨김·실제 종료 양쪽 경로 모두 이 이벤트를 지나므로 여기서 크기·위치 저장
+    saveWindowState(win);
     if (!deps.getIsQuitting()) {
       e.preventDefault();
       win.hide();

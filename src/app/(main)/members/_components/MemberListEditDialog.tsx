@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom';
 import { Spinner } from '@/shared/ui/Spinner';
 import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useMemberListEditController } from '@/features/pinned-members/useMemberListEditController';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { cn } from '@/shared/lib/cn';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { pushOverlay } from '@/shared/utils/overlayStack';
@@ -34,7 +33,6 @@ interface MemberListEditDialogProps {
  * - [완료]: 순서 변경이 있으면 PUT 저장 후 닫힘
  */
 export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProps) {
-  useDimmed(open);
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const {
     isLoading,

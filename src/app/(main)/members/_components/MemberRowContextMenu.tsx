@@ -102,14 +102,18 @@ export function MemberRowContextMenu({ member, x, y, onOpenProfile, onClose }: M
     onClose();
   };
 
-  // EM 신규 채팅 — 메뉴를 제목 입력 다이얼로그로 교체 (차단 컨펌과 동일 패턴)
-  if (startMemberChat.emTitleDraft) {
+  // EM 신규 채팅 — 메뉴를 제목 입력/중복 안내 다이얼로그로 교체 (차단 컨펌과 동일 패턴)
+  if (startMemberChat.emTitleDraft || startMemberChat.emDuplicate) {
     return (
       <StartEMTitleDialog
         draft={startMemberChat.emTitleDraft}
         onChangeTitle={startMemberChat.setEmDraftTitle}
         onConfirm={startMemberChat.confirmEmDraft}
         onCancel={onClose}
+        duplicate={startMemberChat.emDuplicate}
+        onDuplicateCreateNew={startMemberChat.duplicateCreateNew}
+        onDuplicateGoExisting={startMemberChat.duplicateGoExisting}
+        onDuplicateClose={onClose}
       />
     );
   }
