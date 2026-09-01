@@ -229,6 +229,10 @@ export default function MembersPage() {
         onChangeTitle={startMemberChat.setEmDraftTitle}
         onConfirm={startMemberChat.confirmEmDraft}
         onCancel={startMemberChat.cancelEmDraft}
+        duplicate={startMemberChat.emDuplicate}
+        onDuplicateCreateNew={startMemberChat.duplicateCreateNew}
+        onDuplicateGoExisting={startMemberChat.duplicateGoExisting}
+        onDuplicateClose={startMemberChat.closeEmDuplicate}
       />
       <MyProfileDialog isOpen={isMyProfileOpen} onClose={() => setIsMyProfileOpen(false)} />
       <ExternalInviteDialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
