@@ -1,7 +1,9 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useGetTagInfo } from '@/features/tag/queries';
 import type { TagListType } from '@/shared/types/tag';
 import { WS_MESSAGE_CONTENT_TYPE } from '@/shared/types/websocket';
@@ -22,10 +24,11 @@ interface TagSelectPanelProps {
 }
 
 /**
- * 업무태그 선택 패널 (채팅 컬럼 오버레이).
+ * 업무태그 선택 패널 (전체 창 모달).
  *
- * RN 은 전체화면 바텀시트지만, 데스크톱 관례에 맞게 "채팅 컬럼 한정 중앙 카드"로
- * 띄운다 — 딤은 채팅 본문(메시지+입력창)만 덮고, 헤더/사이드패널/네비는 가린다.
+ * 초대 수락·로그아웃 확인 등 다른 확인 모달과 동일하게 창 전체를 스크림으로 덮고
+ * 카드를 창 정중앙에 띄운다 — 과거의 "채팅 컬럼 한정" 방식은 부분 딤이 어색하고
+ * 좁은 컬럼에서 카드가 깨져 전체 창으로 통일 (사용자 결정 2026-09-01).
  *
  * 최근 사용 태그(최대 5) + 전체 업무태그(20개, 5열 그리드) 2섹션 구성 (RN ChatRoomBottomTag 패리티).
  */
@@ -35,6 +38,8 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
   const { selectedTags, toggleTag, resetSelectedTags } = useSelectedTagStore();
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const loginUserId = useAuthStore(s => s.user?.id);
+  // 스크림이 창 전체(타이틀바 대역 포함)를 덮는 동안 WCO 버튼 dim 동기화
+  useDimmed(true);
 
   // 최근 사용 태그 (최대 5개 — RN RECENT_TAG_LIMIT, title 기준 매칭)
   const recentNames = useRecentTagUsageStore(s => s.names);
@@ -117,10 +122,11 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
     };
   }, [handleClose]);
 
-  return (
-    // 딤: 채팅 본문(메시지+입력창)만 덮음. 딤 클릭 시 선택 폐기 후 닫기.
+  return createPortal(
+    // 딤: 창 전체를 덮음 (body 직속 포털 — 조상 스택 컨텍스트 간섭 배제). 딤 클릭 시 선택 폐기 후 닫기.
+    // electron-no-drag: 상단 드래그 스트립이 스크림 상단 클릭을 창 이동으로 삼키지 않게 구멍을 뚫는다
     <div
-      className="animate-tag-dim-in absolute inset-0 z-30 flex items-center justify-center bg-black/30 p-4"
+      className="electron-no-drag animate-tag-dim-in fixed inset-0 z-[70] flex items-center justify-center bg-black/30 p-4"
       onClick={handleClose}
     >
       {/* 중앙 카드 (데스크톱 관례 — RN 바텀시트 대체) */}
@@ -206,7 +212,8 @@ function TagSelectPanelComponent({ onConfirm }: TagSelectPanelProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
