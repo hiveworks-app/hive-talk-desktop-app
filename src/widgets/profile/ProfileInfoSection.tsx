@@ -66,7 +66,7 @@ export function ProfileInfoSection({
           className={canZoom ? 'block cursor-pointer' : 'block cursor-default'}
         >
           {/* RN PROFILE_IMAGE_SIZE=154 패리티 */}
-          <ProfileCircle name={name} storageKey={storageKey} className="h-[154px] w-[154px]" />
+          <ProfileCircle name={name} storageKey={storageKey} size="xl" />
         </button>
         {isBlocked && (
           <div className="pointer-events-none absolute inset-0 rounded-full bg-white/40" />
