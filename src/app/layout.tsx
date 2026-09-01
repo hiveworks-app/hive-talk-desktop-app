@@ -42,6 +42,9 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       {/* Pretendard는 npm 패키지로 번들 (globals.css @import) — CDN 의존 제거로 오프라인/첫 실행에서도 타이포 유지 */}
       <body className="antialiased">
+        {/* Windows·Linux WCO 타이틀바 드래그 스트립 — data-electron-win일 때만 표시 (globals.css)
+            팝업 창은 OS 타이틀바 사용 + data-electron-win 미부여라 자동 비활성 */}
+        <div className="electron-win-drag-strip" aria-hidden />
         <SentryInit />
         <ReactQueryProvider>
           <ElectronPlatformDetector />
