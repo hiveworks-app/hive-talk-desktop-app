@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { LEAVE_CONFIRM_DESCRIPTION } from '@/shared/config/constants';
 import { Checkbox } from '@/shared/ui/Checkbox';
@@ -36,7 +35,6 @@ interface ChatRoomManageOverlayProps {
  * 선택상태·confirm·UI는 오버레이가, 데이터(rooms)·나가기 로직(onLeave)은 EM/사내 래퍼가 주입한다.
  */
 export function ChatRoomManageOverlay({ open, onClose, rooms, onLeave, leaveNotice, resolveLeaveNotice }: ChatRoomManageOverlayProps) {
-  useDimmed(open);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // 실시간으로 목록에서 사라진 방(다른 기기 나감 등)의 선택 제거 — 선택 수 과다 표기 방지 (RN 패리티).

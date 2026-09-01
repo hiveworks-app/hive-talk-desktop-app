@@ -1,5 +1,7 @@
 'use client';
 
+import { useDimmed } from '@/shared/hooks/useDimmed';
+
 /**
  * 선택 동의(마케팅/광고성) 변경 확인 다이얼로그 (RN ConsentChangeDialog 패리티).
  * 정보통신망법 고지 성격 — 토글 성공 시 종류×액션별 카피 + 변경일자 `(YYYY.M.D)`를 모달로 안내한다.
@@ -59,6 +61,7 @@ export function ConsentChangeDialog({
   changedAt,
   onClose,
 }: ConsentChangeDialogProps) {
+  useDimmed(open);
   if (!open) return null;
   const copy = COPY_MAP[consentType][action];
 

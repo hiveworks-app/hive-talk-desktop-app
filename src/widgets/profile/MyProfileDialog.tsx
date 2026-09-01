@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useAuthStore } from '@/store/auth/authStore';
 import { ProfileDialogShell } from './ProfileDialogShell';
 import { ProfileViewMode } from './ProfileViewMode';
@@ -13,7 +12,6 @@ interface MyProfileDialogProps {
 }
 
 export function MyProfileDialog({ isOpen, onClose }: MyProfileDialogProps) {
-  useDimmed(isOpen);
   const user = useAuthStore(s => s.user);
   const [isEditing, setIsEditing] = useState(false);
   // 헤더 [완료] disabled — 이름 공백 시 실시간 비활성 (RN canSaveProfile 패리티)

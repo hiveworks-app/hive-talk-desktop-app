@@ -234,16 +234,37 @@ export function setupIpcHandlers(
      항상 흰색이면 gray-50 화면(설정 계열)이나 어두운 화면(미디어 뷰어)에서 버튼 부분만
      흰 네모로 도드라진다 (2026-08-31 QA). 렌더러가 현재 화면 상단 배경색을 보내는 기본층 +
      dim이 그 위에 우선 적용되는 2층 구조. 심볼(아이콘) 색은 배경 밝기로 자동 결정. */
-  let titleBarBase = { color: '#ffffff', symbolColor: '#333333' };
+  let titleBarBaseColor = '#ffffff';
   let titleBarDimmed = false;
+
+  const hexToRgb = (hex: string): number[] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const rgbToHex = (rgb: number[]) =>
+    `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+
+  // 딤 색 = base색에 스크림(검정 30%)을 합성한 값 — 고정 #666은 흰 카드/스크림 위에서
+  // 이질적으로 도드라진다 (태그창 실측 2026-09-01). 화면이 무엇이든 스크림과 이어져 보인다.
+  const titleBarTarget = () =>
+    titleBarDimmed ? rgbToHex(hexToRgb(titleBarBaseColor).map(v => v * 0.7)) : titleBarBaseColor;
+
+  /* 딤 전환은 단일 스냅 — 스텝 트윈(4×45ms)을 시도했으나 setTitleBarOverlay가 호출마다
+     캡션 영역을 통째로 재도색해 흰색이 끼어드는 깜빡임으로 보였다 (2026-09-01 윈도우 실측).
+     색이 base×스크림 합성값이라 스냅 한 번이면 페이드와의 이질감이 최소다. */
   const applyTitleBar = () => {
     const mainWindow = deps.getMainWindow();
     if ((process.platform !== 'win32' && process.platform !== 'linux') || !mainWindow) return;
+    const hex = titleBarTarget();
+    const [r, g, b] = hexToRgb(hex);
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
     // linux는 Electron 버전에 따라 setTitleBarOverlay 미지원일 수 있어 실패해도 무해하게
     try {
-      mainWindow.setTitleBarOverlay(
-        titleBarDimmed ? { color: '#666666', symbolColor: '#ffffff' } : titleBarBase,
-      );
+      mainWindow.setTitleBarOverlay({
+        color: hex,
+        symbolColor: luminance > 140 ? '#333333' : '#ffffff',
+      });
     } catch { /* 미지원 플랫폼 — 생성 시점의 titleBarOverlay 색 유지 */ }
   };
 
@@ -254,11 +275,7 @@ export function setupIpcHandlers(
 
   ipcMain.handle('set-titlebar-color', (_event, color: unknown) => {
     if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    titleBarBase = { color, symbolColor: luminance > 140 ? '#333333' : '#ffffff' };
+    titleBarBaseColor = color.toLowerCase();
     applyTitleBar();
   });
 }

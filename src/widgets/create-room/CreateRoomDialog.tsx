@@ -1,6 +1,5 @@
 'use client';
 
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { Spinner } from '@/shared/ui/Spinner';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
@@ -20,7 +19,6 @@ interface CreateRoomDialogProps {
 }
 
 export function CreateRoomDialog({ isOpen, onClose, presetMemberIds }: CreateRoomDialogProps) {
-  useDimmed(isOpen);
   const r = useCreateRoom(onClose, presetMemberIds);
 
   if (!isOpen) return null;

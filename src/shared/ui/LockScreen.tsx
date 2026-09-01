@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiLogin } from '@/features/auth/api';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useUIStore } from '@/store';
@@ -26,7 +25,6 @@ export function LockScreen() {
   const setAuth = useAuthStore(s => s.setAuth);
   const logout = useAuthStore(s => s.logout);
   const router = useRouter();
-  useDimmed(isLocked);
 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

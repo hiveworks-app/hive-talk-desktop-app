@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
+import { isPopupWindow } from '@/shared/utils/popupWindow';
 
 interface ElectronAPI {
   isElectron?: boolean;
@@ -34,8 +35,10 @@ export function ElectronTrayHandler() {
     getElectronAPI()?.setTrayLockState?.(isLocked);
   }, [isLocked]);
 
-  // dimmed 상태 변경 시 Windows 타이틀바 색상 동기화
+  // dimmed 상태 변경 시 Windows 타이틀바 색상 동기화.
+  // 팝업 창의 모달이 메인 창 타이틀바를 dim하지 않도록 메인 창에서만 보낸다
   useEffect(() => {
+    if (isPopupWindow()) return;
     getElectronAPI()?.setTitleBarDimmed?.(isDimmed);
   }, [isDimmed]);
 

@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import type { AccountSuspendedPayload } from '@/shared/types/account';
 import { Button } from '@/shared/ui/Button';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 const SUPPORT_EMAIL = 'dawin@dawinsolution.co.kr';
 
@@ -18,6 +19,7 @@ interface AccountSuspendedDialogProps {
  * 닫기는 '확인' 버튼으로만 가능 (정지 안내는 명시적 확인 필요 — 오버레이/ESC 무시).
  */
 export function AccountSuspendedDialog({ open, info, onClose }: AccountSuspendedDialogProps) {
+  useDimmed(open);
   const periodText = info
     ? info.permanent
       ? '영구 정지'

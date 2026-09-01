@@ -1,7 +1,6 @@
 'use client';
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useDimmed } from '@/shared/hooks/useDimmed';
 import { useTitleBarColor } from '@/shared/hooks/useTitleBarColor';
 import { cn as cnHeader } from '@/shared/lib/cn';
 import { formatDotDate } from '@/shared/utils/formatTimeUtils';
@@ -42,7 +41,6 @@ interface MediaViewerProps {
 
 /** Outer shell: dimmed 관리 + visible 가드 */
 export function MediaViewer(props: MediaViewerProps) {
-  useDimmed(props.visible);
   if (!props.visible || !props.items[props.currentIndex]) return null;
   return <MediaViewerContent {...props} />;
 }

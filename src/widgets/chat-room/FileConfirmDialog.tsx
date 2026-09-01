@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { formatBytes } from '@/shared/utils/fileUtils';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 export interface PendingFileItem {
   file: File;
@@ -31,6 +32,7 @@ export function FileConfirmDialog({ items, onConfirm, onCancel, onRemoveItem }: 
     };
   }, [onCancel]);
 
+  useDimmed(items.length > 0);
   if (items.length === 0) return null;
 
   return (
