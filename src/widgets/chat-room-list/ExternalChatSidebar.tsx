@@ -83,7 +83,7 @@ export function ExternalChatSidebar() {
             aria-label="협력채팅 검색"
             className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
           >
-            <IconSearchDefault width={24} height={24} />
+            <IconSearchDefault width={22} height={22} />
           </button>
           {canCreate && (
             <button
@@ -92,7 +92,7 @@ export function ExternalChatSidebar() {
               aria-label="새 협력채팅"
               className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
             >
-              <IconCreateChatFilled width={24} height={24} />
+              <IconCreateChatFilled width={22} height={22} />
             </button>
           )}
           <ChatSettingsMenu

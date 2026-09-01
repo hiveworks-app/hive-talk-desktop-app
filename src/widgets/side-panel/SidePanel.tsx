@@ -14,7 +14,7 @@ import { GroupProfileAvatar, type GroupAvatarUser } from '@/shared/ui/GroupProfi
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { PresignedImage } from '@/shared/ui/PresignedImage';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
-import IconCloseStroke from '@assets/icons/close-stroke.svg';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { IconChevronLeft, IconChevronRight, IconAdd, IconLogout } from '@/shared/ui/icons';
 import { IconUploadImage, IconFileDefault } from '@assets/icons';
 import { MediaViewer } from '@/shared/ui/MediaViewer';
@@ -58,6 +58,8 @@ interface SidePanelProps {
 }
 
 export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId }: SidePanelProps) {
+  // 스크림이 창 전체(타이틀바 대역 포함)를 덮는 동안 WCO 버튼 dim 동기화
+  useDimmed(isOpen);
   const [view, setView] = useState<SidePanelView>('main');
   // 보관함 보낸사람 필터 — 탭(사진/동영상↔파일) 공유. RN은 화면 레벨 단일 상태로
   // "즉시 비교 탐색"을 위해 탭 전환에도 유지한다 (RN ChatRoomSidePanelSelectItemScreen 패리티)
@@ -263,31 +265,31 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b border-divider px-4 py-3">
         <div className="flex items-center gap-2">
-          {view !== 'main' && (
-            <button
-              onClick={handleBack}
-              className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-opacity hover:opacity-70 active:opacity-60"
-            >
-              <IconChevronLeft size={20} />
-            </button>
-          )}
+          {/* ← 뒤로가기 — 서브뷰(사진/파일)는 메인으로, 메인에서는 패널 닫기 (사용자 결정 2026-09-01:
+              윈도우에서 X가 WCO 버튼 근처라 ←로도 닫을 수 있게) */}
+          <button
+            onClick={view !== 'main' ? handleBack : onClose}
+            aria-label={view !== 'main' ? '뒤로가기' : '사이드패널 닫기'}
+            className="flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-opacity hover:opacity-70 active:opacity-60"
+          >
+            <IconChevronLeft size={20} />
+          </button>
           {/* 채팅방 헤더 타이틀(text-heading-md medium)과 동일 스타일 (사용자 결정 2026-08-25).
-              메인 뷰 타이틀은 방 이름 + 인원수 (RN ChatRoomSidePanelScreen 패리티) */}
+              메인 뷰 타이틀은 방 이름 + 인원수 — 인원수는 GM/EM만, DM(1:1)은 이름만
+              (RN ChatRoomSidePanelScreen 패리티, 채팅방 헤더의 !isDM 규칙과 동일) */}
           <h3 className="min-w-0 truncate text-heading-md font-medium text-text-primary">
             {view === 'main' ? (
               <>
                 {roomName || '채팅방 정보'}
-                {totalUserCount > 0 && <span className="ml-1 text-gray-400">{totalUserCount}</span>}
+                {channelType !== WS_CHANNEL_TYPE.DIRECT_MESSAGE && totalUserCount > 0 && (
+                  // 채팅방 헤더의 인원수와 동일 스타일 (body semibold gray-900, 간격 6px — 사용자 결정 2026-09-01)
+                  <span className="ml-1.5 text-body font-semibold text-gray-900">{totalUserCount}</span>
+                )}
               </>
             ) : view === 'media' ? '사진/동영상' : '파일'}
           </h3>
         </div>
-        <button
-          onClick={onClose}
-          className="flex h-6 w-6 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
-        >
-          <IconCloseStroke width={14} height={14} />
-        </button>
+        {/* 우측 X 제거 — 닫기는 좌측 ←가 담당 (윈도우 WCO 버튼과의 혼동 방지, 사용자 결정 2026-09-01) */}
       </div>
 
       {/* 콘텐츠 */}
@@ -582,10 +584,12 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
       />
 
       {/* 패널 — 오른쪽 슬라이드 오버레이. 기본 창 폭(480px)에서 인라인 320px는 대화 영역이
-          남지 않으므로 오버레이가 모든 폭에서 성립하는 유일한 방식이다. */}
+          남지 않으므로 오버레이가 모든 폭에서 성립하는 유일한 방식이다.
+          electron-win-top-offset: fixed는 body 패딩을 무시해 윈도우에서 패널 상단(X 버튼)이
+          WCO 캡션 버튼 아래 깔린다 — 타이틀바 아래부터 시작 (2026-09-01 QA) */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-40 w-[320px] transition-transform duration-300 ease-out',
+          'electron-win-top-offset fixed inset-y-0 right-0 z-40 w-[320px] transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full',
         )}
       >

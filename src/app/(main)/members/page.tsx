@@ -92,25 +92,26 @@ export default function MembersPage() {
   //   listContainerRef.current?.scrollTo({ top: 0 });
   // };
 
+  // 상단 회색은 gray-50 — 채팅 목록·설정과 동일 톤, RN MembersScreen 패리티 (기존 gray-100은 한 단계 진했음 — 2026-09-01 QA)
   return (
-    <main className="flex flex-1 flex-col overflow-hidden bg-gray-100">
+    <main className="flex flex-1 flex-col overflow-hidden bg-gray-50">
       <header className="electron-drag">
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-heading-xl font-semibold text-text-primary">멤버목록</h2>
           <div className="electron-no-drag flex items-center gap-1">
             {/* 검색은 별도 풀스크린 화면으로 push (RN /member-search 방식 — 2026-08-20 사용자 확정) */}
             <button onClick={() => setIsSearchOpen(true)} aria-label="멤버 검색" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
-              <IconSearchDefault width={24} height={24} />
+              <IconSearchDefault width={22} height={22} />
             </button>
             {/* 초대하기(사람+)는 사내멤버 전용 — 게스트에게는 노출하지 않는다 (RN MembersScreen 패리티) */}
             {isOrgMember && (
               <button onClick={() => setIsInviteOpen(true)} aria-label="멤버 초대" className="flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
-                <IconAddMemberDefault width={24} height={24} />
+                <IconAddMemberDefault width={22} height={22} />
               </button>
             )}
             {/* 편지봉투 = 초대현황(받은/보낸). 받은 초대가 있으면 빨간 dot 표시 (RN 패리티) */}
             <button onClick={() => setIsStatusOpen(true)} aria-label="초대 현황" className="relative flex h-7 w-7 items-center justify-center rounded text-gray-900 transition-opacity hover:opacity-70 active:opacity-60">
-              <IconEnvelope width={24} height={24} />
+              <IconEnvelope width={22} height={22} />
               {receivedInviteCount > 0 && (
                 <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-state-error" />
               )}
