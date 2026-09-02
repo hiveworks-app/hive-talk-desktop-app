@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { BootScreen } from '@/shared/ui/BootScreen';
 import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
 import { ExternalInviteArrivalNotice } from '@/features/external-member/ExternalInviteArrivalNotice';
 import { MemberInviteConfirm } from '@/features/member-invite/MemberInviteConfirm';
@@ -75,7 +76,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const { updateReady, installUpdate, isInstalling } = useAutoUpdate();
 
-  if (!authChecked) return null;
+  // 인증 체크 동안 null 렌더 = 빈 흰 창 — 스플래시와 이어지는 브랜드 로딩으로 채운다 (2026-09-02)
+  if (!authChecked) return <BootScreen />;
 
   return (
     <WebSocketProvider>

@@ -28,10 +28,21 @@ export function createSplashWindow(): void {
     title: 'HiveTalk',
     icon: getIconPath(),
     backgroundColor: '#FFFFFF',
+    show: false, // 페인트 완료 후 표시 (아래 ready-to-show)
     webPreferences: { devTools: false },
+  });
+  // 콘텐츠 페인트 후 표시 — 즉시 show하면 렌더러 기동 동안 빈 흰 박스로 보인다 (2026-09-02 윈도우 실측).
+  // 페인트가 오래 걸리는 머신 대비 1.5초 후에는 상태 그대로라도 표시(안전망)
+  const showFallback = setTimeout(() => {
+    if (splash && !splash.isDestroyed() && !splash.isVisible()) splash.show();
+  }, 1500);
+  splash.once('ready-to-show', () => {
+    clearTimeout(showFallback);
+    if (splash && !splash.isDestroyed()) splash.show();
   });
   // 사용자가 스플래시를 직접 닫으면 기동 중단 — 창 없는 유령 부팅이 백그라운드에 남는 것 방지
   splash.on('closed', () => {
+    clearTimeout(showFallback);
     splash = null;
     if (!dismissed) app.quit();
   });
