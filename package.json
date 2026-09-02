@@ -1,6 +1,6 @@
 {
   "name": "hiveworks-web",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "author": "HiveWorks <dawinsolution@gmail.com>",
   "main": "dist-electron/main.js",
