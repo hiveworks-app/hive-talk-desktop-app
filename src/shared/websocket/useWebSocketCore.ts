@@ -183,7 +183,13 @@ export function useWebSocketCore({
         if (!newToken) {
           // refresh가 SC010으로 거절된 경우 — 강제 로그아웃 대신 안내 다이얼로그 확인 대기
           if (useSessionDisconnectStore.getState().noticeVisible) return;
-          handleForceLogout();
+          // 서버의 명시적 거절은 refreshAccessToken 내부가 이미 강제 로그아웃을 수행했다.
+          // 여기 null은 네트워크 레벨 실패(오프라인·차단·타임아웃) 포함 — 일시 장애에 세션을
+          // 버리지 않고 백오프 재시도한다 (refresh의 "네트워크 실패 로그아웃 금지" 설계와 정합, 2026-09-02)
+          if (!useAuthStore.getState().accessToken) return; // 이미 로그아웃된 상태
+          reconnectTimerRef.current = setTimeout(() => {
+            if (!forceCloseRef.current) connectWebSocketRef.current();
+          }, delay);
           return;
         }
         const token = newToken;

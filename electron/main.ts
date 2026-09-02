@@ -70,7 +70,6 @@ app.on('before-quit', async () => {
       await mainWindow.webContents.executeJavaScript(`
         if (localStorage.getItem('auto-login') !== 'true') {
           localStorage.removeItem('user-auth');
-          document.cookie = 'has-auth=; max-age=0; path=/';
         }
       `);
     } catch {

@@ -38,7 +38,6 @@ export type LoginErrorField = 'email' | 'password';
 
 export function useLoginForm() {
   const accessToken = useAuthStore(s => s.accessToken);
-  const logout = useAuthStore(s => s.logout);
   const setAuth = useAuthStore(s => s.setAuth);
   const { mutateAsync: login } = useLogin();
   const queryClient = useQueryClient();
@@ -242,10 +241,10 @@ export function useLoginForm() {
     if (e.key === 'Enter' && !isProcessing) onLogin();
   };
 
-  // 토큰 있는데 쿠키 없으면 로그아웃
-  if (accessToken && typeof document !== 'undefined' && !document.cookie.includes('has-auth')) {
-    logout();
-  }
+  // (제거 2026-09-02) "토큰 있는데 has-auth 쿠키 없으면 로그아웃" 가드 —
+  // 미들웨어 시절 서버 쿠키와 localStorage 동기화용이었다. 정적 export 전환으로 미들웨어가
+  // 사라졌고, app:// 스킴은 쿠키를 저장하지 않아 이 가드가 로그인 성공 즉시 토큰을 지워
+  // 로그인 자체를 불가능하게 만들었다 (2026-09-02 윈도우 실측).
 
   return {
     email, handleEmailChange,
