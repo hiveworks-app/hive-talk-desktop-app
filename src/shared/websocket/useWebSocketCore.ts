@@ -167,7 +167,8 @@ export function useWebSocketCore({
       if (reason.includes('401') || e.code === 1006) {
         const attempt = reconnectAttemptRef.current;
         if (attempt >= MAX_RECONNECT) {
-          console.warn(`[WS] 인증 재연결 ${MAX_RECONNECT}회 초과 → 강제 로그아웃`);
+          // error 레벨 — 원격 PC의 "연결이 계속 끊김 끝에 로그아웃" 사례를 Sentry로 수집 (2026-09-02)
+          console.error(`[WS] 인증 재연결 ${MAX_RECONNECT}회 초과 → 강제 로그아웃`);
           handleForceLogout();
           return;
         }

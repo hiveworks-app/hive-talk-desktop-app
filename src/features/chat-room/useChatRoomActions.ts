@@ -240,8 +240,10 @@ export const useChatRoomActions = () => {
           if (msg.retryPayload?.content) {
             removePendingPublish(msg.retryPayload.content);
           }
-          // 에코 미스 진단 — 발생 시 방/메시지 식별자로 원인 추적 (RN reportEchoMiss 대응)
-          console.warn('[SEND] 5초 내 서버 에코 없음 → 실패 처리:', {
+          // 에코 미스 진단 — 방/메시지 식별자만 담아 Sentry 수집 (RN reportEchoMiss 대응).
+          // error 레벨 사용: captureConsole이 error만 이벤트로 승격한다 — 원격 PC의
+          // "메시지 안 보내짐" 증상을 대시보드에서 보기 위함 (2026-09-02, 내용은 미포함)
+          console.error('[SEND] 5초 내 서버 에코 없음 → 실패 처리:', {
             localId,
             roomId: msg.retryPayload?.roomId || currentRoomId,
           });

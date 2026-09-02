@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, Menu, nativeTheme, Tray } from 'electron';
-import { initMainSentry } from './sentry';
+import { initMainSentry, reportSlowStartup } from './sentry';
 import { registerStaticScheme, setupStaticServing } from './protocol';
 import { createSplashWindow, closeSplashWindow } from './splash';
 import { createWindow } from './window';
@@ -13,6 +13,9 @@ import { isDev, DEV_PORT } from './utils';
 // 이름(hiveworks-web) 폴더를 쓰고, 이후 코드는 HiveTalk 폴더를 봐서 두 갈래로 갈라진다
 // (window-state 저장이 존재하지 않는 HiveTalk 폴더에 쓰다 조용히 실패 — 2026-09-01 윈도우 실측)
 app.setName('HiveTalk');
+
+// 기동 시간 측정 기점 — 메인 프로세스 JS가 도는 가장 이른 시점
+const BOOT_START = Date.now();
 
 // Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
 initMainSentry();
@@ -159,8 +162,14 @@ app.whenReady().then(async () => {
     // 뒤늦게 창을 만들지 않는다
     if (isQuitting) return;
     mainWindow = createWindow(serverUrl, deps);
-    // 메인 창이 실제 표시되는 순간(ready-to-show → show) 스플래시 제거 — 빈틈·겹침 없음
-    mainWindow.once('show', () => closeSplashWindow());
+    // 메인 창이 실제 표시되는 순간(ready-to-show → show) 스플래시 제거 — 빈틈·겹침 없음.
+    // 기동 소요(프로세스 시작→첫 표시)를 함께 측정 — 백신 등으로 느린 PC를 원격에서 식별 (2026-09-02)
+    mainWindow.once('show', () => {
+      closeSplashWindow();
+      const bootMs = Date.now() - BOOT_START;
+      console.log(`[boot] 실행 → 창 표시 ${bootMs}ms`);
+      if (bootMs > 10_000) reportSlowStartup(bootMs);
+    });
     tray = createTray(deps);
     setupIpcHandlers(deps, serverUrl);
 
