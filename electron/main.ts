@@ -165,11 +165,11 @@ app.whenReady().then(async () => {
     // 디스코드식 부팅 업데이트 게이트 — 새 버전이 있으면 스플래시에서 받아 즉시 설치·재시작.
     // 체크 지연/오프라인/다운로드 정체 시엔 정상 부팅으로 폴백 (런타임 배너가 이어받음)
     if (app.isPackaged) {
-      const gate = await runBootUpdateGate({
+      // 설치가 성공하면 프로세스가 종료되므로 이 await는 "부팅을 계속해야 할 때"만 돌아온다
+      await runBootUpdateGate({
         setStatus: setSplashStatus,
         setIsQuitting: deps.setIsQuitting,
       });
-      if (gate === 'restarting') return; // quitAndInstall이 교체 후 새 버전을 실행한다
       if (isQuitting) return;
       setSplashStatus('실행 준비 중…');
     }
