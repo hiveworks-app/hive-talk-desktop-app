@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGetStorage } from '@/features/storage/api';
 import { PRESIGNED_URL } from '@/shared/config/queryKeys';
+import { tryHeicFallback } from '@/shared/utils/heicFallback';
 
 interface PresignedImageProps {
   /** NCP 스토리지 키 — 내장 URL 만료 시 fresh presigned 재발급용 */
@@ -23,6 +24,8 @@ interface PresignedImageProps {
 export function PresignedImage({ storageKey, fallbackUrl, alt = '', className }: PresignedImageProps) {
   const retryRef = useRef(0);
   const [useFresh, setUseFresh] = useState(!fallbackUrl);
+  // HEIC 변환 결과(data URL) — RN 구멍으로 올라온 HEIC 원본은 Chromium이 못 읽는다 (2026-09-02)
+  const [heicSrc, setHeicSrc] = useState<string | null>(null);
 
   const { data: freshUrl, refetch } = useQuery({
     queryKey: PRESIGNED_URL(storageKey ?? ''),
@@ -41,15 +44,22 @@ export function PresignedImage({ storageKey, fallbackUrl, alt = '', className }:
 
   return (
     <img
-      src={src}
+      src={heicSrc ?? src}
       alt={alt}
       loading="lazy"
       className={className}
       onError={() => {
-        if (!storageKey || retryRef.current >= 2) return;
-        retryRef.current += 1;
-        if (!useFresh) setUseFresh(true);
-        else void refetch();
+        const continueRetry = () => {
+          if (!storageKey || retryRef.current >= 2) return;
+          retryRef.current += 1;
+          if (!useFresh) setUseFresh(true);
+          else void refetch();
+        };
+        // HEIC 폴백 먼저 — 성공 시 변환본 표시, 아니면 기존 만료 재발급 경로 (ProfileCircle과 동일)
+        void tryHeicFallback(storageKey ?? src, src).then(converted => {
+          if (converted) setHeicSrc(converted);
+          else continueRetry();
+        });
       }}
     />
   );

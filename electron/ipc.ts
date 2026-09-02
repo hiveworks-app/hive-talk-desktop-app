@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getTrayIconPath, getTrayBadgeIconPath } from './utils';
 import { getOgPreview } from './ogPreview';
+import { registerHeicIpc } from './heic';
 import { getRoundedTrayIcon, getRoundedTrayBadgeIcon } from './trayIcon';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
@@ -92,6 +93,9 @@ export function setupIpcHandlers(
 
   // 링크 프리뷰 — 정적 export 전환으로 Next 서버 route 대신 메인이 CORS 없이 OG를 파싱한다
   ipcMain.handle('og-preview', (_event, url: string) => getOgPreview(String(url)));
+
+  // HEIC 폴백 변환 — Chromium이 못 읽는 이미지(HEIC)를 메인이 JPEG로 변환 (electron/heic.ts)
+  registerHeicIpc();
 
   session.defaultSession.on('will-download', (_event, item) => {
     const key = item.getURLChain()[0] ?? item.getURL();

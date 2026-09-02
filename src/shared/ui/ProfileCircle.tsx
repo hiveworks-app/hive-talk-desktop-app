@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
+import { tryHeicFallback } from '@/shared/utils/heicFallback';
 
 type ProfileCircleSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -30,23 +31,37 @@ const noImagePadding: Record<ProfileCircleSize, string> = {
 export function ProfileCircle({ name, size = 'sm', storageKey, className }: ProfileCircleProps) {
   const { data: presignedUrl, refetch } = usePresignedUrl(storageKey);
   const [isBroken, setIsBroken] = useState(false);
+  // HEIC 변환 결과(data URL) — RN 구멍으로 올라온 HEIC 원본은 Chromium이 못 읽는다 (2026-09-02)
+  const [heicSrc, setHeicSrc] = useState<string | null>(null);
   const retryCountRef = useRef(0);
 
   const handleImageError = useCallback(() => {
-    if (retryCountRef.current < 2) {
-      retryCountRef.current += 1;
-      refetch();
-    } else {
-      setIsBroken(true);
+    const continueRetry = () => {
+      // HEIC 아님 → 만료 가능성: 재발급 재시도 후 소진 시 기본 이미지
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        refetch();
+      } else {
+        setIsBroken(true);
+      }
+    };
+    // 1) HEIC 폴백 먼저 — 성공 시 변환본으로 표시, 판정은 캐시되어 재시도가 싸다
+    if (presignedUrl && storageKey) {
+      void tryHeicFallback(storageKey, presignedUrl).then(converted => {
+        if (converted) setHeicSrc(converted);
+        else continueRetry();
+      });
+      return;
     }
-  }, [refetch]);
+    continueRetry();
+  }, [presignedUrl, storageKey, refetch]);
 
   const hasImage = !!presignedUrl && !isBroken;
 
   if (hasImage) {
     return (
       <img
-        src={presignedUrl}
+        src={heicSrc ?? presignedUrl}
         alt={name}
         className={cn(
           'shrink-0 rounded-full object-cover',

@@ -31,6 +31,12 @@ files:
   - node_modules/debug/**/*
   - node_modules/ms/**/*
   - node_modules/sax/**/*
+  # HEIC 폴백 변환(electron/heic.ts) 의존성 클로저 — 재생성은 위 명령의 f('heic-convert')
+  - node_modules/heic-convert/**/*
+  - node_modules/heic-decode/**/*
+  - node_modules/jpeg-js/**/*
+  - node_modules/libheif-js/**/*
+  - node_modules/pngjs/**/*
   # Sentry 메인 프로세스(@sentry/electron/main) 의존성 클로저 — 69개, 아래 명령으로 재생성:
   #   node -e "const w=new Set();const f=p=>{if(w.has(p))return;try{const m=require(`./node_modules/${p}/package.json`);w.add(p);Object.keys(m.dependencies||{}).forEach(f)}catch{}};f('@sentry/electron');[...w].sort().forEach(p=>console.log(`  - node_modules/${p}/**/*`))"
   - node_modules/@fastify/otel/**/*
