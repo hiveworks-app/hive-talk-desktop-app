@@ -57,3 +57,12 @@ export function closeSplashWindow(): void {
   if (splash && !splash.isDestroyed()) splash.close();
   splash = null;
 }
+
+/** 부팅 상태 문구 갱신 (디스코드식) — 업데이트 확인/다운로드 진행률을 스플래시에 표시.
+ *  percent가 null이면 진행률 바 숨김. 스플래시가 이미 닫혔으면 조용히 무시. */
+export function setSplashStatus(text: string, percent: number | null = null): void {
+  if (!splash || splash.isDestroyed()) return;
+  void splash.webContents
+    .executeJavaScript(`window.__setBootStatus?.(${JSON.stringify(text)}, ${percent === null ? 'null' : percent});`)
+    .catch(() => { /* 로드 전/닫힘 — 무시 */ });
+}

@@ -1,11 +1,11 @@
 import { app, BrowserWindow, dialog, Menu, nativeTheme, Tray } from 'electron';
 import { initMainSentry, reportSlowStartup } from './sentry';
 import { registerStaticScheme, setupStaticServing } from './protocol';
-import { createSplashWindow, closeSplashWindow } from './splash';
+import { createSplashWindow, closeSplashWindow, setSplashStatus } from './splash';
 import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
-import { initializeAutoUpdater, registerUpdateIpc } from './autoUpdater';
+import { initializeAutoUpdater, registerUpdateIpc, runBootUpdateGate } from './autoUpdater';
 import { isDev, DEV_PORT } from './utils';
 
 // 앱 이름은 무엇보다 먼저 고정 — userData 경로(%APPDATA%/<이름>)가 여기서 결정된다.
@@ -161,6 +161,19 @@ app.whenReady().then(async () => {
     // 부팅 중 스플래시를 닫아 종료가 시작됐으면(quit → before-quit → isQuitting)
     // 뒤늦게 창을 만들지 않는다
     if (isQuitting) return;
+
+    // 디스코드식 부팅 업데이트 게이트 — 새 버전이 있으면 스플래시에서 받아 즉시 설치·재시작.
+    // 체크 지연/오프라인/다운로드 정체 시엔 정상 부팅으로 폴백 (런타임 배너가 이어받음)
+    if (app.isPackaged) {
+      const gate = await runBootUpdateGate({
+        setStatus: setSplashStatus,
+        setIsQuitting: deps.setIsQuitting,
+      });
+      if (gate === 'restarting') return; // quitAndInstall이 교체 후 새 버전을 실행한다
+      if (isQuitting) return;
+      setSplashStatus('실행 준비 중…');
+    }
+
     mainWindow = createWindow(serverUrl, deps);
     // 메인 창이 실제 표시되는 순간(ready-to-show → show) 스플래시 제거 — 빈틈·겹침 없음.
     // 기동 소요(프로세스 시작→첫 표시)를 함께 측정 — 백신 등으로 느린 PC를 원격에서 식별 (2026-09-02)
