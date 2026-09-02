@@ -19,6 +19,12 @@
       animation: spin 0.9s linear infinite;
     }
     p { font-size: 12px; color: #999999; margin: 0; }
+    /* 부팅 업데이트 다운로드 진행률 (디스코드식) — 진행 중일 때만 표시 */
+    #bar-wrap {
+      display: none; width: 170px; height: 4px; border-radius: 2px;
+      background: #e5e7eb; overflow: hidden;
+    }
+    #bar { width: 0%; height: 100%; border-radius: 2px; background: #3b6cf6; transition: width 0.25s ease; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -26,13 +32,28 @@
   <img id="logo" alt="" />
   <h1>HiveTalk</h1>
   <div class="spinner"></div>
-  <p>실행 준비 중…</p>
+  <p id="status">실행 준비 중…</p>
+  <div id="bar-wrap"><div id="bar"></div></div>
   <script>
     // 아이콘 경로는 메인 프로세스가 file URL로 전달 (dev/prod 리소스 위치가 달라 하드코딩 불가)
     const icon = new URLSearchParams(location.search).get('icon');
     const img = document.getElementById('logo');
     img.onerror = () => { img.style.display = 'none'; };
     if (icon) img.src = icon; else img.style.display = 'none';
+
+    // 부팅 상태 갱신 훅 — 메인 프로세스가 executeJavaScript로 호출 (업데이트 확인/다운로드 진행률)
+    const statusEl = document.getElementById('status');
+    const barWrap = document.getElementById('bar-wrap');
+    const bar = document.getElementById('bar');
+    window.__setBootStatus = (text, percent) => {
+      statusEl.textContent = text;
+      if (percent == null) {
+        barWrap.style.display = 'none';
+      } else {
+        barWrap.style.display = 'block';
+        bar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+      }
+    };
   </script>
 </body>
 </html>

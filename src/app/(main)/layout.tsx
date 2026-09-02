@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { BootScreen } from '@/shared/ui/BootScreen';
 import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
 import { ExternalInviteArrivalNotice } from '@/features/external-member/ExternalInviteArrivalNotice';
 import { MemberInviteConfirm } from '@/features/member-invite/MemberInviteConfirm';
@@ -75,7 +76,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const { updateReady, installUpdate, isInstalling } = useAutoUpdate();
 
-  if (!authChecked) return null;
+  // 인증 체크 동안 null 렌더 = 빈 흰 창 — 스플래시와 이어지는 브랜드 로딩으로 채운다 (2026-09-02)
+  if (!authChecked) return <BootScreen />;
 
   return (
     <WebSocketProvider>
@@ -94,10 +96,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </button>
           </div>
         )}
-        {/* 업데이트 적용 안내 — 종료→조용한 설치→재실행의 공백을 예고 (없으면 앱이 그냥 죽은 것처럼 보인다) */}
+        {/* 업데이트 적용 안내 — 종료→교체(NSIS 진행 창)→재실행 흐름의 예고.
+            스플래시와 동일한 시각 언어(로고+스피너)로 부팅 화면과 한 흐름으로 읽히게 (2026-09-02) */}
         {isInstalling && (
-          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-white">
-            <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-gray-200 border-t-blue-500" />
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white">
+            <img src="/hivetalk-login-logo.png" alt="" className="h-[72px] w-[72px] object-contain" />
+            <span className="h-6 w-6 animate-spin rounded-full border-[3px] border-gray-200 border-t-blue-500" />
             <p className="text-body font-medium text-text-primary">업데이트를 적용하고 있어요</p>
             <p className="text-sub-sm text-text-secondary">곧 적용 화면이 표시되고, 완료되면 자동으로 다시 시작됩니다.</p>
           </div>

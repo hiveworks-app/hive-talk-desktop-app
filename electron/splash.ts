@@ -28,10 +28,21 @@ export function createSplashWindow(): void {
     title: 'HiveTalk',
     icon: getIconPath(),
     backgroundColor: '#FFFFFF',
+    show: false, // 페인트 완료 후 표시 (아래 ready-to-show)
     webPreferences: { devTools: false },
+  });
+  // 콘텐츠 페인트 후 표시 — 즉시 show하면 렌더러 기동 동안 빈 흰 박스로 보인다 (2026-09-02 윈도우 실측).
+  // 페인트가 오래 걸리는 머신 대비 1.5초 후에는 상태 그대로라도 표시(안전망)
+  const showFallback = setTimeout(() => {
+    if (splash && !splash.isDestroyed() && !splash.isVisible()) splash.show();
+  }, 1500);
+  splash.once('ready-to-show', () => {
+    clearTimeout(showFallback);
+    if (splash && !splash.isDestroyed()) splash.show();
   });
   // 사용자가 스플래시를 직접 닫으면 기동 중단 — 창 없는 유령 부팅이 백그라운드에 남는 것 방지
   splash.on('closed', () => {
+    clearTimeout(showFallback);
     splash = null;
     if (!dismissed) app.quit();
   });
@@ -45,4 +56,13 @@ export function closeSplashWindow(): void {
   dismissed = true;
   if (splash && !splash.isDestroyed()) splash.close();
   splash = null;
+}
+
+/** 부팅 상태 문구 갱신 (디스코드식) — 업데이트 확인/다운로드 진행률을 스플래시에 표시.
+ *  percent가 null이면 진행률 바 숨김. 스플래시가 이미 닫혔으면 조용히 무시. */
+export function setSplashStatus(text: string, percent: number | null = null): void {
+  if (!splash || splash.isDestroyed()) return;
+  void splash.webContents
+    .executeJavaScript(`window.__setBootStatus?.(${JSON.stringify(text)}, ${percent === null ? 'null' : percent});`)
+    .catch(() => { /* 로드 전/닫힘 — 무시 */ });
 }
