@@ -73,7 +73,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [authChecked, accessToken]);
 
-  const { updateReady, installUpdate } = useAutoUpdate();
+  const { updateReady, installUpdate, isInstalling } = useAutoUpdate();
 
   if (!authChecked) return null;
 
@@ -87,10 +87,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>
             <button
               onClick={installUpdate}
-              className="rounded bg-white px-3 py-1 text-xs font-semibold text-blue-500 transition-colors hover:bg-blue-50"
+              disabled={isInstalling}
+              className="rounded bg-white px-3 py-1 text-xs font-semibold text-blue-500 transition-colors hover:bg-blue-50 disabled:opacity-70"
             >
-              재시작
+              {isInstalling ? '적용 중…' : '재시작'}
             </button>
+          </div>
+        )}
+        {/* 업데이트 적용 안내 — 종료→조용한 설치→재실행의 공백을 예고 (없으면 앱이 그냥 죽은 것처럼 보인다) */}
+        {isInstalling && (
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-white">
+            <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-gray-200 border-t-blue-500" />
+            <p className="text-body font-medium text-text-primary">업데이트를 적용하고 있어요</p>
+            <p className="text-sub-sm text-text-secondary">곧 적용 화면이 표시되고, 완료되면 자동으로 다시 시작됩니다.</p>
           </div>
         )}
         <AppNav />
