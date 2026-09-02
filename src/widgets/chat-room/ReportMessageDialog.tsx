@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import { isApiError } from '@/shared/api';
 import { useGetReportCategories, useReportMessage } from '@/features/report-message/queries';
 import { FALLBACK_REPORT_CATEGORIES, REPORT_DETAIL_INFO_TEXT } from '@/features/report-message/reportCategories';
@@ -28,6 +29,8 @@ interface ReportMessageDialogProps {
  * 1단계 카테고리 선택 → 2단계 세부(위반행위/ETC 자유입력/주의사항) → 접수 확인 → POST.
  */
 export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose }: ReportMessageDialogProps) {
+  // 어두운 스크림 → 창 버튼(WCO) 딤 동기화 (2026-09-02 전수 점검 누락분)
+  useDimmed(open);
   const { data } = useGetReportCategories();
   const { categories, notice } = data ?? FALLBACK_REPORT_CATEGORIES;
   const reportMutation = useReportMessage();
