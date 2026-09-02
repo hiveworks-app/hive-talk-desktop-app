@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   // 링크 프리뷰 — 메인 프로세스가 CORS 없이 OG 메타를 파싱 (정적 export 전환으로 서버 route 대체)
   getOgPreview: (url: string) => ipcRenderer.invoke('og-preview', url),
+  // HEIC 폴백 — Chromium이 못 읽는 프로필/채팅 이미지(HEIC)를 메인이 JPEG로 변환
+  convertHeicImage: (url: string) => ipcRenderer.invoke('convert-heic', url),
   // 일괄 다운로드 — main downloadURL 경로 (연쇄 <a download>는 크로미엄이 첫 건 이후 차단)
   downloadFile: (data: { url: string; filename: string; directory?: string }) => ipcRenderer.invoke('download-url', data),
   chooseDownloadDirectory: () => ipcRenderer.invoke('choose-download-directory'),
