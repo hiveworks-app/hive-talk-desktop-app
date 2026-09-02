@@ -82,10 +82,11 @@ export function registerUpdateIpc(deps: { setIsQuitting: (v: boolean) => void })
     deps.setIsQuitting(true);
     // IPC 응답이 렌더러로 전달된 후 종료 (즉시 종료하면 IPC가 블로킹됨)
     setTimeout(() => {
-      // isSilent: true — 이미 받아둔 설치 파일로 조용히 교체 후 자동 재실행.
-      // false면 NSIS 진행 창이 떠서 "다시 설치하는" 것처럼 보인다 (2026-09-02 사용자 피드백).
-      // 윈도우는 실행 중 exe를 교체할 수 없어 종료→교체→재실행 단계 자체는 생략 불가 — 보이지 않게만 한다
-      autoUpdater.quitAndInstall(true, true);
+      // isSilent: false — 교체 구간(앱 종료~재실행)에 NSIS 진행 창을 띄운다 (2026-09-02 최종 결정).
+      // 한 바퀴 돈 결정: silent로 바꿨더니 빈 공백이 "앱이 죽었다"로 읽혔다. 렌더러의
+      // "적용 중" 예고(useAutoUpdate)와 조합하면 진행 창이 그 구간의 스플래시 역할을 한다.
+      // 윈도우는 실행 중 exe를 교체할 수 없어 종료→교체→재실행 자체는 생략 불가.
+      autoUpdater.quitAndInstall(false, true);
     }, 100);
   });
 }
