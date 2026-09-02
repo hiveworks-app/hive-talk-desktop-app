@@ -29,11 +29,14 @@ function ensureUpdaterLoaded(): boolean {
  * 부팅을 볼모로 잡지 않는 폴백:
  * - 체크 4초 무응답/오류/오프라인 → 정상 부팅 (런타임 배너 흐름이 이어받는다)
  * - 다운로드 60초 무진행 → 정상 부팅 (다운로드는 백그라운드 지속 — 완료 시 배너 안내)
+ * - 설치(quitAndInstall) 후 10초 생존 = 적용 실패 → 현재 버전으로 정상 부팅
+ *
+ * resolve('proceed')가 유일한 반환 — 설치가 성공하면 프로세스가 종료되어 반환 자체가 없다.
  */
 export async function runBootUpdateGate(opts: {
   setStatus: (text: string, percent?: number | null) => void;
   setIsQuitting: (v: boolean) => void;
-}): Promise<'proceed' | 'restarting'> {
+}): Promise<'proceed'> {
   if (!ensureUpdaterLoaded()) return 'proceed';
 
   return await new Promise(resolve => {
@@ -41,7 +44,7 @@ export async function runBootUpdateGate(opts: {
     let stallTimer: ReturnType<typeof setTimeout> | null = null;
     const checkTimer = setTimeout(() => finish('proceed'), 4_000);
 
-    const finish = (result: 'proceed' | 'restarting') => {
+    const finish = (result: 'proceed') => {
       if (settled) return;
       settled = true;
       cleanup();
@@ -67,11 +70,20 @@ export async function runBootUpdateGate(opts: {
       console.log('[AutoUpdater] 부팅 게이트 — 다운로드 완료, 즉시 설치:', info.version);
       opts.setStatus('업데이트를 적용하고 다시 시작합니다', 100);
       opts.setIsQuitting(true);
-      settled = true;
       cleanup();
       // 스플래시가 문구를 그릴 짧은 여유 후 설치 (NSIS 진행 창 → 새 버전 재실행)
       setTimeout(() => autoUpdater.quitAndInstall(false, true), 400);
-      resolve('restarting');
+      // 설치가 성공하면 프로세스가 여기서 끝난다 — 10초 뒤에도 살아있다면 적용 실패
+      // (예: 미서명 맥 빌드의 서명 검증 거부, 2026-09-02 실측: 스플래시에서 무한 대기).
+      // 세션을 버리지 않고 현재 버전으로 정상 부팅한다.
+      setTimeout(() => {
+        if (settled) return;
+        console.warn('[AutoUpdater] quitAndInstall 후에도 생존 → 적용 실패, 현재 버전으로 부팅');
+        opts.setIsQuitting(false);
+        opts.setStatus('업데이트 적용에 실패했어요 — 현재 버전으로 시작합니다');
+        settled = true;
+        resolve('proceed');
+      }, 10_000);
     };
     const onError = (err: Error) => {
       console.warn('[AutoUpdater] 부팅 게이트 오류 → 정상 부팅:', err.message);
