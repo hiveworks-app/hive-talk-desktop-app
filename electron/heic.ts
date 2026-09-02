@@ -21,6 +21,15 @@ function isHeicBuffer(buf: Buffer): boolean {
 // 프로필/채팅 이미지 용도 상한 — 비정상 대용량은 변환 시도 자체를 거부
 const MAX_BYTES = 30 * 1024 * 1024;
 
+// SSRF 가드 — 렌더러가 넘긴 임의 URL을 메인이 CORS 없이 fetch하는 창구이므로,
+// 실제 이미지가 오는 도메인(NCP 스토리지·자사)만 허용한다 (og-preview의 사설망 차단과 동일 취지.
+// webRequest CORS 필터와 같은 도메인 전제 — 스토리지 이전 시 함께 갱신할 것)
+const ALLOWED_HOST_SUFFIXES = ['.ncloudstorage.com', '.hiveworks.co.kr'];
+function isAllowedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return ALLOWED_HOST_SUFFIXES.some(s => h.endsWith(s) || h === s.slice(1));
+}
+
 export type HeicConvertResult =
   | { status: 'converted'; dataUrl: string }
   | { status: 'not-heic' } // 확정 — 렌더러가 캐시해 재시도하지 않는다
@@ -30,9 +39,11 @@ export function registerHeicIpc(): void {
   ipcMain.handle('convert-heic', async (_event, rawUrl: string): Promise<HeicConvertResult> => {
     try {
       const url = new URL(String(rawUrl));
-      if (url.protocol !== 'https:' && url.protocol !== 'http:') return { status: 'fetch-failed' };
+      // presigned URL은 https 고정 — http·기타 스킴, 허용 외 호스트는 거부
+      if (url.protocol !== 'https:' || !isAllowedHost(url.hostname)) return { status: 'fetch-failed' };
 
-      const res = await fetch(url.toString());
+      // redirect 차단 — 302로 내부망 주소(169.254.169.254 등)로 튕기는 우회 봉쇄 (presigned는 직접 응답)
+      const res = await fetch(url.toString(), { redirect: 'error' });
       if (!res.ok) return { status: 'fetch-failed' };
       const bytes = Buffer.from(await res.arrayBuffer());
       if (bytes.length > MAX_BYTES || !isHeicBuffer(bytes)) return { status: 'not-heic' };
