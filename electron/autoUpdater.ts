@@ -82,7 +82,10 @@ export function registerUpdateIpc(deps: { setIsQuitting: (v: boolean) => void })
     deps.setIsQuitting(true);
     // IPC 응답이 렌더러로 전달된 후 종료 (즉시 종료하면 IPC가 블로킹됨)
     setTimeout(() => {
-      autoUpdater.quitAndInstall(false, true);
+      // isSilent: true — 이미 받아둔 설치 파일로 조용히 교체 후 자동 재실행.
+      // false면 NSIS 진행 창이 떠서 "다시 설치하는" 것처럼 보인다 (2026-09-02 사용자 피드백).
+      // 윈도우는 실행 중 exe를 교체할 수 없어 종료→교체→재실행 단계 자체는 생략 불가 — 보이지 않게만 한다
+      autoUpdater.quitAndInstall(true, true);
     }, 100);
   });
 }

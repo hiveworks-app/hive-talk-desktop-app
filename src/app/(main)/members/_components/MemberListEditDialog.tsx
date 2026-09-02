@@ -10,6 +10,7 @@ import { useMemberListEditController } from '@/features/pinned-members/useMember
 import { cn } from '@/shared/lib/cn';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { pushOverlay } from '@/shared/utils/overlayStack';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 import type { MemberItem } from '@/shared/types/user';
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -52,6 +53,8 @@ export function MemberListEditDialog({ open, onClose }: MemberListEditDialogProp
     newSelectionCount,
     hasNewSelections,
   } = useMemberListEditController();
+  // 저장 중 전면 스크림(bg-black/20) → 창 버튼(WCO) 딤 동기화 (2026-09-02 전수 점검)
+  useDimmed(isSaving);
 
   // HTML5 DnD 리오더 (RN DraggableList 대응)
   const [dragIndex, setDragIndex] = useState<number | null>(null);

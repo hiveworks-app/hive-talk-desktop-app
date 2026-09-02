@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { pushOverlay } from '@/shared/utils/overlayStack';
+import { useDimmed } from '@/shared/hooks/useDimmed';
 
 interface InviteRespondDialogProps {
   name: string;
@@ -21,6 +22,8 @@ interface InviteRespondDialogProps {
  */
 export function InviteRespondDialog({ name, respondingAction, onReject, onAccept, onClose }: InviteRespondDialogProps) {
   const isLoading = respondingAction !== null;
+  // 어두운 스크림 → 창 버튼(WCO) 딤 동기화 — 열릴 때만 마운트되므로 상시 (2026-09-02 윈도우 실측 누락분)
+  useDimmed(true);
 
   const isLoadingRef = useRef(isLoading);
   const onCloseRef = useRef(onClose);
