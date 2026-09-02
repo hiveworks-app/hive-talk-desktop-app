@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>HiveTalk</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; background: #ffffff; color: #333333;
+      font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      -webkit-app-region: drag; user-select: none; cursor: default; overflow: hidden;
+    }
+    img { width: 96px; height: 96px; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.02em; }
+    .spinner {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2.5px solid #e5e7eb; border-top-color: #333333;
+      animation: spin 0.9s linear infinite;
+    }
+    p { font-size: 12px; color: #999999; margin: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <img id="logo" alt="" />
+  <h1>HiveTalk</h1>
+  <div class="spinner"></div>
+  <p>실행 준비 중…</p>
+  <script>
+    // 아이콘 경로는 메인 프로세스가 file URL로 전달 (dev/prod 리소스 위치가 달라 하드코딩 불가)
+    const icon = new URLSearchParams(location.search).get('icon');
+    const img = document.getElementById('logo');
+    img.onerror = () => { img.style.display = 'none'; };
+    if (icon) img.src = icon; else img.style.display = 'none';
+  </script>
+</body>
+</html>

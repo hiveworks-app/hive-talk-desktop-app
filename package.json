@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start -p 23000",
     "lint": "eslint",
-    "electron:compile": "tsc -p electron/tsconfig.json && cp electron/notification.html dist-electron/notification.html",
+    "electron:compile": "tsc -p electron/tsconfig.json && cp electron/notification.html electron/splash.html dist-electron/",
     "electron:dev": "npm run electron:compile && concurrently -n next,electron \"next dev -p 23000\" \"wait-on http://localhost:23000 && electron .\"",
     "electron:build": "npm run build && npm run electron:compile && electron-builder",
     "electron:pack": "npm run build && npm run electron:compile && electron-builder --dir"

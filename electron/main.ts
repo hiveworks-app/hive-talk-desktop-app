@@ -1,6 +1,7 @@
-import { app, BrowserWindow, Menu, nativeTheme, Tray } from 'electron';
+import { app, BrowserWindow, dialog, Menu, nativeTheme, Tray } from 'electron';
 import { initMainSentry } from './sentry';
 import { startNextServer, killNextServer } from './server';
+import { createSplashWindow, closeSplashWindow } from './splash';
 import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
@@ -148,9 +149,17 @@ app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
   }
 
+  // 서버 부팅(느린 PC에서 수십 초) 동안 무반응으로 보이지 않게 즉시 스플래시부터 표시
+  createSplashWindow();
+
   try {
     const serverUrl = await startNextServer();
+    // 부팅 중 스플래시를 닫아 종료가 시작됐으면(quit → before-quit → isQuitting)
+    // 뒤늦게 도착한 서버 준비로 창을 만들지 않는다
+    if (isQuitting) return;
     mainWindow = createWindow(serverUrl, deps);
+    // 메인 창이 실제 표시되는 순간(ready-to-show → show) 스플래시 제거 — 빈틈·겹침 없음
+    mainWindow.once('show', () => closeSplashWindow());
     tray = createTray(deps);
     setupIpcHandlers(deps, serverUrl);
 
@@ -164,6 +173,13 @@ app.whenReady().then(async () => {
     }
   } catch (err) {
     console.error('Failed to start:', err);
+    // 스플래시만 떠 있다 침묵 종료되면 사용자는 원인을 알 수 없다 — 실패를 알리고 종료.
+    // 서버 30초 타임아웃의 주 용의자는 보안 프로그램의 검사/차단 (2026-09-02 현장)
+    closeSplashWindow();
+    dialog.showErrorBox(
+      'HiveTalk 실행 실패',
+      '앱을 시작하지 못했습니다. 잠시 후 다시 실행해주세요.\n문제가 계속되면 보안 프로그램이 앱을 차단하고 있는지 확인해주세요.',
+    );
     app.quit();
   }
 });
