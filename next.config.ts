@@ -22,11 +22,13 @@ const svgrOptions = {
 const packageJson = require('./package.json');
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
-  // standalone 출력 구조 고정 — 미지정 시 Next가 상위 폴더 락파일로 워크스페이스 루트를 "추론"해서
-  // 환경에 따라 standalone/server.js 위치가 달라진다 (hiveworks/... 중첩 ↔ 루트).
-  // electron-builder extraResources·electron/server.ts가 이 평평한 구조를 전제한다.
-  outputFileTracingRoot: path.join(__dirname),
+  // 정적 export (2026-09-02 아키텍처 전환) — Electron이 내장 Next 서버(utilityProcess) 없이
+  // out/ 정적 파일을 app:// 프로토콜로 직접 서빙한다 (Slack/Discord 방식).
+  // 기동 시 서버 부팅·포트 점유·localhost 이슈 클래스가 통째로 사라진다.
+  // 제약: 동적 세그먼트(/chat/[roomId]) 불가 → 쿼리 파라미터(/chat?roomId=…)로 전환됨.
+  output: 'export',
+  // 정적 export는 Next 이미지 최적화 서버가 없다 — 원본 그대로 사용
+  images: { unoptimized: true },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },

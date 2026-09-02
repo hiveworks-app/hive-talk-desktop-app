@@ -1,8 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { useGetDMRoomList, useGetGMRoomList } from '@/features/chat-room-list/queries';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { DM_ROOM_LIST_KEY, GM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
@@ -35,7 +35,7 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
   const myUserId = useAuthStore(s => s.user?.id);
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const router = useAppRouter();
-  const params = useParams();
+  const currentRoomId = useRoomIdParam();
   const queryClient = useQueryClient();
 
   // DM/GM 합쳐 최신순 — 목록과 동일 정렬
@@ -98,8 +98,7 @@ export function CompanyChatManageDialog({ open, onClose }: CompanyChatManageDial
       if (gmIds.length > 0) queryClient.invalidateQueries({ queryKey: GM_ROOM_LIST_KEY });
     });
 
-    const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
-    if (openRoomId && sel.has(openRoomId)) router.push('/chat');
+    if (currentRoomId && sel.has(currentRoomId)) router.push('/chat');
 
     showSnackbar({ message: `${ids.length}개 채팅방을 나갔어요.`, state: 'success' });
   };

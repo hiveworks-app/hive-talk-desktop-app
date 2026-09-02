@@ -120,7 +120,6 @@ export function handleForceLogout() {
   }
   useAuthStore.getState().logout();
   del("hiveworks-query-cache");           // IndexedDB 영속 캐시 삭제
-  document.cookie = "has-auth=; max-age=0; path=/";
   if (typeof window !== "undefined") {
     window.location.href = "/login";
   }

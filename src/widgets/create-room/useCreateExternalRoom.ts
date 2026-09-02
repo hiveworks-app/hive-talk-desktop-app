@@ -4,6 +4,7 @@ import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { roomPath } from '@/shared/hooks/useRoomIdParam';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { useCheckDuplicateEM } from '@/features/external-chat/queries';
@@ -140,7 +141,7 @@ export function useCreateExternalRoom(onClose: () => void) {
         initialNotReadCount: room.notReadCount ?? 0,
       });
       close();
-      router.push(`/external-chat/${room.roomId}`);
+      router.push(roomPath('/external-chat', room.roomId));
     },
     [close, router, myUserId],
   );
@@ -158,7 +159,7 @@ export function useCreateExternalRoom(onClose: () => void) {
       });
     } else {
       close();
-      router.push(`/external-chat/${roomId}`);
+      router.push(roomPath('/external-chat', roomId));
     }
   };
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { pendingReadRegistry } from '@/features/chat-room/pendingReadRegistry';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
@@ -11,6 +10,7 @@ import {
   GM_ROOM_LIST_KEY,
 } from '@/shared/config/queryKeys';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { WS_CHANNEL_TYPE, WebSocketChannelTypes } from '@/shared/types/websocket';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { useAppWebSocket } from '@/shared/websocket/WebSocketContext';
@@ -29,7 +29,7 @@ export function useLeaveRoom() {
   const { send } = useAppWebSocket();
   const queryClient = useQueryClient();
   const router = useAppRouter();
-  const params = useParams();
+  const currentRoomId = useRoomIdParam();
   const showSnackbar = useUIStore(s => s.showSnackbar);
 
   const dmBuilder = useWebSocketMessageBuilder({ type: WS_CHANNEL_TYPE.DIRECT_MESSAGE, channelId: '' });
@@ -70,8 +70,7 @@ export function useLeaveRoom() {
 
       // 열려 있던 방이면 목록으로 이탈 — 복귀 칩을 방 종류에 맞춘다 (RN 패리티:
       // GM 방을 나갔는데 '1:1 채팅' 칩이 유지된 화면으로 복귀하는 것 방지)
-      const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
-      if (openRoomId === roomId) {
+      if (currentRoomId === roomId) {
         if (channelType !== WS_CHANNEL_TYPE.EXTERNAL_MESSAGE) {
           setLastCompanyChatChip(channelType === WS_CHANNEL_TYPE.DIRECT_MESSAGE ? 'dm' : 'gm');
         }
@@ -81,7 +80,7 @@ export function useLeaveRoom() {
       // silent: 자동 정리(빈 방 등)처럼 사용자가 직접 '나가기'를 누르지 않은 경우 스낵바 생략
       if (!options?.silent) showSnackbar({ message: '채팅방을 나갔어요.', state: 'success' });
     },
-    [send, dmBuilder, gmBuilder, emBuilder, queryClient, params, router, showSnackbar],
+    [send, dmBuilder, gmBuilder, emBuilder, queryClient, currentRoomId, router, showSnackbar],
   );
 
   return { leaveRoom };

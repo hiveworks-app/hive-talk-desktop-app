@@ -17,6 +17,7 @@ import { formatKoreanTime } from "@/shared/utils/formatTimeUtils";
 import { useAppWebSocket } from "@/shared/websocket/WebSocketContext";
 import { useWebSocketMessageBuilder } from "@/shared/websocket/useWebSocketMessageBuilder";
 import { useAuthStore } from "@/store/auth/authStore";
+import { ApiError } from "@/shared/api";
 import { isOffline } from "@/shared/utils/offlineGuard";
 import { useChatRoomRuntimeStore } from "@/store/chat/chatRoomRuntimeStore";
 import { useChatRoomInfo } from "@/store/chat/chatRoomStore";
@@ -134,6 +135,15 @@ export const useChatRoomActions = () => {
       }
     } catch (err) {
       console.error("[ensureRoomId] 방 생성 실패:", err);
+      // 침묵 실패 금지 — 무피드백이면 현장에서 원인 추적 자체가 불가능하다 (2026-09-02 윈도우 실측:
+      // 로딩만 돌다 메시지가 흔적 없이 사라져 타임아웃인지 서버 거절인지 구분할 수 없었다)
+      useUIStore.getState().showSnackbar({
+        message:
+          err instanceof ApiError && err.message
+            ? err.message
+            : "채팅방 생성에 실패했어요. 네트워크 상태를 확인한 뒤 다시 시도해주세요.",
+        state: "error",
+      });
       return null;
     } finally {
       useUIStore.getState().hideLoadingOverlay();
@@ -230,8 +240,10 @@ export const useChatRoomActions = () => {
           if (msg.retryPayload?.content) {
             removePendingPublish(msg.retryPayload.content);
           }
-          // 에코 미스 진단 — 발생 시 방/메시지 식별자로 원인 추적 (RN reportEchoMiss 대응)
-          console.warn('[SEND] 5초 내 서버 에코 없음 → 실패 처리:', {
+          // 에코 미스 진단 — 방/메시지 식별자만 담아 Sentry 수집 (RN reportEchoMiss 대응).
+          // error 레벨 사용: captureConsole이 error만 이벤트로 승격한다 — 원격 PC의
+          // "메시지 안 보내짐" 증상을 대시보드에서 보기 위함 (2026-09-02, 내용은 미포함)
+          console.error('[SEND] 5초 내 서버 에코 없음 → 실패 처리:', {
             localId,
             roomId: msg.retryPayload?.roomId || currentRoomId,
           });
@@ -298,9 +310,11 @@ export const useChatRoomActions = () => {
           doSend(roomId, content, tagList);
           startSendTimer(localId);
         } else {
-          useChatRoomRuntimeStore.setState((state) => ({
-            messages: state.messages.filter((m) => m.id !== localId),
-          }));
+          // 방 생성 실패 — 메시지를 지우지 않고 실패 상태로 남긴다 (재시도 가능, 침묵 삭제 금지).
+          // 실패 원인 안내는 ensureRoomId의 스낵바가 담당
+          useChatRoomRuntimeStore
+            .getState()
+            .patchMessageById(localId, { localStatus: "failed" });
         }
       });
     },
@@ -325,31 +339,52 @@ export const useChatRoomActions = () => {
       const { content, tagList, roomId } = msg.retryPayload;
       const effectiveRoomId =
         roomId || useChatRoomRuntimeStore.getState().currentRoomId;
-      if (!effectiveRoomId) return;
 
       // 이전 전송이 pending queue에 남아있을 수 있으므로 먼저 제거 (중복 방지)
       removePendingPublish(content);
-      // 재시도 시작 — 영속 실패 목록에서 제거 (다시 실패하면 타이머가 재저장)
-      useFailedMessagesStore.getState().removeFailed(effectiveRoomId, messageId);
 
       // 재시도: 현재 시간으로 갱신 + 메시지를 맨 아래로 이동
-      const now = new Date().toISOString();
-      useChatRoomRuntimeStore.setState((state) => ({
-        messages: [
-          ...state.messages.filter((m) => m.id !== messageId),
-          {
-            ...msg,
-            localStatus: "uploading" as const,
-            createdAt: now,
-            time: formatKoreanTime(now),
-            retryPayload: { content, tagList, roomId: effectiveRoomId },
-          },
-        ],
-      }));
-      doSend(effectiveRoomId, content, tagList);
-      startSendTimer(messageId);
+      const resend = (targetRoomId: string) => {
+        // 재시도 시작 — 영속 실패 목록에서 제거 (다시 실패하면 타이머가 재저장)
+        useFailedMessagesStore.getState().removeFailed(targetRoomId, messageId);
+        const now = new Date().toISOString();
+        useChatRoomRuntimeStore.setState((state) => ({
+          messages: [
+            ...state.messages.filter((m) => m.id !== messageId),
+            {
+              ...msg,
+              localStatus: "uploading" as const,
+              createdAt: now,
+              time: formatKoreanTime(now),
+              retryPayload: { content, tagList, roomId: targetRoomId },
+            },
+          ],
+        }));
+        doSend(targetRoomId, content, tagList);
+        startSendTimer(messageId);
+      };
+
+      if (effectiveRoomId) {
+        resend(effectiveRoomId);
+        return;
+      }
+
+      // draft 방 — 방 생성 자체가 실패했던 메시지는 방 생성부터 다시 시도.
+      // 또 실패하면 실패 상태 복귀 (안내 스낵바는 ensureRoomId가 담당)
+      useChatRoomRuntimeStore
+        .getState()
+        .patchMessageById(messageId, { localStatus: "uploading" });
+      void ensureRoomId().then((newRoomId) => {
+        if (newRoomId) {
+          resend(newRoomId);
+        } else {
+          useChatRoomRuntimeStore
+            .getState()
+            .patchMessageById(messageId, { localStatus: "failed" });
+        }
+      });
     },
-    [doSend, startSendTimer, removePendingPublish, retryMediaMessage],
+    [doSend, startSendTimer, removePendingPublish, retryMediaMessage, ensureRoomId],
   );
 
   const removeFailedMessage = useCallback(

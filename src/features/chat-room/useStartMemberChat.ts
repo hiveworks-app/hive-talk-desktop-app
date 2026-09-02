@@ -6,6 +6,7 @@ import { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { useCheckDuplicateEM } from '@/features/external-chat/queries';
 import { DM_ROOM_LIST_KEY, EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { roomPath } from '@/shared/hooks/useRoomIdParam';
 import type { MemberItem } from '@/shared/types/user';
 import { WS_CHANNEL_TYPE, type WebSocketPublishItem } from '@/shared/types/websocket';
 import { useAuthStore } from '@/store/auth/authStore';
@@ -68,7 +69,7 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
       useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
     }
     onBeforeNavigate?.();
-    router.push(roomId ? `/chat/${roomId}` : '/chat/new');
+    router.push(roomId ? roomPath('/chat', roomId) : '/chat/new');
   };
 
   const startDM = (member: MemberItem) => {
@@ -99,7 +100,7 @@ export function useStartMemberChat({ onBeforeNavigate }: UseStartMemberChatOptio
       invitedUserIds: [],
     });
     onBeforeNavigate?.();
-    router.push(`/external-chat/${roomId}`);
+    router.push(roomPath('/external-chat', roomId));
   };
 
   // 협력멤버 1:1 — DM이 아닌 EM 플로우 (정책 em.md, RN C1 패리티): 중복검사 → 기존 방 이동 / 새 방 제목 입력

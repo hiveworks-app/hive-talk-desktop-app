@@ -238,12 +238,12 @@ export function createWindow(
   attachEditableContextMenu(win);
   attachReloadShortcut(win);
 
-  // 요청 Origin 제거: 데스크톱은 내장 서버(localhost:23000, 점유 시 랜덤 포트)에서 UI를 띄우므로
-  // 브라우저 엔진이 모든 API 요청에 Origin: http://localhost:<port> 를 자동으로 붙인다.
+  // 요청 Origin 제거: 데스크톱 UI의 출처(프로덕션 app://bundle, dev localhost:23000)를
+  // 브라우저 엔진이 모든 API 요청에 Origin 헤더로 자동으로 붙인다.
   // 실서버는 이 출처가 CORS 허용 목록에 없어 문전 403으로 차단하므로(2026-08-31 실측:
   // Origin 없으면 400 정상 도달, 붙이면 403), 모바일(RN)과 동일한 "Origin 없는 네이티브
   // 클라이언트"로 요청한다. CORS는 브라우저-사용자 보호 장치라 자체 앱 요청에서 제거해도
-  // 서버 공격면은 변하지 않으며, 랜덤 포트 폴백 시 출처가 바뀌는 문제도 함께 해소된다.
+  // 서버 공격면은 변하지 않는다.
   // wss 패턴 별도 명시: match pattern의 `*://`는 http/https만 매칭 — WS 핸드셰이크도 커버.
   session.defaultSession.webRequest.onBeforeSendHeaders(
     {

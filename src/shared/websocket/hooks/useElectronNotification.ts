@@ -3,6 +3,7 @@
 import { useEffect, type MutableRefObject } from 'react';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { useQueryClient } from '@tanstack/react-query';
+import { roomPath } from '@/shared/hooks/useRoomIdParam';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
 import { countDMTotalUsers, countRoomListTotalUsers } from '@/shared/utils/roomUserCount';
@@ -109,7 +110,7 @@ export function useElectronNotification(deps: UseElectronNotificationDeps) {
 
       // EM(협력채팅)은 전용 라우트로 — /chat 고정 라우팅 버그 수정 (RN 패리티)
       const routePrefix = channelType === WS_CHANNEL_TYPE.EXTERNAL_MESSAGE ? '/external-chat' : '/chat';
-      routerRef.current.push(`${routePrefix}/${roomId}`);
+      routerRef.current.push(roomPath(routePrefix, roomId));
     });
 
     return cleanup;

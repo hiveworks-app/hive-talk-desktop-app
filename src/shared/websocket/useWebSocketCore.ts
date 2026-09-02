@@ -167,7 +167,8 @@ export function useWebSocketCore({
       if (reason.includes('401') || e.code === 1006) {
         const attempt = reconnectAttemptRef.current;
         if (attempt >= MAX_RECONNECT) {
-          console.warn(`[WS] 인증 재연결 ${MAX_RECONNECT}회 초과 → 강제 로그아웃`);
+          // error 레벨 — 원격 PC의 "연결이 계속 끊김 끝에 로그아웃" 사례를 Sentry로 수집 (2026-09-02)
+          console.error(`[WS] 인증 재연결 ${MAX_RECONNECT}회 초과 → 강제 로그아웃`);
           handleForceLogout();
           return;
         }
@@ -183,7 +184,13 @@ export function useWebSocketCore({
         if (!newToken) {
           // refresh가 SC010으로 거절된 경우 — 강제 로그아웃 대신 안내 다이얼로그 확인 대기
           if (useSessionDisconnectStore.getState().noticeVisible) return;
-          handleForceLogout();
+          // 서버의 명시적 거절은 refreshAccessToken 내부가 이미 강제 로그아웃을 수행했다.
+          // 여기 null은 네트워크 레벨 실패(오프라인·차단·타임아웃) 포함 — 일시 장애에 세션을
+          // 버리지 않고 백오프 재시도한다 (refresh의 "네트워크 실패 로그아웃 금지" 설계와 정합, 2026-09-02)
+          if (!useAuthStore.getState().accessToken) return; // 이미 로그아웃된 상태
+          reconnectTimerRef.current = setTimeout(() => {
+            if (!forceCloseRef.current) connectWebSocketRef.current();
+          }, delay);
           return;
         }
         const token = newToken;

@@ -21,13 +21,8 @@ const initAuthState = {
   user: null,
 };
 
-const AUTH_COOKIE = 'has-auth=1; path=/; max-age=604800; SameSite=Lax';
-
-function syncAuthCookie(hasToken: boolean) {
-  if (typeof document === 'undefined') return;
-  document.cookie = hasToken ? AUTH_COOKIE : 'has-auth=; max-age=0; path=/';
-}
-
+// has-auth 쿠키 동기화(syncAuthCookie)는 미들웨어 라우트 보호용이었다 — 정적 export 전환
+// (2026-09-02)으로 미들웨어가 사라졌고 app:// 스킴은 쿠키를 저장하지 않아 전면 제거.
 export const useAuthStore = create<AuthState>()(
   persist(
     set => ({
@@ -35,7 +30,6 @@ export const useAuthStore = create<AuthState>()(
       setAuth: ({ accessToken, refreshToken, deviceInfo, user }) =>
         set(state => {
           const newToken = accessToken ?? state.accessToken;
-          if (newToken) syncAuthCookie(true);
           return {
             ...state,
             accessToken: newToken,
@@ -46,7 +40,6 @@ export const useAuthStore = create<AuthState>()(
         }),
       logout: () => {
         set({ ...initAuthState });
-        syncAuthCookie(false);
         // 멀티 채팅창은 이 창(허브)의 소켓에 얹혀 있다 — 로그아웃하면 남겨둘 이유가 없고,
         // 남기면 아무것도 못 받는 죽은 창이 된다 (Electron 아니면 no-op)
         wsRelay.shutdown();
@@ -76,9 +69,8 @@ export const useAuthStore = create<AuthState>()(
         // ⚠️ sessionStorage는 origin이 아니라 **창(탭)마다 독립**이다. localStorage/쿠키와 다르다.
         //    멀티 채팅창(팝업)은 새 BrowserWindow라 이 플래그가 항상 비어 있어 "앱을 새로 켰다"로
         //    오판되고, 자동 로그인이 꺼져 있으면(기본값) logout()이 돈다. 그 여파가 팝업에 그치지
-        //    않는다 — logout()의 set()은 persist를 타고 localStorage의 user-auth를 비우고,
-        //    syncAuthCookie(false)는 origin 공유 자원인 has-auth 쿠키를 지워 **메인 창의 로그인까지
-        //    풀어버린다**.
+        //    않는다 — logout()의 set()은 persist를 타고 origin 공유 자원인 localStorage의
+        //    user-auth를 비워 **메인 창의 로그인까지 풀어버린다**.
         //    팝업은 "앱을 새로 켠 것"이 아니라 이미 로그인된 앱에서 파생된 창이므로 판정에서 제외한다.
         //    (보조 창이 더 늘어나면 경로 검사 대신 preload가 주는 "첫 창" 플래그로 옮길 것)
         if (!isPopupWindow() && !sessionStorage.getItem('auth-checked')) {
@@ -88,8 +80,6 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
         }
-
-        syncAuthCookie(!!state.accessToken);
       },
     },
   ),

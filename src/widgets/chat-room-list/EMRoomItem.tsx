@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { roomPath, useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { apiGetEMLastMessage } from '@/features/chat-room/api';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { useLeaveRoom } from '@/features/chat-room-list/useLeaveRoom';
@@ -40,7 +40,7 @@ interface EMRoomItemProps {
 
 export function EMRoomItem({ room, myUserId, pinnedRankMap, showFavoriteStar = false }: EMRoomItemProps) {
   const router = useAppRouter();
-  const params = useParams();
+  const openRoomId = useRoomIdParam();
   const queryClient = useQueryClient();
   // 차단 목록 변경 시 미리보기 접힘 문구 즉시 반영 (구독 목적 — 값 미사용)
   useBlockedMembersStore(s => s.items);
@@ -77,7 +77,7 @@ export function EMRoomItem({ room, myUserId, pinnedRankMap, showFavoriteStar = f
   // ★는 관심멤버순 정렬일 때만 표시 (RN showFavoriteStar 패리티 — 2026-08-18 앱 기준 통일)
   const hasPinned = showFavoriteStar && emRoomFavoriteRank(room, pinnedRankMap) !== NO_PIN_RANK;
 
-  const isActive = params?.roomId === roomModel.roomId;
+  const isActive = openRoomId === roomModel.roomId;
 
   // 개별 나가기 (hover 액션 — RN 스와이프 나가기 대응)
   const { leaveRoom } = useLeaveRoom();
@@ -109,7 +109,7 @@ export function EMRoomItem({ room, myUserId, pinnedRankMap, showFavoriteStar = f
       initialNotReadCount: notReadCount,
     });
 
-    router.push(`/external-chat/${roomModel.roomId}`);
+    router.push(roomPath('/external-chat', roomModel.roomId));
   };
 
   return (

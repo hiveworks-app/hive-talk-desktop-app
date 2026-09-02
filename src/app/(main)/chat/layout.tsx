@@ -1,13 +1,15 @@
 'use client';
 
-import { useParams, usePathname } from 'next/navigation';
+import { Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/cn';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { ChatRoomListSidebar } from '@/widgets/chat-room-list/ChatRoomListSidebar';
 
-export default function ChatLayout({ children }: { children: React.ReactNode }) {
-  const params = useParams();
+function ChatLayoutInner({ children }: { children: React.ReactNode }) {
+  const roomId = useRoomIdParam();
   const pathname = usePathname();
-  const hasActiveRoom = !!params?.roomId || pathname === '/chat/new';
+  const hasActiveRoom = !!roomId || pathname === '/chat/new';
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -32,5 +34,14 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
         {children}
       </div>
     </div>
+  );
+}
+
+export default function ChatLayout({ children }: { children: React.ReactNode }) {
+  // useSearchParams(roomId)의 정적 프리렌더 경계 — 하위 페이지·목록 컴포넌트까지 이 경계가 커버한다
+  return (
+    <Suspense fallback={null}>
+      <ChatLayoutInner>{children}</ChatLayoutInner>
+    </Suspense>
   );
 }

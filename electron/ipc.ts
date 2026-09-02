@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, session, Tray } from 
 import * as fs from 'fs';
 import * as path from 'path';
 import { getTrayIconPath, getTrayBadgeIconPath } from './utils';
+import { getOgPreview } from './ogPreview';
 import { getRoundedTrayIcon, getRoundedTrayBadgeIcon } from './trayIcon';
 import { showCustomNotification, showNativeNotification, NotificationData } from './notifications';
 import { updateTrayMenu, getTrayAuthState } from './tray';
@@ -88,6 +89,9 @@ export function setupIpcHandlers(
   });
 
   ipcMain.handle('get-app-version', () => app.getVersion());
+
+  // 링크 프리뷰 — 정적 export 전환으로 Next 서버 route 대신 메인이 CORS 없이 OG를 파싱한다
+  ipcMain.handle('og-preview', (_event, url: string) => getOgPreview(String(url)));
 
   session.defaultSession.on('will-download', (_event, item) => {
     const key = item.getURLChain()[0] ?? item.getURL();
