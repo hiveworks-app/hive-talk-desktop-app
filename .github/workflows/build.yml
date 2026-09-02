@@ -46,9 +46,8 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_WS_URL: ${{ secrets.NEXT_PUBLIC_WS_URL }}
 
-      # standalone은 flat 구조가 정본 (next.config.ts outputFileTracingRoot 고정, 2026-08-31) —
-      # 과거의 nested 변환(Normalize standalone structure)은 afterPack 훅·extraResources와
-      # 충돌하므로 제거됨. server.js는 .next/standalone/ 바로 아래에 생성된다.
+      # 정적 export 전환 (2026-09-02) — next build가 out/ 정적 번들을 생성하고
+      # electron-builder extraResources가 그대로 복사한다 (내장 서버·standalone 없음)
       - name: Compile Electron TypeScript
         run: npm run electron:compile
 

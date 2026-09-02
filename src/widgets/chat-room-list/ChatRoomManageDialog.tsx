@@ -1,8 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { useGetEMRoomList } from '@/features/chat-room-list/queries';
 import type { GetChatRoomListItemType } from '@/features/chat-room-list/type';
 import { EM_ROOM_LIST_KEY } from '@/shared/config/queryKeys';
@@ -27,7 +27,7 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
   const myUserId = useAuthStore(s => s.user?.id);
   const showSnackbar = useUIStore(s => s.showSnackbar);
   const router = useAppRouter();
-  const params = useParams();
+  const currentRoomId = useRoomIdParam();
   const queryClient = useQueryClient();
 
   // 최신순 정렬 (RN ChatRoomManagementScreen 패리티 — 사내 방 관리와 동일 기준: sortAt 우선)
@@ -70,8 +70,7 @@ export function ChatRoomManageDialog({ open, onClose }: ChatRoomManageDialogProp
       queryClient.invalidateQueries({ queryKey: EM_ROOM_LIST_KEY });
     });
 
-    const openRoomId = typeof params?.roomId === 'string' ? params.roomId : undefined;
-    if (openRoomId && sel.has(openRoomId)) router.push('/external-chat');
+    if (currentRoomId && sel.has(currentRoomId)) router.push('/external-chat');
 
     showSnackbar({ message: `${ids.length}개 채팅방을 나갔어요.`, state: 'success' });
   };

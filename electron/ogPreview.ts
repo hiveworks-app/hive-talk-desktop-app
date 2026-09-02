@@ -1,20 +1,42 @@
 import { lookup } from 'node:dns/promises';
 import net from 'node:net';
-import { getDomain, normalizeUrl, type LinkPreviewData } from '@/shared/utils/linkPreview';
 
 /**
- * 링크 프리뷰 서버사이드 프록시.
- * 렌더러(Electron/브라우저)는 외부 사이트를 직접 fetch하면 CORS로 막히므로,
- * Next 서버(Node)가 대신 fetch·OG 파싱 후 JSON을 반환한다. 렌더러는 같은 출처(`/api/og-preview`) 호출.
- * 파서 로직은 RN `shared/ui/Chats/ogParser.ts` 미러.
+ * 링크 프리뷰 OG 파서 — 메인 프로세스판.
+ *
+ * 정적 export 전환(2026-09-02)으로 Next 서버 route(app/api/og-preview)가 사라져 이곳으로 이전.
+ * 메인 프로세스는 브라우저가 아니라 CORS 제약 없이 외부 사이트를 직접 fetch할 수 있다.
+ * 파서·SSRF 가드 로직은 기존 route.ts(= RN ogParser.ts 미러)를 그대로 옮긴 것.
+ * LinkPreviewData 타입과 normalizeUrl/getDomain은 렌더러(src/shared/utils/linkPreview.ts)와
+ * 동일 형태 유지 — electron/ tsconfig가 src를 포함하지 않아 소형 헬퍼는 여기 복제한다.
  */
-export const runtime = 'nodejs';
+
+export interface LinkPreviewData {
+  url: string;
+  title?: string;
+  description?: string;
+  domain?: string;
+  thumbnailUrl?: string;
+}
 
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_HTML_BYTES = 8000;
 const MAX_REDIRECTS = 5;
 
-// ─── OG/meta 파서 (서버 전용) ───────────────────────────────────
+// ─── 소형 헬퍼 (src/shared/utils/linkPreview.ts 미러) ───────────────
+function normalizeUrl(url: string): string {
+  return url.startsWith('http') ? url : `https://${url}`;
+}
+
+function getDomain(url: string): string {
+  try {
+    return new URL(normalizeUrl(url)).hostname.replace('www.', '');
+  } catch {
+    return url;
+  }
+}
+
+// ─── OG/meta 파서 ───────────────────────────────────────────────
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -117,7 +139,7 @@ async function parsePreviewResponse(response: Response, originalUrl: string): Pr
 }
 
 // ─── SSRF 가드 ──────────────────────────────────────────────────
-// 사용자가 보낸 임의 URL을 서버가 fetch하므로 내부망/메타데이터 주소를 차단해야 한다.
+// 렌더러가 보낸 임의 URL을 메인이 fetch하므로 내부망/메타데이터 주소를 차단해야 한다.
 // 호스트명 문자열만 검사하면 ① DNS rebinding(공개도메인→사설IP) ② 대체표기(127.1, 0x7f.., ::ffff:127.0.0.1)를
 // 놓치므로, 실제 DNS 해석 후 모든 IP의 대역을 검사한다(dns.lookup은 IP 리터럴도 정규화).
 
@@ -162,7 +184,7 @@ async function hostResolvesToPublic(hostname: string): Promise<boolean> {
 /**
  * SSRF-safe fetch — 수동 리다이렉트 루프로 매 홉마다 DNS 해석+대역 재검증.
  * (잔여: DNS rebinding TOCTOU는 해석↔연결 사이 창이 남음. 완전차단은 검증된 IP로 연결을 pin하는
- *  커스텀 dispatcher 필요 — 로컬 데스크톱 서버 맥락상 현 수준으로 충분 판단.)
+ *  커스텀 dispatcher 필요 — 로컬 데스크톱 앱 맥락상 현 수준으로 충분 판단.)
  */
 async function ssrfSafeFetch(initialUrl: string): Promise<Response | null> {
   let currentUrl = new URL(initialUrl);
@@ -204,28 +226,24 @@ async function ssrfSafeFetch(initialUrl: string): Promise<Response | null> {
   return null; // 리다이렉트 과다
 }
 
-export async function GET(request: Request): Promise<Response> {
-  const rawUrl = new URL(request.url).searchParams.get('url');
-  if (!rawUrl) return Response.json({ error: 'url required' }, { status: 400 });
-
+/** IPC 핸들러 본체 — 실패는 항상 fallback(url/domain)으로 응답해 카드가 최소 표시는 되게 한다 */
+export async function getOgPreview(rawUrl: string): Promise<LinkPreviewData> {
   let target: URL;
   try {
     target = new URL(normalizeUrl(rawUrl));
   } catch {
-    return Response.json({ error: 'invalid url' }, { status: 400 });
+    return buildFallback(rawUrl);
   }
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-    return Response.json({ error: 'unsupported protocol' }, { status: 400 });
+    return buildFallback(rawUrl);
   }
 
   try {
     // 매 리다이렉트 홉마다 DNS 해석+사설대역 재검증 (SSRF 차단). 내부주소면 null → fallback만.
     const response = await ssrfSafeFetch(target.toString());
-    if (!response || !response.ok) return Response.json(buildFallback(rawUrl));
-
-    const data = await parsePreviewResponse(response, rawUrl);
-    return Response.json(data, { headers: { 'Cache-Control': 'public, max-age=3600' } });
+    if (!response || !response.ok) return buildFallback(rawUrl);
+    return await parsePreviewResponse(response, rawUrl);
   } catch {
-    return Response.json(buildFallback(rawUrl));
+    return buildFallback(rawUrl);
   }
 }

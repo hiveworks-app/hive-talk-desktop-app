@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 핵심 기술 스택
 
-- **Core:** Next.js 16 (App Router), React 19, TypeScript 5
-- **Desktop:** Electron 40 (utilityProcess.fork 기반 Next.js 서버 통합)
+- **Core:** Next.js 16 (App Router, 정적 export), React 19, TypeScript 5
+- **Desktop:** Electron 40 (out/ 정적 번들을 app:// 커스텀 프로토콜로 직접 서빙 — 내장 서버 없음)
 - **Styling:** Tailwind CSS 4
 - **State Management:**
   - Server State: TanStack Query (React Query) v5
@@ -156,11 +156,11 @@ electron/
 ## 1. 인증 시스템
 
 ```
-로그인 → Zustand(persist) + has-auth 쿠키 → middleware 라우트 보호
+로그인 → Zustand(persist) → (main)/layout.tsx 클라이언트 가드가 라우트 보호
 토큰 만료 → API 클라이언트 401 감지 → refreshAccessToken() → 자동 재시도
 ```
 
-- **middleware.ts**: `has-auth` 쿠키로 서버사이드 라우트 보호 (토큰은 localStorage에만 저장)
+- **(main)/layout.tsx**: 클라이언트 인증 가드 — accessToken 없으면 /login 이동 (정적 export라 서버 미들웨어 없음, 토큰은 localStorage에만 저장)
 - **authStore.ts**: `accessToken`, `refreshToken`, `deviceInfo`, `user` persist
 - **refreshAccessToken.ts**: auth store의 `deviceInfo`에서 deviceId를 읽어 일관성 보장 (RN 앱과 동일 패턴)
 - **API 클라이언트**: 401 응답 시 `SC001`/`SC002` 코드면 자동 refresh 후 재시도
@@ -206,21 +206,22 @@ export const EM_ROOM_LIST_KEY = ['emRoomList'];
 
 ## 4. Electron 데스크톱 통합
 
-### 프로덕션 아키텍처
+### 프로덕션 아키텍처 (정적 export — 2026-09-02 전환)
 
 ```
 Electron Main Process
-  ├─ utilityProcess.fork(server.js)   # Next.js standalone 서버
-  ├─ BrowserWindow.loadURL(serverUrl) # 내장 브라우저에서 로드
-  ├─ webRequest.onHeadersReceived     # CORS 헤더 주입 (treefrog.kr만)
-  ├─ Tray                             # 시스템 트레이 (종료 시 최소화)
-  └─ requestSingleInstanceLock()      # 중복 실행 방지
+  ├─ protocol.handle('app', …)          # out/ 정적 번들 직접 서빙 (electron/protocol.ts)
+  ├─ BrowserWindow.loadURL('app://bundle') # 내장 서버·포트 없음 — 기동 = 파일 열기
+  ├─ 스플래시 창                          # 첫 페인트 전 즉시 표시 (electron/splash.ts)
+  ├─ webRequest(Origin 제거/CORS 재작성)  # hiveworks.co.kr·ncloudstorage.com 한정
+  ├─ Tray                               # 시스템 트레이 (종료 시 최소화)
+  └─ requestSingleInstanceLock()        # 중복 실행 방지
 ```
 
-### 포트 관리
-
-- 포트 23000 선호 (API 서버 CORS 설정과 일치)
-- 사용 중이면 `findFreePort()`로 랜덤 포트 할당 + CORS 헤더 주입
+- 동적 세그먼트(`/chat/[roomId]`) 불가 → **쿼리 파라미터**(`/chat?roomId=…`, `roomPath()` 헬퍼) 사용
+- `useSearchParams`는 정적 프리렌더 시 Suspense 경계 필요 — 채팅 레이아웃·단독 페이지가 제공
+- 링크 프리뷰(OG 파싱)는 Next 서버 route 대신 **메인 프로세스 IPC**(`electron/ogPreview.ts`)
+- dev는 기존대로 `next dev -p 23000`에 접속 (electron:dev 흐름 불변)
 
 ### IPC 브릿지 (preload.ts)
 
@@ -233,7 +234,7 @@ window.electronAPI.isElectron  // boolean
 
 ### CORS 우회
 
-- `session.defaultSession.webRequest.onHeadersReceived`로 treefrog.kr 도메인에만 CORS 헤더 주입
+- `webRequest.onBeforeSendHeaders`로 API 도메인(hiveworks.co.kr·ncloudstorage.com) 요청의 Origin 제거 (RN과 동일한 네이티브 클라이언트 취급) + `onHeadersReceived`로 응답 CORS 헤더 재작성
 - **중요**: URL 필터 없이 등록하면 모든 응답(HTML/JS/CSS)을 가로채서 빈 화면 발생
 
 ---
@@ -242,9 +243,9 @@ window.electronAPI.isElectron  // boolean
 
 | 파일 | 역할 |
 |------|------|
-| `electron/main.ts` | Electron 메인 프로세스 (서버 관리, CORS, 트레이, IPC) |
+| `electron/main.ts` | Electron 메인 프로세스 (스플래시·창 생성, 트레이, IPC 배선) |
 | `electron/preload.ts` | IPC 브릿지 (contextBridge) |
-| `src/middleware.ts` | Next.js 라우트 보호 (has-auth 쿠키) |
+| `electron/protocol.ts` | app:// 정적 번들 서빙 (프로덕션 라우팅의 심장) |
 | `src/shared/api/index.ts` | HTTP 클라이언트 (request, 401 자동 재시도) |
 | `src/shared/api/refreshAccessToken.ts` | 토큰 갱신 (auth store의 deviceInfo 사용) |
 | `src/shared/websocket/WebSocketContext.tsx` | 전역 WebSocket 관리 + React Query 캐시 동기화 |
@@ -258,8 +259,9 @@ window.electronAPI.isElectron  // boolean
 
 ## Electron + Next.js 통합
 
-- `next.config.ts`에서 `output: 'standalone'` 필수 (Electron 번들링용)
-- electron-builder.yml의 `extraResources`로 standalone + static + public 번들링
+- `next.config.ts`에서 `output: 'export'` 필수 (정적 번들 → app:// 서빙)
+- electron-builder.yml의 `extraResources`로 `out/` 번들링 (public은 export가 포함)
+- 새 라우트를 만들 때 동적 세그먼트(`[param]`) 금지 — 쿼리 파라미터로 설계
 - 개발 시 `electron:dev` 사용, 프로덕션 빌드 시 `electron:build` 사용
 
 ## WebSocket 리스너 정리

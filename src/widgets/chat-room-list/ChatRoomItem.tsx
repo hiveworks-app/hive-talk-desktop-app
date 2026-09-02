@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import { useAppRouter } from "@/shared/hooks/useAppRouter";
+import { roomPath, useRoomIdParam } from "@/shared/hooks/useRoomIdParam";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   apiGetDMLastMessage,
@@ -50,7 +50,7 @@ interface ChatRoomItemProps {
 
 export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteStar = false }: ChatRoomItemProps) {
   const router = useAppRouter();
-  const params = useParams();
+  const openRoomId = useRoomIdParam();
   const queryClient = useQueryClient();
   // 차단 목록 변경 시 미리보기 접힘 문구 즉시 반영 (구독 목적 — 값 미사용)
   useBlockedMembersStore(s => s.items);
@@ -97,7 +97,7 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
       : (roomModel.participants ?? []).some((p) => pinnedRankMap.has(String(p.userId)));
   const hasPinned = showFavoriteStar && isPinnedRoom;
 
-  const isActive = params?.roomId === roomModel.roomId;
+  const isActive = openRoomId === roomModel.roomId;
   // 멀티 채팅창(새 창에서 열기)은 Electron 전용
   const isElectron =
     typeof window !== 'undefined' &&
@@ -163,7 +163,7 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
       initialNotReadCount: notReadCount,
     });
 
-    router.push(`/chat/${roomModel.roomId}`);
+    router.push(roomPath('/chat', roomModel.roomId));
   };
 
   // 상대가 회원탈퇴/소속해제로 제거된 DM 또는 혼자 남은 GM — 연한 색 처리 (정책 dm.md/chat.md)
@@ -248,7 +248,7 @@ export function ChatRoomItem({ room, channelType, pinnedRankMap, showFavoriteSta
             onSelect: () => {
               setMenuPos(null);
               (window as unknown as { electronAPI?: { openChatWindow?: (d: { path: string; roomId: string }) => void } })
-                .electronAPI?.openChatWindow?.({ path: `/chat-popup/${roomModel.roomId}`, roomId: roomModel.roomId });
+                .electronAPI?.openChatWindow?.({ path: roomPath('/chat-popup', roomModel.roomId), roomId: roomModel.roomId });
             },
           }] : []),
           { label: '나가기', icon: <IconLeave width={20} height={20} />, danger: true, onSelect: () => { setMenuPos(null); setLeaveConfirmOpen(true); } },

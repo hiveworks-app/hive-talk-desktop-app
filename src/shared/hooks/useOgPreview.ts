@@ -1,16 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LinkPreviewData } from '@/shared/utils/linkPreview';
+import { getDomain, type LinkPreviewData } from '@/shared/utils/linkPreview';
 
 /** URL별 OG 데이터 인메모리 캐시 (앱 실행 중 유지) — RN useOgPreview 미러 */
 const ogCache = new Map<string, LinkPreviewData>();
 
 async function fetchOgPreview(url: string): Promise<LinkPreviewData> {
   try {
-    const res = await fetch(`/api/og-preview?url=${encodeURIComponent(url)}`);
-    if (!res.ok) return { url, domain: undefined };
-    return (await res.json()) as LinkPreviewData;
+    // 정적 export 전환(2026-09-02) — Next 서버 route가 없어 Electron 메인이 CORS 없이 파싱한다.
+    // 브라우저 단독(dev의 localhost 직접 접속)에서는 파서가 없어 도메인 fallback 카드만 표시
+    const api = (window as unknown as {
+      electronAPI?: { getOgPreview?: (url: string) => Promise<LinkPreviewData> };
+    }).electronAPI;
+    if (!api?.getOgPreview) return { url, domain: getDomain(url) };
+    return await api.getOgPreview(url);
   } catch {
     return { url, domain: undefined };
   }

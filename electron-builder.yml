@@ -12,9 +12,6 @@ directories:
   output: release
   buildResources: resources
 
-# standalone/node_modules 수동 복사 — extraResources는 node_modules를 강제 제외 (스크립트 주석 참고)
-afterPack: scripts/afterPack.cjs
-
 files:
   - dist-electron/**/*
   - "!node_modules"
@@ -109,22 +106,11 @@ files:
   - "!electron"
   - "!.next"
 
+# 정적 export 전환 (2026-09-02) — 내장 Next 서버(standalone) 대신 out/ 정적 번들을
+# app:// 프로토콜(electron/protocol.ts)로 서빙한다. public/은 export가 out/에 포함시킨다
 extraResources:
-  - from: .next/standalone
-    to: standalone
-    filter:
-      # "**/*"는 숨김 항목(.next, .env.production)을 매칭하지 않고 node_modules는 기본 제외라
-      # 전부 명시해야 standalone 서버가 온전히 복사된다 (누락 시 부팅 실패 — 2026-08-31 QA)
-      - "**/*"
-      - ".next/**"
-      - ".env.production"
-      - "node_modules/**"
-  - from: .next/static
-    to: standalone/.next/static
-    filter:
-      - "**/*"
-  - from: public
-    to: standalone/public
+  - from: out
+    to: out
     filter:
       - "**/*"
   - from: resources

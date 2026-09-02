@@ -1,12 +1,12 @@
 import { app, BrowserWindow, dialog, Menu, nativeTheme, Tray } from 'electron';
 import { initMainSentry } from './sentry';
-import { startNextServer, killNextServer } from './server';
+import { registerStaticScheme, setupStaticServing } from './protocol';
 import { createSplashWindow, closeSplashWindow } from './splash';
 import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
 import { initializeAutoUpdater, registerUpdateIpc } from './autoUpdater';
-import { isDev } from './utils';
+import { isDev, DEV_PORT } from './utils';
 
 // 앱 이름은 무엇보다 먼저 고정 — userData 경로(%APPDATA%/<이름>)가 여기서 결정된다.
 // whenReady 안에서 늦게 부르면 싱글 인스턴스 락·Sentry·Chromium 프로필은 package.json
@@ -16,6 +16,9 @@ app.setName('HiveTalk');
 
 // Sentry는 가능한 한 이른 시점에 초기화 (이후 main 코드의 예외까지 수집)
 initMainSentry();
+
+// app:// 커스텀 스킴 등록 — whenReady 이전(모듈 로드 시점) 필수
+registerStaticScheme();
 
 // 시스템 테마와 관계없이 항상 Light 모드 강제
 nativeTheme.themeSource = 'light';
@@ -89,9 +92,6 @@ app.on('activate', () => {
   }
 });
 
-app.on('quit', () => {
-  killNextServer();
-});
 
 // ------------------------------------------------------------------
 // App Ready
@@ -149,13 +149,15 @@ app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
   }
 
-  // 서버 부팅(느린 PC에서 수십 초) 동안 무반응으로 보이지 않게 즉시 스플래시부터 표시
+  // 첫 페인트 전 무반응으로 보이지 않게 즉시 스플래시부터 표시
   createSplashWindow();
 
   try {
-    const serverUrl = await startNextServer();
+    // 정적 export 전환 — 프로덕션은 내장 서버 없이 out/ 번들을 app://로 직접 서빙.
+    // dev는 concurrently가 띄운 next dev 서버(localhost:23000)를 그대로 쓴다
+    const serverUrl = isDev ? `http://localhost:${DEV_PORT}` : setupStaticServing();
     // 부팅 중 스플래시를 닫아 종료가 시작됐으면(quit → before-quit → isQuitting)
-    // 뒤늦게 도착한 서버 준비로 창을 만들지 않는다
+    // 뒤늦게 창을 만들지 않는다
     if (isQuitting) return;
     mainWindow = createWindow(serverUrl, deps);
     // 메인 창이 실제 표시되는 순간(ready-to-show → show) 스플래시 제거 — 빈틈·겹침 없음

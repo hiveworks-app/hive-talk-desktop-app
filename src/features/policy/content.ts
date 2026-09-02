@@ -120,7 +120,7 @@ export const HIVETALK_AD_CONSENT: PolicySection[] = [
 ];
 
 /**
- * 정책 문서 레지스트리. 동적 라우트 `/settings/policy/[doc]`의 slug → 문서 매핑.
+ * 정책 문서 레지스트리. 정책 페이지(`/settings/policy?doc=…`)의 slug → 문서 매핑.
  * 개인/보안 화면에서 각 약관 링크가 이 slug로 진입한다.
  */
 export const POLICY_DOCS = {

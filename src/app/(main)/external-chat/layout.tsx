@@ -1,13 +1,15 @@
 'use client';
 
-import { useParams, usePathname } from 'next/navigation';
+import { Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/cn';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { ExternalChatSidebar } from '@/widgets/chat-room-list/ExternalChatSidebar';
 
-export default function ExternalChatLayout({ children }: { children: React.ReactNode }) {
-  const params = useParams();
+function ExternalChatLayoutInner({ children }: { children: React.ReactNode }) {
+  const roomId = useRoomIdParam();
   const pathname = usePathname();
-  const hasActiveRoom = !!params?.roomId || pathname === '/external-chat/new';
+  const hasActiveRoom = !!roomId || pathname === '/external-chat/new';
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -29,5 +31,14 @@ export default function ExternalChatLayout({ children }: { children: React.React
         {children}
       </div>
     </div>
+  );
+}
+
+export default function ExternalChatLayout({ children }: { children: React.ReactNode }) {
+  // useSearchParams(roomId)의 정적 프리렌더 경계 (chat/layout.tsx와 동일)
+  return (
+    <Suspense fallback={null}>
+      <ExternalChatLayoutInner>{children}</ExternalChatLayoutInner>
+    </Suspense>
   );
 }

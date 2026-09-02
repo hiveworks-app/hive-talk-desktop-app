@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useParams } from 'next/navigation';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { useQueryClient } from '@tanstack/react-query';
 import { buildFallbackMember } from '@/features/members/fallbackMember';
 import { MEMBERS_KEY } from '@/shared/config/queryKeys';
@@ -65,10 +65,10 @@ interface ChatRoomViewProps {
 }
 
 export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = false }: ChatRoomViewProps) {
-  const params = useParams();
   const router = useAppRouter();
   const queryClient = useQueryClient();
-  const urlRoomId = params?.roomId as string | undefined;
+  // 정적 export 전환 — roomId는 동적 세그먼트가 아닌 ?roomId= 쿼리에서 읽는다
+  const urlRoomId = useRoomIdParam();
 
   const storeRoomId = useChatRoomInfo(s => s.roomId);
   const invitedUserIds = useChatRoomInfo(s => s.invitedUserIds);

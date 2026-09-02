@@ -3,6 +3,7 @@
 import { comparePolicyMemberName } from '@/features/members/policySort';
 import { useCallback, useMemo, useState } from 'react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { roomPath } from '@/shared/hooks/useRoomIdParam';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
@@ -142,7 +143,7 @@ export function useCreateRoom(onClose: () => void, presetMemberIds?: string[]) {
         useChatRoomRuntimeStore.setState({ currentRoomId: null, messages: [] });
       }
       close();
-      router.push(roomId ? `/chat/${roomId}` : '/chat/new');
+      router.push(roomId ? roomPath('/chat', roomId) : '/chat/new');
     },
     [close, router],
   );

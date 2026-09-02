@@ -1,21 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { bootstrapPopupRoom } from '@/features/chat-room/bootstrapPopupRoom';
+import { useRoomIdParam } from '@/shared/hooks/useRoomIdParam';
 import { ChatRoomView } from '@/widgets/chat-room/ChatRoomView';
 
 /**
  * 멀티 채팅창(팝업) — 사내채팅(DM/GM) 대화 화면 단독.
+ * 정적 export 전환으로 /chat-popup/[roomId] 대신 /chat-popup?roomId=… 쿼리를 쓴다.
  *
  * 방 메타(chatRoomInfo)를 먼저 채운 뒤에만 ChatRoomView를 마운트한다.
  * ChatRoomView는 스토어가 비어 있으면 목록으로 리다이렉트하는데 팝업엔 목록이 없기 때문.
  * 실패해도 창을 닫지 않고 사유를 표시한다 — 닫아버리면 원인을 확인할 방법이 없다.
  */
-export default function ChatPopupPage() {
-  const params = useParams();
-  const roomId = params?.roomId as string | undefined;
+function ChatPopupInner() {
+  const roomId = useRoomIdParam();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorDetail, setErrorDetail] = useState('');
@@ -67,4 +67,13 @@ export default function ChatPopupPage() {
   }
 
   return <ChatRoomView routePrefix="/chat" showNextMessage isPopup />;
+}
+
+export default function ChatPopupPage() {
+  // useSearchParams(roomId)의 정적 프리렌더 경계 — 팝업은 전용 레이아웃이라 페이지가 직접 제공
+  return (
+    <Suspense fallback={null}>
+      <ChatPopupInner />
+    </Suspense>
+  );
 }

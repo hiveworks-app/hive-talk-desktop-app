@@ -1,6 +1,5 @@
 import { app } from 'electron';
 import path from 'path';
-import net from 'net';
 
 export const isDev = !app.isPackaged;
 export const DEV_PORT = 23000;
@@ -49,50 +48,6 @@ export function getDefaultProfilePath() {
   return path.join(base, 'notification-profile-default.png');
 }
 
-// ------------------------------------------------------------------
-// Network Helpers
-// ------------------------------------------------------------------
-
-export function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port);
-  });
-}
-
-export function findFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.listen(0, () => {
-      const port = (server.address() as net.AddressInfo).port;
-      server.close(() => resolve(port));
-    });
-    server.on('error', reject);
-  });
-}
-
-export function waitForServer(url: string, timeout = 30_000): Promise<void> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      fetch(url)
-        .then((res) => {
-          if (res.ok || res.status < 500) resolve();
-          else retry();
-        })
-        .catch(retry);
-    };
-    const retry = () => {
-      if (Date.now() - start > timeout) {
-        reject(new Error(`Server did not start within ${timeout}ms`));
-        return;
-      }
-      setTimeout(check, 500);
-    };
-    check();
-  });
-}
+// 포트 헬퍼(isPortAvailable/findFreePort/waitForServer)는 정적 export 전환(2026-09-02)으로 제거 —
+// 프로덕션이 내장 서버 없이 app:// 프로토콜(electron/protocol.ts)로 번들을 서빙한다.
+// DEV_PORT는 dev(next dev -p 23000) 접속용으로만 남는다.

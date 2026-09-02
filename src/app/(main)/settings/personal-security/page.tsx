@@ -74,11 +74,11 @@ export default function PersonalSecurityPage() {
           <Section label="동의 정보 (필수)">
             <LinkRow
               title="하이브톡 서비스 이용약관"
-              onClick={() => router.push('/settings/policy/terms-of-service')}
+              onClick={() => router.push('/settings/policy?doc=terms-of-service')}
             />
             <LinkRow
               title="개인정보 수집·이용 동의"
-              onClick={() => router.push('/settings/policy/privacy-consent')}
+              onClick={() => router.push('/settings/policy?doc=privacy-consent')}
             />
           </Section>
 
@@ -90,7 +90,7 @@ export default function PersonalSecurityPage() {
               loading={termsPending}
               disabled={marketing.isPending}
               onChange={handleToggle(marketing, 'marketing', '마케팅 목적 개인정보 이용')}
-              onViewFullText={() => router.push('/settings/policy/marketing-consent')}
+              onViewFullText={() => router.push('/settings/policy?doc=marketing-consent')}
             />
             <ConsentToggleRow
               title="광고성 정보 수신동의"
@@ -98,7 +98,7 @@ export default function PersonalSecurityPage() {
               loading={termsPending}
               disabled={adInfo.isPending}
               onChange={handleToggle(adInfo, 'adInfo', '광고성 정보 수신')}
-              onViewFullText={() => router.push('/settings/policy/ad-consent')}
+              onViewFullText={() => router.push('/settings/policy?doc=ad-consent')}
             />
           </Section>
 
