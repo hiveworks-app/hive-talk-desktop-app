@@ -12,7 +12,7 @@ import { acquireEscSuppress } from '@/shared/utils/escSuppress';
 import { pushOverlay } from '@/shared/utils/overlayStack';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { useAuthStore } from '@/store/auth/authStore';
-import IconArrowBack from '@assets/icons/arrow_back.svg';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconCircleClose from '@assets/icons/circle-close.svg';
 import { EMRoomItem } from './EMRoomItem';
@@ -27,6 +27,7 @@ interface ExternalChatSearchOverlayProps {
 
 /**
  * 협력채팅 목록 검색 풀스크린 화면 (RN ExternalChatSearchScreen 패리티).
+ * 헤더는 ✕(좌) + 중앙 타이틀 + 아래 줄 Searchbar (2026-09-03 사용자 결정 — 멤버 검색과 동일 구조).
  * 사내(ChatSearchOverlay)와 같은 골격이되 RN 사양 차이를 따른다:
  * - 칩·"검색결과 (N)" 라벨 없음 — 단순형
  * - 검색 대상은 **방 제목만** (참여자 이름 미포함), 초성 매칭 + 300ms 디바운스
@@ -101,17 +102,27 @@ export function ExternalChatSearchOverlay({ sortType, onClose }: ExternalChatSea
         {/* macOS 신호등 영역 확보용 드래그 바 */}
         <div className="electron-drag h-8 w-full shrink-0" />
 
-        {/* 헤더: ← + Searchbar */}
-        <div className="flex h-[52px] shrink-0 items-center gap-3 px-4">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="뒤로가기"
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
-          >
-            <IconArrowBack width={24} height={24} />
-          </button>
-          <div className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-100 px-3.5">
+        {/* 헤더: ✕(좌) + 중앙 타이틀 — ProfileDialogShell(초대현황) 헤더와 동일 규격 (52px) */}
+        <div className="relative h-[52px] shrink-0">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+            <h2 className="truncate text-heading-md font-medium text-text-primary">협력채팅 검색</h2>
+          </div>
+          <div className="flex h-full items-center px-4">
+            {/* ✕는 획이 사방으로 뻗어 ←보다 커 보임 — 20px로 시각 균형 (셸과 동일 규칙) */}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="z-10 flex h-8 w-8 items-center justify-center text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
+            >
+              <IconCloseStroke width={20} height={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Searchbar — 타이틀 아래 별도 줄 (멤버 검색과 동일 구조) */}
+        <div className="shrink-0 px-4">
+          <div className="flex h-10 min-w-0 items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-100 px-3.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">
               <IconSearchDefault
                 width={20}

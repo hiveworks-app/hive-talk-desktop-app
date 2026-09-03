@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/auth/authStore';
 import { Chip } from '@/shared/ui/Chip';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { UserProfileDialog } from '@/widgets/profile/UserProfileDialog';
-import IconArrowBack from '@assets/icons/arrow_back.svg';
+import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconSearchDefault from '@assets/icons/search-default.svg';
 import IconCircleClose from '@assets/icons/circle-close.svg';
 import { MemberListItem } from './MemberListItem';
@@ -28,7 +28,8 @@ interface MemberSearchOverlayProps {
 
 /**
  * 멤버 검색 풀스크린 화면 (RN MemberSearchScreen 방식 — 2026-08-20 사용자 확정).
- * - 헤더: ← 뒤로가기 + Searchbar(flex-1) — 타이틀 없음
+ * - 헤더: ✕(좌) + 중앙 타이틀 "멤버 검색" — 초대현황(ProfileDialogShell) 헤더 패턴,
+ *   Searchbar는 타이틀 아래 별도 줄 (2026-09-03 사용자 결정 — 기존 ←+검색바 단일 줄에서 변경)
  * - 본문: 흰 카드(rounded-t-2xl) 안에 [칩(사내멤버만) + "검색결과 (N)" + 리스트 | Empty]
  * - 칩 상태는 화면 진입마다 초기화 (멤버목록 칩과 비공유 — RN 별도 화면과 동일)
  * - 검색: 초성/자모 한글 검색 + 300ms 디바운스, 차단 멤버 제외
@@ -111,18 +112,27 @@ export function MemberSearchOverlay({ onClose }: MemberSearchOverlayProps) {
         {/* macOS 신호등 영역 확보용 드래그 바 */}
         <div className="electron-drag h-8 w-full shrink-0" />
 
-        {/* 헤더: ← + Searchbar (다른 오버레이 헤더와 동일한 52px) */}
-        <div className="flex h-[52px] shrink-0 items-center gap-3 px-4">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="뒤로가기"
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-gray-900 transition-opacity hover:opacity-70 active:opacity-60"
-          >
-            <IconArrowBack width={24} height={24} />
-          </button>
-          {/* Searchbar — 데스크톱 크기 40px (RN 48px에서 축소), 회색 채움 + 포커스 시 돋보기 진하게 */}
-          <div className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-100 px-3.5">
+        {/* 헤더: ✕(좌) + 중앙 타이틀 — ProfileDialogShell(초대현황) 헤더와 동일 규격 (52px) */}
+        <div className="relative h-[52px] shrink-0">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[100px]">
+            <h2 className="truncate text-heading-md font-medium text-text-primary">멤버 검색</h2>
+          </div>
+          <div className="flex h-full items-center px-4">
+            {/* ✕는 획이 사방으로 뻗어 ←보다 커 보임 — 20px로 시각 균형 (셸과 동일 규칙) */}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="z-10 flex h-8 w-8 items-center justify-center text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
+            >
+              <IconCloseStroke width={20} height={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Searchbar — 타이틀 아래 별도 줄. 데스크톱 크기 40px, 회색 채움 + 포커스 시 돋보기 진하게 */}
+        <div className="shrink-0 px-4">
+          <div className="flex h-10 min-w-0 items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-100 px-3.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">
               <IconSearchDefault
                 width={20}
