@@ -5,6 +5,7 @@ import IconArrowBack from '@assets/icons/arrow_back.svg';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { isWithdrawPasswordMismatch, useWithdrawAccount } from '@/features/withdrawal/queries';
 import { Checkbox } from '@/shared/ui/Checkbox';
+import { Input } from '@/shared/ui/Input';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import { useAuthStore } from '@/store/auth/authStore';
 import { SettingsOverlay } from '../_components/SettingsOverlay';
@@ -15,7 +16,7 @@ const WITHDRAWAL_NOTICES = [
   '탈퇴 전에 구독 중인 결제 상품이 있는 경우 별도 해지해 주셔야 합니다.',
 ];
 
-type Step = 'intro' | 'password' | 'complete';
+type Step = 'intro' | 'password';
 
 export default function WithdrawalPage() {
   const router = useAppRouter();
@@ -37,18 +38,16 @@ export default function WithdrawalPage() {
     withdraw(
       { password },
       {
-        onSuccess: () => setStep('complete'),
+        // 가드 밖 완료 화면으로 이동 (RN 패리티·정책 settings.md "탈퇴 완료 후 로그인 이동").
+        // 여기서 logout()까지 하면 (main) 가드 effect(토큰 소실 → /login)가 이 이동과 경합해
+        // 완료 화면이 스킵된다 — 로컬 세션 정리는 완료 화면 마운트 시점에 수행 (2026-09-03)
+        onSuccess: () => router.replace('/withdrawal-complete'),
         onError: err => {
           // 비밀번호 불일치(U016)만 인라인 에러로 표시. 그 외는 hook의 onError 스낵바가 처리.
           if (isWithdrawPasswordMismatch(err)) setPasswordError('입력한 비밀번호가 일치하지 않습니다.');
         },
       },
     );
-  };
-
-  const handleComplete = () => {
-    useAuthStore.getState().logout();
-    router.replace('/login');
   };
 
   return (
@@ -64,15 +63,13 @@ export default function WithdrawalPage() {
           </button>
         )}
         <h2 className="text-heading-md font-medium text-text-primary">하이브톡 탈퇴</h2>
-        {step !== 'complete' && (
-          <button
-            onClick={close}
-            className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
-            aria-label="닫기"
-          >
-            <IconCloseStroke width={20} height={20} />
-          </button>
-        )}
+        <button
+          onClick={close}
+          className="electron-no-drag absolute right-3 flex h-8 w-8 items-center justify-center rounded text-text-primary transition-opacity hover:opacity-70 active:opacity-60"
+          aria-label="닫기"
+        >
+          <IconCloseStroke width={20} height={20} />
+        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 rounded-t-2xl bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
@@ -109,7 +106,7 @@ export default function WithdrawalPage() {
                 type="button"
                 onClick={() => setStep('password')}
                 disabled={!confirmed}
-                className="flex h-10 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
+                className="flex h-12 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
               >
                 하이브톡 탈퇴
               </button>
@@ -127,7 +124,8 @@ export default function WithdrawalPage() {
               </div>
 
               <div>
-                <input
+                {/* 공용 Input(lg 48px)으로 통일 — 수제 py 기반·비표준 색 입력 정리 (2026-09-03 전수 통일) */}
+                <Input
                   type="password"
                   value={password}
                   onChange={e => {
@@ -139,9 +137,9 @@ export default function WithdrawalPage() {
                   }}
                   placeholder="비밀번호"
                   autoComplete="current-password"
-                  className={`w-full rounded-lg border bg-surface px-3 py-2.5 text-sub text-text-primary outline-none transition ${passwordError ? 'border-red-400 ring-1 ring-inset ring-red-400' : 'border-divider focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary'}`}
+                  error={!!passwordError}
                 />
-                {passwordError && <p className="mt-1 text-sub-sm text-red-500">{passwordError}</p>}
+                {passwordError && <p className="mt-1 text-sub-sm text-state-error">{passwordError}</p>}
               </div>
 
               {/* RN 패리티 — 실행 버튼도 primary blue 56px, disabled gray-400 */}
@@ -149,34 +147,15 @@ export default function WithdrawalPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={password.length === 0 || isPending}
-                className="flex h-10 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
+                className="flex h-12 w-full items-center justify-center rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors hover:bg-[var(--color-state-primary-pressed)] active:bg-[var(--color-state-primary-pressed)] disabled:bg-gray-400 disabled:text-white"
               >
                 {isPending ? '처리 중...' : '인증 및 하이브톡 탈퇴하기'}
               </button>
             </div>
           )}
 
-          {step === 'complete' && (
-            /* RN WithdrawalCompleteScreen 패리티 — 파란 체크 뱃지 + 감사 카피 */
-            <div className="flex flex-col items-center gap-5 pt-10 text-center">
-              <div className="flex size-[50px] items-center justify-center rounded-full bg-blue-100">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <h3 className="text-heading-lg font-semibold text-text-primary">하이브톡 탈퇴 완료</h3>
-                <p className="text-sub text-text-secondary">하이브톡을 이용해 주셔서 감사합니다.</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleComplete}
-                className="mt-4 w-full rounded-lg bg-primary py-2.5 text-sub font-semibold text-on-primary"
-              >
-                로그인 페이지로 가기
-              </button>
-            </div>
-          )}
+          {/* 탈퇴 완료 화면은 인증 가드 밖 별도 라우트(/withdrawal-complete)로 이동 —
+              (main) 안에서 보여주면 세션 소멸에 따른 강제 로그아웃이 화면을 스킵한다 */}
         </div>
       </div>
     </SettingsOverlay>

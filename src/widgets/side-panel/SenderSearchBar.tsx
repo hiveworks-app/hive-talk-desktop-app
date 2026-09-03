@@ -95,7 +95,8 @@ export function SenderSearchBar({
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2.5 border-b border-divider bg-background px-4 py-2">
+      {/* py-2.5 — 검색줄 높이 40px 통일 (2026-09-03 전수 감사: py-2는 ~36px로 검색바 표준 이탈) */}
+      <div className="flex items-center gap-2.5 border-b border-divider bg-background px-4 py-2.5">
         <IconSearchDefault width={20} height={20} className="shrink-0 text-text-primary" />
         {selectedSender && (
           <button

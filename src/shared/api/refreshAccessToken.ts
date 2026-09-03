@@ -112,6 +112,9 @@ export function handleForceLogout() {
   // 서버 디바이스 세션 종료 best-effort — 로컬만 지우면 서버에 세션이 잔존한다 (RN 패리티).
   // 이미 토큰이 무효한 상황일 수 있으므로 실패는 무시(fire-and-forget).
   const token = useAuthStore.getState().accessToken;
+  // 이미 로그아웃된 상태(탈퇴 완료 화면 등 가드 밖 체류 중)면 재차 /login 강제 이동으로
+  // 화면을 뺏지 않는다 — (main) 영역의 무토큰 상태는 레이아웃 가드가 알아서 처리한다 (2026-09-03)
+  if (!token) return;
   if (token) {
     void fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/logout`, {
       method: 'POST',

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
+import { tryHeicFallback } from '@/shared/utils/heicFallback';
 
 export interface GroupAvatarUser {
   name: string;
@@ -163,29 +164,53 @@ function LargeGroupAvatar({ display }: { display: GroupAvatarUser[] }) {
   );
 }
 
-/** 단일 아바타 이미지 — presigned URL 개별 구독 + 실패 시 재시도 후 플레이스홀더. */
+/** 단일 아바타 이미지 — presigned URL 개별 구독 + 실패 시 HEIC 변환→재시도→플레이스홀더. */
 function AvatarImg({ user }: { user?: GroupAvatarUser }) {
   const { data: url, refetch } = usePresignedUrl(user?.storageKey);
   const [isBroken, setIsBroken] = useState(false);
+  // HEIC 변환 결과 — ProfileCircle과 동일 폴백 (그룹 아바타만 빠져 있던 누락분, 2026-09-03)
+  const [heicSrc, setHeicSrc] = useState<string | null>(null);
+  // 로드 성공 전까지 img 숨김 — 실패한 src가 깨진 이미지 아이콘(엑스박스)으로 그려지지 않게
+  const [showImg, setShowImg] = useState(false);
   const retryCountRef = useRef(0);
+  const storageKey = user?.storageKey;
 
   const handleError = useCallback(() => {
-    if (retryCountRef.current < 2) {
-      retryCountRef.current += 1;
-      refetch();
-    } else {
-      setIsBroken(true);
+    const continueRetry = () => {
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        refetch();
+      } else {
+        setIsBroken(true);
+      }
+    };
+    if (url && storageKey) {
+      void tryHeicFallback(storageKey, url).then(converted => {
+        if (converted) setHeicSrc(converted);
+        else continueRetry();
+      });
+      return;
     }
-  }, [refetch]);
+    continueRetry();
+  }, [url, storageKey, refetch]);
 
   if (url && !isBroken) {
     return (
-      <img
-        src={url}
-        alt={user?.name ?? ''}
-        onError={handleError}
-        className="h-full w-full rounded-full object-cover"
-      />
+      <div className="relative flex h-full w-full items-center justify-center rounded-full bg-blue-300">
+        {!showImg && (
+          <img src="/empty-profile.png" alt="" className="h-4/5 w-4/5 object-contain" />
+        )}
+        <img
+          src={heicSrc ?? url}
+          alt={user?.name ?? ''}
+          onLoad={() => setShowImg(true)}
+          onError={() => {
+            setShowImg(false);
+            handleError();
+          }}
+          className={cn('absolute inset-0 h-full w-full rounded-full object-cover', !showImg && 'invisible')}
+        />
+      </div>
     );
   }
 

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { usePresignedUrl } from '@/features/storage/usePresignedUrl';
 import { cn } from '@/shared/lib/cn';
+import { tryHeicFallback } from '@/shared/utils/heicFallback';
 import { IconPlay } from '@/shared/ui/icons';
 import { formatMediaDuration } from '@/shared/utils/formatTimeUtils';
 
@@ -197,18 +198,32 @@ function GridImg({
 }) {
   const { data: freshUrl, refetch } = usePresignedUrl(storageKey);
   const [isBroken, setIsBroken] = useState(false);
+  // HEIC 변환 결과 — RN OTA 이전에 올라온 HEIC 채팅 이미지 대응 (ProfileCircle과 동일 폴백)
+  const [heicSrc, setHeicSrc] = useState<string | null>(null);
+  // 로드 성공 전까지 img 숨김 — 실패한 src가 깨진 이미지 아이콘(엑스박스)으로 그려지지 않게
+  const [showImg, setShowImg] = useState(false);
   const retryCountRef = useRef(0);
 
   const src = freshUrl || fallbackSrc;
 
   const handleError = useCallback(() => {
-    if (storageKey && retryCountRef.current < 2) {
-      retryCountRef.current += 1;
-      refetch();
-    } else {
-      setIsBroken(true);
+    const continueRetry = () => {
+      if (storageKey && retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        refetch();
+      } else {
+        setIsBroken(true);
+      }
+    };
+    if (storageKey) {
+      void tryHeicFallback(storageKey, src).then(converted => {
+        if (converted) setHeicSrc(converted);
+        else continueRetry();
+      });
+      return;
     }
-  }, [storageKey, refetch]);
+    continueRetry();
+  }, [storageKey, src, refetch]);
 
   if (isBroken) {
     return <div className={cn('bg-gray-100', className)} />;
@@ -216,10 +231,14 @@ function GridImg({
 
   return (
     <img
-      src={src}
+      src={heicSrc ?? src}
       alt=""
-      className={className}
-      onError={handleError}
+      className={cn(className, !showImg && 'invisible')}
+      onLoad={() => setShowImg(true)}
+      onError={() => {
+        setShowImg(false);
+        handleError();
+      }}
     />
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/shared/lib/cn';
 import { apiGetStorage } from '@/features/storage/api';
 import { PRESIGNED_URL } from '@/shared/config/queryKeys';
 import { tryHeicFallback } from '@/shared/utils/heicFallback';
@@ -26,6 +27,9 @@ export function PresignedImage({ storageKey, fallbackUrl, alt = '', className }:
   const [useFresh, setUseFresh] = useState(!fallbackUrl);
   // HEIC 변환 결과(data URL) — RN 구멍으로 올라온 HEIC 원본은 Chromium이 못 읽는다 (2026-09-02)
   const [heicSrc, setHeicSrc] = useState<string | null>(null);
+  // 로드 성공 전까지 img 숨김(visibility) — 실패한 src가 깨진 이미지 아이콘(엑스박스)으로
+  // 그려지는 것을 원천 차단. invisible이라 레이아웃 자리는 유지된다 (2026-09-03 QA)
+  const [showImg, setShowImg] = useState(false);
 
   const { data: freshUrl, refetch } = useQuery({
     queryKey: PRESIGNED_URL(storageKey ?? ''),
@@ -47,8 +51,10 @@ export function PresignedImage({ storageKey, fallbackUrl, alt = '', className }:
       src={heicSrc ?? src}
       alt={alt}
       loading="lazy"
-      className={className}
+      className={cn(className, !showImg && 'invisible')}
+      onLoad={() => setShowImg(true)}
       onError={() => {
+        setShowImg(false);
         const continueRetry = () => {
           if (!storageKey || retryRef.current >= 2) return;
           retryRef.current += 1;

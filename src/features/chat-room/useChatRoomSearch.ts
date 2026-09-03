@@ -12,6 +12,8 @@ interface UseChatRoomSearchOptions {
 export interface UseChatRoomSearchReturn {
   isSearchMode: boolean;
   searchKeyword: string;
+  /** 실제 검색이 실행된 키워드 — 입력 중 키워드와 비교해 "엔터=다음 결과" 판정 (2026-09-03) */
+  activeSearchKeyword: string;
   isSearching: boolean;
   /** 검색을 완주했는지 — '검색결과 없음' 표시 조건 */
   hasSearched: boolean;
@@ -136,7 +138,7 @@ export function useChatRoomSearch({ containerRef, loadMoreBeforeMessage }: UseCh
   const displayIndex = useMemo(() => (searchResults.length === 0 ? 0 : searchResults.length - currentIndex), [searchResults.length, currentIndex]);
 
   return {
-    isSearchMode, searchKeyword, isSearching, searchResults,
+    isSearchMode, searchKeyword, activeSearchKeyword, isSearching, searchResults,
     // 검색을 완주했는지 — '검색결과 없음' 표시 조건 (검색 전/취소와 0건 완주를 구분, RN C5 패리티)
     hasSearched: activeSearchKeyword.trim().length > 0,
     currentIndex, displayIndex, totalCount: searchResults.length,

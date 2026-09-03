@@ -191,11 +191,25 @@ export function ChatRoomHeader({
               value={search.searchKeyword}
               onChange={e => search.handleSearchKeywordChange(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') search.handleSearchSubmit(search.searchKeyword);
+                if (e.key === 'Enter') {
+                  // 같은 키워드로 검색이 끝난 상태의 엔터 = 다음 결과(과거 방향, ▲과 동일)로 이동,
+                  // Shift+엔터 = 반대 방향 — 브라우저/카톡 검색 관례 (2026-09-03 사용자 요청).
+                  // 키워드가 바뀌었거나 첫 엔터면 기존대로 검색 실행.
+                  const sameSearchDone =
+                    !search.isSearching &&
+                    search.totalCount > 0 &&
+                    search.searchKeyword.trim() === search.activeSearchKeyword.trim();
+                  if (sameSearchDone) {
+                    if (e.shiftKey) { if (search.canGoNext) search.goToNext(); }
+                    else if (search.canGoPrev) search.goToPrevious();
+                  } else {
+                    search.handleSearchSubmit(search.searchKeyword);
+                  }
+                }
                 if (e.key === 'Escape') search.exitSearchMode();
               }}
               placeholder="대화 내용 · 파일명 검색"
-              className="w-full rounded-md border border-divider bg-gray-50 px-3 py-1.5 pr-8 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+              className="h-10 w-full rounded-md border border-divider bg-gray-50 px-3 pr-8 text-sub text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
             />
             {/* 키워드만 지우기 — 검색 모드는 유지 (RN 검색바 X 패리티, 우측 ✕는 모드 종료) */}
             {search.searchKeyword.length > 0 && (
@@ -231,14 +245,15 @@ export function ChatRoomHeader({
               disabled={!search.canGoPrev}
               className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-30"
             >
-              <IconChevronUp />
+              {/* 기본 14px는 28px 버튼에서 왜소 — 20px로 (2026-09-03 사용자 QA) */}
+              <IconChevronUp size={20} />
             </button>
             <button
               onClick={search.goToNext}
               disabled={!search.canGoNext}
               className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary transition-opacity hover:opacity-70 active:opacity-60 disabled:opacity-30"
             >
-              <IconChevronDown />
+              <IconChevronDown size={20} />
             </button>
           </div>
           <button

@@ -93,7 +93,7 @@ export default function ChangeEmailPage() {
             {/* 이메일 입력 + 인라인 인증요청 + 안내멘트 */}
             <div className="flex flex-col gap-2">
               <div
-                className={`flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition ${
+                className={`flex h-12 items-center gap-2 rounded-[10px] border bg-surface px-4 transition ${
                   emailError
                     ? 'border-state-error ring-1 ring-inset ring-state-error'
                     : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary'
@@ -114,7 +114,7 @@ export default function ChangeEmailPage() {
                   onClick={handleSendCode}
                   disabled={!canRequestCode}
                   className={cn(
-                    'flex h-7 min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
+                    'flex h-8 min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
                     isSending
                       ? 'bg-blue-100 text-blue-500' // 진행중: blue 100 배경 + 스피너
                       : canRequestCode
@@ -142,7 +142,7 @@ export default function ChangeEmailPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-10 items-center gap-2 rounded-[10px] border px-4 transition',
+                    'flex h-12 items-center gap-2 rounded-[10px] border px-4 transition',
                     codeDisabled
                       ? 'border-outline bg-disabled' // 5회 실패/시간초과: 비활성 회색(#F8F9FA, 다크모드 대응)
                       : codeError
@@ -188,7 +188,7 @@ export default function ChangeEmailPage() {
           <button
             onClick={handleVerifyAndChange}
             disabled={!canComplete}
-            className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+            className="h-12 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
           >
             {isVerifying ? '변경 중...' : '완료'}
           </button>
