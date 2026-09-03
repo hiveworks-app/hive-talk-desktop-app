@@ -341,7 +341,9 @@ export function SidePanel({ isOpen, onClose, roomId, channelType, lastMessageId 
                         onChange={e => setTitleDraft(e.target.value)}
                         onKeyDown={e => {
                           if (e.key === 'Enter') handleTitleSubmit();
-                          if (e.key === 'Escape') setIsEditingTitle(false);
+                          // preventDefault — 편집만 취소. 없으면 방 공용 ESC 핸들러가 같은
+                          // 이벤트로 사이드패널까지 닫는다 (레이어 1개씩 벗기기)
+                          if (e.key === 'Escape') { e.preventDefault(); setIsEditingTitle(false); }
                         }}
                         maxLength={50}
                         placeholder="채팅방 이름"

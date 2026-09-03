@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { useEscClose } from '@/shared/hooks/useEscClose';
 import { isOffline } from '@/shared/utils/offlineGuard';
 import { LEAVE_CONFIRM_DESCRIPTION } from '@/shared/config/constants';
 import { Checkbox } from '@/shared/ui/Checkbox';
@@ -50,6 +51,9 @@ export function ChatRoomManageOverlay({ open, onClose, rooms, onLeave, leaveNoti
     return () => clearTimeout(timer);
   }, [rooms]);
   const [isLeaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+
+  // ESC = 닫기 — 위에 겹친 나가기 컨펌(Radix)이 소비한 ESC는 무시된다 (2026-09-03 전수 감사)
+  useEscClose(open, onClose);
 
   if (!open) return null;
 

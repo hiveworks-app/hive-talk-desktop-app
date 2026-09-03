@@ -36,7 +36,7 @@ export default function NotificationSettingsPage() {
     });
 
   return (
-    <SettingsOverlay bg="bg-gray-50">
+    <SettingsOverlay bg="bg-gray-50" onEscape={() => router.push('/settings')}>
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">알림 설정</h2>
         <button

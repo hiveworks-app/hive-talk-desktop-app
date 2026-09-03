@@ -80,7 +80,7 @@ export default function BlockedMembersPage() {
   };
 
   return (
-    <SettingsOverlay bg="bg-background">
+    <SettingsOverlay bg="bg-background" onEscape={() => router.back()}>
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">차단멤버 관리</h2>
         {/* RN BlockListScreen 패리티 — 좌측 ← 뒤로가기(진입 경로로 복귀), 호버 배경 박스 없음 */}

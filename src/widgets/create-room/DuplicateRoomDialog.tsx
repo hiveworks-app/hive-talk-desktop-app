@@ -1,6 +1,7 @@
 'use client';
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscClose } from '@/shared/hooks/useEscClose';
 
 interface DuplicateRoomDialogProps {
   open: boolean;
@@ -27,6 +28,8 @@ export function DuplicateRoomDialog({
   onClose,
 }: DuplicateRoomDialogProps) {
   useDimmed(open);
+  // ESC = 딤 클릭과 동일(닫기, Step1 유지) — 생성 다이얼로그 위 겹침은 스택이 최상단만 닫는다
+  useEscClose(open, onClose);
   if (!open) return null;
 
   return (

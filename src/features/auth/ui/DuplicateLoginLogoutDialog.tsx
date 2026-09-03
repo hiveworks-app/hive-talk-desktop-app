@@ -6,6 +6,7 @@ import { handleForceLogout } from '@/shared/api/refreshAccessToken';
 import { Button } from '@/shared/ui/Button';
 import { useSessionDisconnectStore } from '@/store/auth/sessionDisconnectStore';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 
 /**
  * 중복 로그인(SC010) 강제 종료 안내 다이얼로그 (RN 패리티, Figma 3300:62648).
@@ -16,6 +17,8 @@ import { useDimmed } from '@/shared/hooks/useDimmed';
 export function DuplicateLoginLogoutDialog() {
   const visible = useSessionDisconnectStore(s => s.noticeVisible);
   useDimmed(visible);
+  // ESC-닫기가 막힌 모달이므로 떠 있는 동안 ESC는 완전 no-op — 억제 없으면 메인이 창만 숨긴다
+  useEscSuppress(visible);
 
   const handleConfirm = useCallback(() => {
     useSessionDisconnectStore.getState().hideNotice();

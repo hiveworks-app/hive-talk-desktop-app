@@ -56,7 +56,7 @@ export default function PersonalSecurityPage() {
       });
 
   return (
-    <SettingsOverlay bg="bg-gray-50">
+    <SettingsOverlay bg="bg-gray-50" onEscape={() => router.push('/settings')}>
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="text-heading-md font-medium text-text-primary">개인/보안</h2>
         <button

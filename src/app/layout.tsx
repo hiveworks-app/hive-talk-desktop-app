@@ -5,6 +5,7 @@ import { ElectronPlatformDetector } from '@/shared/ui/ElectronPlatformDetector';
 import { ElectronTrayHandler } from '@/shared/ui/ElectronTrayHandler';
 import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
 import { LockScreen } from '@/shared/ui/LockScreen';
+import { MouseFocusReset } from '@/shared/ui/MouseFocusReset';
 import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
 
@@ -49,6 +50,7 @@ export default function RootLayout({
         <ReactQueryProvider>
           <ElectronPlatformDetector />
           <ElectronTrayHandler />
+          <MouseFocusReset />
           {children}
           <ToastContainer />
           <LoadingOverlay />

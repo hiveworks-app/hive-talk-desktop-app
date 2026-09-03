@@ -45,7 +45,7 @@ export default function ChangePasswordPage() {
   const [focusedField, setFocusedField] = useState<'password' | 'confirm' | null>(null);
 
   return (
-    <SettingsOverlay bg="bg-background">
+    <SettingsOverlay bg="bg-background" onEscape={goBack}>
       {/* TopBar — ←(이전 단계/상세) / 중앙 타이틀 / X. 완료(DONE) 화면은 ← 제거, X→계정정보 */}
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         {step !== 'DONE' && (

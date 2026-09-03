@@ -52,7 +52,7 @@ export default function WithdrawalPage() {
   };
 
   return (
-    <SettingsOverlay bg="bg-gray-50">
+    <SettingsOverlay bg="bg-gray-50" onEscape={close}>
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         {step === 'password' && (
           <button

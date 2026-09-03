@@ -100,6 +100,11 @@ app.on('activate', () => {
 // ------------------------------------------------------------------
 
 app.whenReady().then(async () => {
+  // 두 번째 인스턴스(중복 실행)면 여기서 끝 — 위의 app.quit()은 비동기라 ready가 먼저
+  // 도달할 수 있고, 그 틈에 스플래시가 만들어져 기존 창 복원과 함께 깜빡인다
+  // (2026-09-03 윈도우 실측: 트레이 상주 중 바탕화면 아이콘 더블클릭)
+  if (!gotTheLock) return;
+
   // macOS 메뉴바
   if (process.platform === 'darwin') {
     const appMenu = Menu.buildFromTemplate([
@@ -133,6 +138,9 @@ app.whenReady().then(async () => {
           { role: 'reload', label: '새로고침' },
           // 개발자 도구는 dev 전용 — 배포 빌드는 webPreferences.devTools:false로 원천 차단과 한 쌍
           ...(isDev ? [{ role: 'toggleDevTools' as const, label: '개발자 도구' }] : []),
+          { type: 'separator' },
+          // macOS 전체화면 단축키(⌃⌘F)는 이 메뉴 항목이 있어야 등록된다 (2026-09-03 사용자 신고)
+          { role: 'togglefullscreen', label: '전체 화면 시작/종료' },
           // 확대/축소(⌘+/−) 미제공 — 네이티브 데스크톱 앱처럼 고정 배율 (카톡 PC 관례)
         ],
       },

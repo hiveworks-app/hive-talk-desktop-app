@@ -29,7 +29,7 @@ export default function AccountInfoPage() {
   const job = user?.job ?? '';
 
   return (
-    <SettingsOverlay bg="bg-gray-50">
+    <SettingsOverlay bg="bg-gray-50" onEscape={() => router.push('/settings')}>
       {/* TopBar — 가운데 정렬 타이틀 + 우상단 닫기 */}
       {/* 헤더 구분선 없음 — 아래 흰 라운드 패널이 분리를 담당 (RN 설정 공통 패턴) */}
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">

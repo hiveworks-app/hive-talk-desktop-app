@@ -312,7 +312,14 @@ export function createWindow(
     saveWindowState(win);
     if (!deps.getIsQuitting()) {
       e.preventDefault();
-      win.hide();
+      // macOS 전체화면 창을 그대로 hide()하면 전용 Space가 검게 남아 먹통이 된다
+      // (2026-09-03 실측) — 전체화면 해제가 끝난 뒤에 숨긴다
+      if (win.isFullScreen()) {
+        win.once('leave-full-screen', () => win.hide());
+        win.setFullScreen(false);
+      } else {
+        win.hide();
+      }
     }
   });
 
@@ -323,6 +330,12 @@ export function createWindow(
   // ESC 키 → 창 숨기기 (트레이로 최소화, overlay가 열려있으면 무시)
   win.webContents.on('before-input-event', (_event, input) => {
     if (input.key === 'Escape' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta && !escSuppressed) {
+      // 전체화면에서의 ESC는 '전체화면 해제'가 한 겹 벗기기 — 그대로 hide()하면
+      // macOS는 빈 전용 Space가 검게 남아 먹통이 된다 (2026-09-03 실측)
+      if (win.isFullScreen()) {
+        win.setFullScreen(false);
+        return;
+      }
       win.hide();
     }
   });
