@@ -5,6 +5,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { Spinner } from '@/shared/ui/Spinner';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import { GroupProfileAvatar } from '@/shared/ui/GroupProfileAvatar';
+import { useEscClose } from '@/shared/hooks/useEscClose';
 import { IconClose } from '@/shared/ui/icons';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
 import IconSearchDefault from '@assets/icons/search-default.svg';
@@ -25,6 +26,8 @@ interface CreateExternalRoomDialogProps {
  */
 export function CreateExternalRoomDialog({ isOpen, onClose }: CreateExternalRoomDialogProps) {
   const r = useCreateExternalRoom(onClose);
+  // ESC = X(닫기)와 동일 — 억제 없으면 ESC가 앱 창을 트레이로 숨긴다 (2026-09-03 전수 감사)
+  useEscClose(isOpen, r.close);
 
   if (!isOpen) return null;
 

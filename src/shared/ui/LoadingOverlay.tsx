@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useDimmed } from "@/shared/hooks/useDimmed";
+import { useEscSuppress } from "@/shared/hooks/useEscSuppress";
 import { useUIStore } from "@/store/uiStore";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -40,6 +41,8 @@ function DeterminateBar({ progress }: { progress: number }) {
 export function LoadingOverlay() {
   const { visible, message, progress } = useUIStore((s) => s.loadingOverlay);
   useDimmed(visible);
+  // 진행 중 ESC는 완전 no-op — 억제 없으면 로딩 도중 앱 창만 트레이로 숨는다 (2026-09-03)
+  useEscSuppress(visible);
   const [animationData, setAnimationData] = useState<unknown>(null);
 
   useEffect(() => {

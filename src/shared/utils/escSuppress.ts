@@ -31,3 +31,9 @@ export function acquireEscSuppress(): () => void {
 export function isEscSuppressed(): boolean {
   return suppressCount > 0;
 }
+
+/** 현재 억제 카운트 — 자기 몫을 잡은 레이어(대화 검색·사이드패널)가 "자기보다 위층"
+ *  존재 여부를 판정할 때 자기 몫을 빼고 비교하는 용도 (ChatRoomView ESC 핸들러) */
+export function getEscSuppressCount(): number {
+  return suppressCount;
+}

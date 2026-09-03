@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 import { useGetMembers } from '@/features/members/queries';
 import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { Button } from '@/shared/ui/Button';
@@ -31,6 +32,8 @@ interface InviteMemberDialogProps {
 export function InviteMemberDialog({ open, onClose, existingUserIds, onInvite, companyOnly }: InviteMemberDialogProps) {
   // 어두운 스크림 → 창 버튼(WCO) 딤 동기화 (2026-09-02 전수 점검 누락분)
   useDimmed(open);
+  // ESC=다이얼로그 닫기만 — 억제 없으면 Radix가 닫는 순간 메인이 창을 트레이로 숨긴다 (2026-09-03)
+  useEscSuppress(open);
   const { data: members = [], isLoading } = useGetMembers();
   const { data: pinnedMembers = [] } = useGetPinnedMembers();
   // EM 방 초대: 협력/사내 2탭 (RN CreateExternalRoomStep1 패리티) — 사내 방은 탭 없음

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/shared/lib/cn";
+import { useEscSuppress } from "@/shared/hooks/useEscSuppress";
 import IconSettingDefault from "@assets/icons/setting-default.svg";
 
 export type ChatSortType = "latest" | "favorite";
@@ -17,8 +19,11 @@ interface ChatSettingsMenuProps {
  * 정렬순(최신메시지 순 / 관심멤버 순) + 채팅방 관리. (Figma node 929-12647)
  */
 export function ChatSettingsMenu({ sortType, onSortChange, onManageRooms }: ChatSettingsMenuProps) {
+  // ESC=메뉴 닫기만 — 억제 없으면 Radix가 닫는 순간 메인이 창을 트레이로 숨긴다 (2026-09-03)
+  const [isOpen, setOpen] = useState(false);
+  useEscSuppress(isOpen);
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root onOpenChange={setOpen}>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"

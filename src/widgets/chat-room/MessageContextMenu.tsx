@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from '@/shared/lib/cn';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 import { TAG_ICON_MAP, type TagName } from '@/shared/ui/TagIcon';
 import { IconChevronRight } from '@/shared/ui/icons';
 import {
@@ -72,6 +73,8 @@ export function MessageContextMenu({
   onMoreTags,
 }: MessageContextMenuProps) {
   const [open, setOpen] = useState(false);
+  // ESC=메뉴 닫기만 — 억제 없으면 Radix가 닫는 순간 메인이 창을 트레이로 숨긴다 (2026-09-03)
+  useEscSuppress(open);
 
   const items = useMemo<ContextMenuItem[]>(() => {
     const list: ContextMenuItem[] = [];

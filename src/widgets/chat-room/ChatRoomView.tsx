@@ -25,7 +25,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useCalendarDateJump } from '@/features/chat-room/useCalendarDateJump';
 import { useGetTagInfo } from '@/features/tag/queries';
 import { isOffline } from '@/shared/utils/offlineGuard';
-import { acquireEscSuppress, isEscSuppressed } from '@/shared/utils/escSuppress';
+import { acquireEscSuppress, getEscSuppressCount } from '@/shared/utils/escSuppress';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 import { closeIfPopup } from '@/shared/utils/popupWindow';
 import { useRecentTagUsageStore } from '@/store/tag/recentTagUsageStore';
 import { cn } from '@/shared/lib/cn';
@@ -321,6 +322,11 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
     if (search.isSearchMode) setExpandedBlockedIds(new Set());
   }
 
+  // 대화 검색·사이드패널이 열려 있는 동안 Electron 메인의 ESC→트레이 숨김 억제 —
+  // 억제 없으면 아래 핸들러가 레이어를 닫는 순간 메인 프로세스가 동시에 창을 숨긴다
+  // (before-input-event는 렌더러보다 먼저 도착하므로 renderer 처리 여부를 알 수 없다)
+  useEscSuppress(search.isSearchMode || isSidePanelOpen);
+
   // 키보드 단축키
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -334,7 +340,9 @@ export function ChatRoomView({ routePrefix, showNextMessage = false, isPopup = f
       if (e.key === 'Escape') {
         // 위 레이어가 이미 소비한 ESC는 무시 — Radix 레이어는 capture 단계에서 preventDefault,
         // 전역 오버레이(미디어 뷰어·프로필·커서 메뉴)는 escSuppress를 잡는다. IME 조합 취소도 제외.
-        if (e.defaultPrevented || e.isComposing || isEscSuppressed()) return;
+        // 검색·사이드패널이 잡은 자기 몫(1)은 빼고 비교 — 자기 억제에 자기가 막히면 ESC로 못 닫는다.
+        const ownHold = search.isSearchMode || isSidePanelOpen ? 1 : 0;
+        if (e.defaultPrevented || e.isComposing || getEscSuppressCount() > ownHold) return;
         if (viewerVisible) return;
         if (pendingItems.length > 0) return; // 파일 전송 확인 다이얼로그가 자체적으로 ESC=취소 처리
         if (search.isSearchMode) search.exitSearchMode();

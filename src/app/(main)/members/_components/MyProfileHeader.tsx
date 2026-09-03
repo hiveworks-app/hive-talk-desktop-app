@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useMyProfileHook } from '@/features/profile/useMyProfileHook';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { ProfileCircle } from '@/shared/ui/ProfileCircle';
 import IconArrowRightDefault from '@assets/icons/arrow-right-default.svg';
@@ -19,6 +20,9 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
   const { name, department, job, profileUrl } = useMyProfileHook();
   const router = useAppRouter();
   const [isEditOpen, setEditOpen] = useState(false);
+  // ESC=메뉴 닫기만 — 억제 없으면 Radix가 닫는 순간 메인이 창을 트레이로 숨긴다 (2026-09-03)
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  useEscSuppress(isMenuOpen);
 
   // RN MembersProfileHeader 패리티 — 하단 여백 pb-3(12px), 아래 흰색 카드와의 간격
   return (
@@ -43,7 +47,7 @@ export function MyProfileHeader({ onOpenProfile }: MyProfileHeaderProps) {
       </button>
 
       {/* 우측: 설정 기어 → 드롭다운 (RN MembersProfileHeader 패리티: 관심멤버 편집 / 차단멤버 관리) */}
-      <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Root modal={false} onOpenChange={setMenuOpen}>
         <DropdownMenu.Trigger asChild>
           <button
             type="button"

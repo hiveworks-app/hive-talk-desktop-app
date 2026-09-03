@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import type { AccountSuspendedPayload } from '@/shared/types/account';
 import { Button } from '@/shared/ui/Button';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 
 const SUPPORT_EMAIL = 'dawin@dawinsolution.co.kr';
 
@@ -20,6 +21,8 @@ interface AccountSuspendedDialogProps {
  */
 export function AccountSuspendedDialog({ open, info, onClose }: AccountSuspendedDialogProps) {
   useDimmed(open);
+  // ESC-닫기가 막힌 모달이므로 떠 있는 동안 ESC는 완전 no-op — 억제 없으면 메인이 창만 숨긴다
+  useEscSuppress(open);
   const periodText = info
     ? info.permanent
       ? '영구 정지'

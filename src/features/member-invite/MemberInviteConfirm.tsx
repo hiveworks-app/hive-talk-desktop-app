@@ -21,6 +21,7 @@ import { useUIStore } from '@/store/uiStore';
 import { apiAcceptMemberInvite, apiRejectMemberInvite } from './api';
 import type { MemberInvitePayload } from './type';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscClose } from '@/shared/hooks/useEscClose';
 
 /**
  * 🏢 사내(소속) 초대 수락/거절 다이얼로그 (RN useMemberInviteHandler 패리티).
@@ -118,6 +119,8 @@ export function MemberInviteConfirm() {
 
   // 만료 안내는 자체 스크림이라 직접 dim — 초대 확인 모달의 dim은 ConfirmDialog가 담당
   useDimmed(isExpiredVisible);
+  // ESC = 스크림 클릭과 동일(닫기) — 억제 없으면 ESC가 앱 창을 트레이로 숨긴다 (2026-09-03)
+  useEscClose(isExpiredVisible, closeExpired);
 
   if (!pendingInvite && !isExpiredVisible) return null;
 

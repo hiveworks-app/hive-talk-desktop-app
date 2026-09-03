@@ -1,6 +1,7 @@
 'use client';
 
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscClose } from '@/shared/hooks/useEscClose';
 
 /**
  * 선택 동의(마케팅/광고성) 변경 확인 다이얼로그 (RN ConsentChangeDialog 패리티).
@@ -62,6 +63,8 @@ export function ConsentChangeDialog({
   onClose,
 }: ConsentChangeDialogProps) {
   useDimmed(open);
+  // ESC = 확인(닫기)과 동일 — 억제 없으면 ESC가 앱 창을 트레이로 숨긴다 (2026-09-03 전수 감사)
+  useEscClose(open, onClose);
   if (!open) return null;
   const copy = COPY_MAP[consentType][action];
 

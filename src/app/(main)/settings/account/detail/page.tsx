@@ -19,7 +19,7 @@ export default function AccountDetailPage() {
   const maskedPhone = formatMaskedPhone(user?.phoneHead, user?.phoneMid, user?.phoneTail);
 
   return (
-    <SettingsOverlay bg="bg-background">
+    <SettingsOverlay bg="bg-background" onEscape={() => router.push('/settings/account')}>
       {/* TopBar — ←(하이브톡 계정정보로) / 중앙 타이틀 / X(전체설정으로) */}
       <header className="relative flex h-[52px] shrink-0 items-center justify-center border-b border-divider px-4">
         <button

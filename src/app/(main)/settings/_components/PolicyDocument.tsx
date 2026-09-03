@@ -18,7 +18,7 @@ export function PolicyDocument({ title, sections }: PolicyDocumentProps) {
   const router = useAppRouter();
 
   return (
-    <SettingsOverlay bg="bg-gray-50">
+    <SettingsOverlay bg="bg-gray-50" onEscape={() => router.back()}>
       <header className="relative flex h-[52px] shrink-0 items-center justify-center px-4">
         <h2 className="max-w-[calc(100%-5.5rem)] truncate text-heading-md font-medium text-text-primary">
           {title}

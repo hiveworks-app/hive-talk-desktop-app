@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useDimmed } from '@/shared/hooks/useDimmed';
+import { useEscSuppress } from '@/shared/hooks/useEscSuppress';
 import { isApiError } from '@/shared/api';
 import { useGetReportCategories, useReportMessage } from '@/features/report-message/queries';
 import { FALLBACK_REPORT_CATEGORIES, REPORT_DETAIL_INFO_TEXT } from '@/features/report-message/reportCategories';
@@ -31,6 +32,8 @@ interface ReportMessageDialogProps {
 export function ReportMessageDialog({ open, roomType, roomId, messageId, onClose }: ReportMessageDialogProps) {
   // 어두운 스크림 → 창 버튼(WCO) 딤 동기화 (2026-09-02 전수 점검 누락분)
   useDimmed(open);
+  // ESC=다이얼로그 닫기만 — 억제 없으면 Radix가 닫는 순간 메인이 창을 트레이로 숨긴다 (2026-09-03)
+  useEscSuppress(open);
   const { data } = useGetReportCategories();
   const { categories, notice } = data ?? FALLBACK_REPORT_CATEGORIES;
   const reportMutation = useReportMessage();

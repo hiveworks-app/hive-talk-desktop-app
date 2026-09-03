@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { cn } from "@/shared/lib/cn";
+import { useEscClose } from "@/shared/hooks/useEscClose";
 import { FindIdContent } from "./_components/FindIdContent";
 import { FindPasswordContent } from "./_components/FindPasswordContent";
 
@@ -13,6 +14,9 @@ export default function FindAccountPage() {
   const [findPasswordKey, setFindPasswordKey] = useState(0);
   // 결과/완료 단계에서 상단 탭 숨김 — 결과에 집중 (RN showSegment 패리티)
   const [hideTabs, setHideTabs] = useState(false);
+
+  // ESC = ←(로그인으로)와 동일 — 억제 없으면 ESC가 앱 창을 트레이로 숨긴다 (2026-09-03 전수 감사)
+  useEscClose(true, () => { window.location.href = "/login"; });
 
   const handleFoundEmail = useCallback((email: string) => {
     // 비밀번호 찾기 탭 프리필만 준비 — 탭을 강제 전환하면 Radix Tabs가 결과 화면을
