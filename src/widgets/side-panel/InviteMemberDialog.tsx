@@ -11,7 +11,7 @@ import { useGetPinnedMembers } from '@/features/pinned-members/queries';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import IconCloseStroke from '@assets/icons/close-stroke.svg';
-import { IconSearch } from '@/shared/ui/icons';
+import IconSearchDefault from '@assets/icons/search-default.svg';
 import { useAuthStore } from '@/store/auth/authStore';
 import { useBlockedMembersStore } from '@/store/blockedMembersStore';
 import { MemberRow } from '@/widgets/create-room/MemberRow';
@@ -144,13 +144,15 @@ export function InviteMemberDialog({ open, onClose, existingUserIds, onInvite, c
           )}
 
           <div className="px-5 pt-3">
-            <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-2.5 py-2">
-              <IconSearch size={14} className="text-gray-400" />
+            {/* 다이얼로그 내 멤버 검색바 — 방 만들기(CreateRoomDialog)와 동일 규격 (2026-09-03 전수 통일:
+                기존 py-2(≈36px)+text-sm(비토큰)+14px 아이콘이 검색바 표준(40px·text-sub·20px)에서 이탈) */}
+            <div className="flex items-center gap-2.5 rounded-lg border border-divider bg-gray-100 px-3.5 py-2.5">
+              <IconSearchDefault width={20} height={20} className="shrink-0 text-gray-400" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="이름·부서 검색"
-                className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                className="min-w-0 flex-1 bg-transparent text-sub text-text-primary outline-none placeholder:text-text-tertiary"
               />
             </div>
           </div>

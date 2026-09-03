@@ -86,14 +86,14 @@ export default function ChangePasswordPage() {
 
             <div className="flex flex-col gap-3">
               {/* 이메일 (읽기 전용) */}
-              <div className="flex h-10 items-center rounded-[10px] border border-outline bg-disabled px-4">
+              <div className="flex h-12 items-center rounded-[10px] border border-outline bg-disabled px-4">
                 <span className="truncate text-body font-medium text-text-tertiary">
                   {userEmail || '-'}
                 </span>
               </div>
 
               {/* 휴대폰 입력 + 인증요청 */}
-              <div className="flex h-10 items-center gap-2 rounded-[10px] border border-outline bg-surface px-4">
+              <div className="flex h-12 items-center gap-2 rounded-[10px] border border-outline bg-surface px-4">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -107,7 +107,7 @@ export default function ChangePasswordPage() {
                   onClick={handleSendCode}
                   disabled={!canRequestCode}
                   className={cn(
-                    'flex h-7 min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
+                    'flex h-8 min-w-[64px] shrink-0 items-center justify-center rounded-md px-3.5 text-sub font-medium transition-colors',
                     isSending
                       ? 'bg-blue-100 text-blue-500' // 진행중: blue 100 배경 + 스피너
                       : canRequestCode
@@ -124,7 +124,7 @@ export default function ChangePasswordPage() {
                 <div className="flex flex-col gap-2">
                   <div
                     className={cn(
-                      'flex h-10 items-center gap-2 rounded-[10px] border px-4 transition',
+                      'flex h-12 items-center gap-2 rounded-[10px] border px-4 transition',
                       isCodeDisabled
                         ? 'border-outline bg-disabled' // 5회 실패/시간초과: 비활성 회색
                         : codeErrorMessage
@@ -170,7 +170,7 @@ export default function ChangePasswordPage() {
             <button
               onClick={handleVerifyCode}
               disabled={!canVerify}
-              className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+              className="h-12 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
             >
               {isLoading ? '확인 중...' : '비밀번호 변경'}
             </button>
@@ -189,7 +189,7 @@ export default function ChangePasswordPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
+                    'flex h-12 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
                     passwordError
                       ? 'border-state-error ring-1 ring-inset ring-state-error'
                       : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary',
@@ -238,7 +238,7 @@ export default function ChangePasswordPage() {
               <div className="flex flex-col gap-2">
                 <div
                   className={cn(
-                    'flex h-10 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
+                    'flex h-12 items-center gap-2 rounded-[10px] border bg-surface px-4 transition',
                     confirmError
                       ? 'border-state-error ring-1 ring-inset ring-state-error'
                       : 'border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary',
@@ -290,7 +290,7 @@ export default function ChangePasswordPage() {
             <button
               onClick={handleChangePassword}
               disabled={!canSubmitReset}
-              className="h-10 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
+              className="h-12 w-full rounded-[10px] bg-primary text-body font-medium text-on-primary transition-colors disabled:bg-gray-400"
             >
               {isLoading ? '변경 중...' : '새 비밀번호로 변경'}
             </button>
