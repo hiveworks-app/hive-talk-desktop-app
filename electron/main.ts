@@ -100,6 +100,11 @@ app.on('activate', () => {
 // ------------------------------------------------------------------
 
 app.whenReady().then(async () => {
+  // 두 번째 인스턴스(중복 실행)면 여기서 끝 — 위의 app.quit()은 비동기라 ready가 먼저
+  // 도달할 수 있고, 그 틈에 스플래시가 만들어져 기존 창 복원과 함께 깜빡인다
+  // (2026-09-03 윈도우 실측: 트레이 상주 중 바탕화면 아이콘 더블클릭)
+  if (!gotTheLock) return;
+
   // macOS 메뉴바
   if (process.platform === 'darwin') {
     const appMenu = Menu.buildFromTemplate([
