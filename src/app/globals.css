@@ -299,6 +299,17 @@ body {
   box-sizing: border-box;
 }
 
+/* 브라우저 기본 포커스 링(OS 강조색 outline) 전역 제거 — 마우스 중심 데스크톱 앱 관례
+ * (2026-09-03 사용자 결정, 카톡 PC 동일). 버튼 클릭 후 ESC 등 키 입력이 섞이면 Chromium이
+ * 클릭 포커스를 :focus-visible로 승격해 마지막 클릭한 버튼에 링이 남는다 (초대현황 봉투 실측).
+ * :focus까지 포함 — Radix 메뉴류가 닫히며 트리거로 포커스를 프로그램 복원하는 경로도 차단.
+ * 입력창의 포커스 표시는 각 컴포넌트의 border/ring 유틸리티가 담당하므로 시각 피드백은 유지된다.
+ * (클릭 유래 포커스 잔존 자체는 MouseFocusReset이 전역 회수 — CSS는 표시, 컴포넌트는 원인 차단) */
+*:focus,
+*:focus-visible {
+  outline: none;
+}
+
 /* Scrollbar styling for chat areas */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
