@@ -33,6 +33,9 @@ export function ProfileCircle({ name, size = 'sm', storageKey, className }: Prof
   const [isBroken, setIsBroken] = useState(false);
   // HEIC 변환 결과(data URL) — RN 구멍으로 올라온 HEIC 원본은 Chromium이 못 읽는다 (2026-09-02)
   const [heicSrc, setHeicSrc] = useState<string | null>(null);
+  // 로드 성공 전까지 img 숨김 — 실패한 src(HEIC/만료)가 브라우저 깨진 이미지 아이콘
+  // (엑스박스)으로 그려지는 것을 원천 차단, 그동안은 기본 프로필 표시 (2026-09-03 QA)
+  const [showImg, setShowImg] = useState(false);
   const retryCountRef = useRef(0);
 
   const handleImageError = useCallback(() => {
@@ -60,16 +63,29 @@ export function ProfileCircle({ name, size = 'sm', storageKey, className }: Prof
 
   if (hasImage) {
     return (
-      <img
-        src={heicSrc ?? presignedUrl}
-        alt={name}
+      <div
         className={cn(
-          'shrink-0 rounded-full object-cover',
+          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full',
+          !showImg && 'bg-blue-300',
+          !showImg && noImagePadding[size],
           sizeStyles[size],
           className,
         )}
-        onError={handleImageError}
-      />
+      >
+        {!showImg && (
+          <img src="/empty-profile.png" alt="" className="h-full w-full object-contain" />
+        )}
+        <img
+          src={heicSrc ?? presignedUrl}
+          alt={name}
+          className={cn('absolute inset-0 h-full w-full object-cover', !showImg && 'invisible')}
+          onLoad={() => setShowImg(true)}
+          onError={() => {
+            setShowImg(false);
+            handleImageError();
+          }}
+        />
+      </div>
     );
   }
 
