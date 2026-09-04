@@ -42,6 +42,16 @@ function attachEditableContextMenu(win: BrowserWindow) {
   });
 }
 
+/** 마우스 X버튼의 히스토리 탐색 차단 — 윈도우는 X버튼 클릭이 DOM 이벤트와 별개로
+ *  WM_APPCOMMAND(app-command)로도 도착해 렌더러 가드(MouseNavGuard)를 우회한다.
+ *  주소창 없는 SPA에서 히스토리 임의 이동은 화면 상태와 어긋나므로 무시 (2026-09-04).
+ *  app-command는 윈도우 전용 이벤트 — 맥·리눅스는 렌더러 가드만으로 충분하다. */
+function blockHistoryNavigation(win: BrowserWindow) {
+  win.on('app-command', (e, cmd) => {
+    if (cmd === 'browser-backward' || cmd === 'browser-forward') e.preventDefault();
+  });
+}
+
 /** 새로고침 단축키 (Ctrl+R / F5) — 윈도우·리눅스는 앱 메뉴가 없어 role 기반 단축키가 없다.
  *  화면이 꼬였을 때 사용자가 스스로 복구할 수단 (macOS는 앱 메뉴의 ⌘R이 별도로 있다). */
 function attachReloadShortcut(win: BrowserWindow) {
@@ -150,6 +160,7 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
   attachReloadShortcut(win);
+  blockHistoryNavigation(win);
   // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
   // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
   const showFallback = setTimeout(() => {
@@ -237,6 +248,7 @@ export function createWindow(
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
   attachReloadShortcut(win);
+  blockHistoryNavigation(win);
 
   // 요청 Origin 제거: 데스크톱 UI의 출처(프로덕션 app://bundle, dev localhost:23000)를
   // 브라우저 엔진이 모든 API 요청에 Origin 헤더로 자동으로 붙인다.
