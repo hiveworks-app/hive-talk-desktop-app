@@ -18,7 +18,10 @@ function ensureUpdaterLoaded(): boolean {
     return false;
   }
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = false;
+  // 종료 시 자동 적용 (디스코드식 2단계, 2026-09-04) — 세션 중 받아둔 업데이트를 사용자가
+  // 앱을 종료하는 순간 조용히 설치한다. 다음 실행은 이미 새 버전이라 대부분의 사용자는
+  // 업데이트 과정을 보지 않는다. 트레이 상주로 종료가 드문 사용자는 부팅 게이트가 안전망.
+  autoUpdater.autoInstallOnAppQuit = true;
   return true;
 }
 
@@ -71,8 +74,10 @@ export async function runBootUpdateGate(opts: {
       opts.setStatus('업데이트를 적용하고 다시 시작합니다', 100);
       opts.setIsQuitting(true);
       cleanup();
-      // 스플래시가 문구를 그릴 짧은 여유 후 설치 (NSIS 진행 창 → 새 버전 재실행)
-      setTimeout(() => autoUpdater.quitAndInstall(false, true), 400);
+      // isSilent: true — 부팅 맥락은 사용자가 "기다리는 중"이라 몇 초 공백이 자연스럽다
+      // (디스코드와 동일 체감, 2026-09-04). 2026-09-02의 silent 거부는 '세션 중 재시작'
+      // 맥락의 결정 — 쓰던 앱이 말없이 사라지면 죽은 것으로 읽히는 문제로, 부팅에는 해당 없음.
+      setTimeout(() => autoUpdater.quitAndInstall(true, true), 400);
       // 설치가 성공하면 프로세스가 여기서 끝난다 — 10초 뒤에도 살아있다면 적용 실패
       // (예: 미서명 맥 빌드의 서명 검증 거부, 2026-09-02 실측: 스플래시에서 무한 대기).
       // 세션을 버리지 않고 현재 버전으로 정상 부팅한다.
@@ -180,6 +185,8 @@ export function registerUpdateIpc(deps: { setIsQuitting: (v: boolean) => void })
       // 한 바퀴 돈 결정: silent로 바꿨더니 빈 공백이 "앱이 죽었다"로 읽혔다. 렌더러의
       // "적용 중" 예고(useAutoUpdate)와 조합하면 진행 창이 그 구간의 스플래시 역할을 한다.
       // 윈도우는 실행 중 exe를 교체할 수 없어 종료→교체→재실행 자체는 생략 불가.
+      // (2026-09-04 디스코드식 전환 이후에도 유지 — 부팅 게이트·종료 시 적용은 silent지만,
+      //  이 경로는 '쓰던 세션을 지금 끊고 적용'하는 유일한 가시 구간이라 진행 창이 맞다)
       autoUpdater.quitAndInstall(false, true);
     }, 100);
   });
