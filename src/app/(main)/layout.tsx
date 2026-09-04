@@ -85,15 +85,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="relative flex h-full overflow-hidden">
         <OfflineBanner />
         <SystemErrorBanner />
+        {/* 업데이트 준비 배너 — 종료 시 자동 적용(autoInstallOnAppQuit)이 기본 경로라 재시작을
+            요구하지 않는 안내형 문구. '지금 재시작'은 즉시 적용을 원하는 사용자용 선택지 (2026-09-04) */}
         {updateReady && (
           <div className="absolute right-0 bottom-0 left-0 z-50 flex items-center justify-center gap-3 bg-blue-500 px-4 py-2 text-sm text-white">
-            <span>v{updateReady.version} 업데이트가 준비되었습니다.</span>
+            <span>v{updateReady.version} 업데이트 준비 완료 — 앱 종료 시 자동 적용됩니다.</span>
             <button
               onClick={installUpdate}
               disabled={isInstalling}
               className="rounded bg-white px-3 py-1 text-xs font-semibold text-blue-500 transition-colors hover:bg-blue-50 disabled:opacity-70"
             >
-              {isInstalling ? '적용 중…' : '재시작'}
+              {isInstalling ? '적용 중…' : '지금 재시작'}
             </button>
           </div>
         )}

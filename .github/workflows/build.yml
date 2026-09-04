@@ -235,6 +235,7 @@ jobs:
             release/*.exe
             release/*.deb
             release/*.yml
+            release/*.exe.blockmap
 
   # 빌드 완료 후 GitHub Releases에 설치 파일 자동 업로드
   release:
@@ -263,8 +264,11 @@ jobs:
           # 같은 버전의 기존 Release가 있으면 삭제 후 재생성
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
 
-          # 설치 파일 + electron-updater 메타데이터 (latest*.yml) 수집
-          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.deb" -o -name "latest*.yml" \))
+          # 설치 파일 + electron-updater 메타데이터 (latest*.yml) 수집.
+          # *.exe.blockmap: 윈도우 차등 다운로드용 (2026-09-04) — exe는 CI 후처리가 없어
+          # 빌드 시점 blockmap이 유효하다. 맥은 재서명·재압축으로 blockmap이 무효라 제외
+          # (미탑재 시 electron-updater가 자동으로 전량 다운로드 폴백 — 현행 동작 유지).
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.deb" -o -name "latest*.yml" -o -name "*.exe.blockmap" \))
 
           # Release 생성 + 설치 파일 업로드
           gh release create "$TAG" $FILES \
