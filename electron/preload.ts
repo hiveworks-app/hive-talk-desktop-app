@@ -65,6 +65,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   setSuppressEsc: (suppress: boolean) => ipcRenderer.invoke('set-suppress-esc', suppress),
+  // 딥링크 (hivetalk://) — 메일 '앱에서 인증 완료하기' 등 외부 진입 URL 수신
+  onDeepLink: (callback: (url: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
+    ipcRenderer.on('deep-link', handler);
+    return () => { ipcRenderer.removeListener('deep-link', handler); };
+  },
+  // 렌더러 준비 신호 — 콜드 스타트로 큐잉된 딥링크가 이 시점에 전달된다
+  deepLinkReady: () => ipcRenderer.send('deep-link-ready'),
 
   /* WebSocket 중계 — 소켓은 메인 창(허브)만 갖고 팝업은 여기에 얹는다.
      서버가 한 계정당 최신 소켓 하나에만 브로드캐스트하기 때문 (ipc.ts 주석 참조). */

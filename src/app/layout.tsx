@@ -6,6 +6,7 @@ import { ElectronTrayHandler } from '@/shared/ui/ElectronTrayHandler';
 import { LoadingOverlay } from '@/shared/ui/LoadingOverlay';
 import { LockScreen } from '@/shared/ui/LockScreen';
 import { MouseFocusReset } from '@/shared/ui/MouseFocusReset';
+import { MouseNavGuard } from '@/shared/ui/MouseNavGuard';
 import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
 
@@ -51,6 +52,7 @@ export default function RootLayout({
           <ElectronPlatformDetector />
           <ElectronTrayHandler />
           <MouseFocusReset />
+          <MouseNavGuard />
           {children}
           <ToastContainer />
           <LoadingOverlay />

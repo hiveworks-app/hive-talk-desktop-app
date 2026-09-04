@@ -9,6 +9,21 @@ export function setEscSuppressed(value: boolean) {
   escSuppressed = value;
 }
 
+/** 데스크톱 앱이 자칭하는 고정 출처 — 실존 도메인일 필요 없는 식별자 문자열이지만,
+ *  서버 CORS 허용 목록과 스킴 포함 한 글자도 다르지 않게 일치해야 한다 (백엔드 협의 2026-09-04) */
+const DESKTOP_ORIGIN = 'https://desktop.hivetalk.co.kr';
+
+/** API·WS 도메인(hiveworks.co.kr 계열) 판정 — 고정 Origin 주입 대상 한정
+ *  (ncloudstorage 등 그 외 매칭 도메인은 기존대로 Origin 제거만 적용) */
+function isApiHost(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return hostname === 'hiveworks.co.kr' || hostname.endsWith('.hiveworks.co.kr');
+  } catch {
+    return false;
+  }
+}
+
 /** 렌더러의 target=_blank 링크를 OS 기본 브라우저로 위임 — 주소창 없는 앱 창에 임의
  *  웹페이지가 로드되는 것을 막는다 (RN openLink 패리티, 2026-08-26 전수 감사).
  *  앱 자체 팝업(멀티 채팅창)은 window.open이 아니라 IPC로 열리므로 영향 없음. */
@@ -39,6 +54,16 @@ function attachEditableContextMenu(win: BrowserWindow) {
       { role: 'selectAll', label: '전체 선택', enabled: editFlags.canSelectAll },
     ]);
     menu.popup({ window: win });
+  });
+}
+
+/** 마우스 X버튼의 히스토리 탐색 차단 — 윈도우는 X버튼 클릭이 DOM 이벤트와 별개로
+ *  WM_APPCOMMAND(app-command)로도 도착해 렌더러 가드(MouseNavGuard)를 우회한다.
+ *  주소창 없는 SPA에서 히스토리 임의 이동은 화면 상태와 어긋나므로 무시 (2026-09-04).
+ *  app-command는 윈도우 전용 이벤트 — 맥·리눅스는 렌더러 가드만으로 충분하다. */
+function blockHistoryNavigation(win: BrowserWindow) {
+  win.on('app-command', (e, cmd) => {
+    if (cmd === 'browser-backward' || cmd === 'browser-forward') e.preventDefault();
   });
 }
 
@@ -150,6 +175,7 @@ export function openChatWindow(serverUrl: string, path: string, roomId: string) 
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
   attachReloadShortcut(win);
+  blockHistoryNavigation(win);
   // dev에서 라우트 온디맨드 컴파일이 길어지면 ready-to-show가 늦게 와 창이 안 뜬 것처럼 보인다 —
   // 일정 시간 뒤에는 스피너 상태로라도 표시하는 안전망 (프로덕션은 ready-to-show가 먼저 도착).
   const showFallback = setTimeout(() => {
@@ -237,13 +263,15 @@ export function createWindow(
   delegateExternalLinks(win);
   attachEditableContextMenu(win);
   attachReloadShortcut(win);
+  blockHistoryNavigation(win);
 
-  // 요청 Origin 제거: 데스크톱 UI의 출처(프로덕션 app://bundle, dev localhost:23000)를
-  // 브라우저 엔진이 모든 API 요청에 Origin 헤더로 자동으로 붙인다.
-  // 실서버는 이 출처가 CORS 허용 목록에 없어 문전 403으로 차단하므로(2026-08-31 실측:
-  // Origin 없으면 400 정상 도달, 붙이면 403), 모바일(RN)과 동일한 "Origin 없는 네이티브
-  // 클라이언트"로 요청한다. CORS는 브라우저-사용자 보호 장치라 자체 앱 요청에서 제거해도
-  // 서버 공격면은 변하지 않는다.
+  // 요청 Origin 재작성: 데스크톱 UI의 실제 출처(프로덕션 app://bundle, dev localhost:23000)를
+  // 브라우저 엔진이 모든 API 요청에 Origin 헤더로 자동으로 붙이는데, 실서버 허용 목록에 없어
+  // 문전 403으로 차단된다(2026-08-31 실측). API·WS(hiveworks.co.kr)에는 고정 데스크톱 출처를
+  // 자칭한다(백엔드 협의 2026-09-04) — 서버가 이 출처를 CORS 허용 목록에 등록하면 preflight
+  // (OPTIONS)가 인증 필터 앞의 CORS 필터에서 200으로 응답되어 OPTIONS 401 문제가 근본 해소된다.
+  // 설치 기기·네트워크와 무관하게 앱에 하드코딩된 동일 값이 나간다.
+  // ncloudstorage(프리사인 업/다운로드)는 기존대로 Origin 없는 네이티브 클라이언트 취급 유지.
   // wss 패턴 별도 명시: match pattern의 `*://`는 http/https만 매칭 — WS 핸드셰이크도 커버.
   session.defaultSession.webRequest.onBeforeSendHeaders(
     {
@@ -260,6 +288,7 @@ export function createWindow(
       for (const key of Object.keys(requestHeaders)) {
         if (key.toLowerCase() === 'origin') delete requestHeaders[key];
       }
+      if (isApiHost(details.url)) requestHeaders['Origin'] = DESKTOP_ORIGIN;
       callback({ requestHeaders });
     },
   );
