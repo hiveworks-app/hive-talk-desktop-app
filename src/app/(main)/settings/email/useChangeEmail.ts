@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   apiChangeEmail,
@@ -15,6 +15,7 @@ import { isOffline } from '@/shared/utils/offlineGuard';
 import { isValidEmail } from '@/shared/utils/validation';
 import { useUIStore } from '@/store';
 import { useAuthStore } from '@/store/auth/authStore';
+import { useDeepLinkStore, type PendingEmailVerify } from '@/store/deepLinkStore';
 
 type Step = 'EMAIL' | 'CODE' | 'DONE';
 
@@ -128,18 +129,14 @@ export function useChangeEmail() {
 
   const cancelChange = () => setPendingChangeEmail(null);
 
-  const handleVerifyAndChange = async () => {
+  // 검증 → 최종 확인 대기 — 수동 입력(handleVerifyAndChange)과 딥링크 자동 인증이 공유
+  const verifyAndStage = useCallback(async (targetEmail: string, targetCode: string) => {
     if (isOffline()) return;
-    if (code.length < 6) {
-      showSnackbar({ message: '인증번호 6자리를 입력해 주세요.', state: 'error' });
-      return;
-    }
-    const trimmed = email.trim();
     setIsVerifying(true);
     try {
       // 1) 검증 성공 시 최종 확인 다이얼로그로 위임 — 즉시 변경하지 않는다 (RN 패리티)
-      await apiChangeEmailVerify({ email: trimmed, code });
-      setPendingChangeEmail(trimmed);
+      await apiChangeEmailVerify({ email: targetEmail, code: targetCode });
+      setPendingChangeEmail(targetEmail);
     } catch (err) {
       // 인증번호 오류(CP011): payload "N/5"로 시도 횟수 분기 (스낵바 대신 인라인 에러)
       if (isApiError(err) && err.code === 'CP011') {
@@ -165,7 +162,45 @@ export function useChangeEmail() {
     } finally {
       setIsVerifying(false);
     }
+  }, [showSnackbar]);
+
+  const handleVerifyAndChange = () => {
+    if (code.length < 6) {
+      showSnackbar({ message: '인증번호 6자리를 입력해 주세요.', state: 'error' });
+      return;
+    }
+    void verifyAndStage(email.trim(), code);
   };
+
+  // 딥링크 자동 인증 — 메일 '앱에서 인증 완료하기'로 도착한 {email, code}를 소비해
+  // 코드 단계로 진입 + 즉시 검증. 최종 변경은 기존 확인 다이얼로그가 그대로 지킨다
+  // (링크 유출만으로 변경이 완결되지 않게 사람의 확인 1회 유지, 2026-09-03)
+  const startTimerWithExpiresAt = timer.startWithExpiresAt;
+  const timerStart = timer.start;
+  useEffect(() => {
+    const consume = (pending: PendingEmailVerify) => {
+      useDeepLinkStore.getState().clearPendingEmailVerify();
+      setEmail(pending.email);
+      // 만료된 링크는 코드 자동 입력·검증을 생략하고 이메일만 채워 재요청 유도 (RN 패리티)
+      if (pending.expiresAt != null && pending.expiresAt <= Date.now()) {
+        setStep('EMAIL');
+        setCode('');
+        return;
+      }
+      setStep('CODE');
+      setCode(pending.code);
+      // 서버 만료 시각 기준 잔여 시간 표시 — 없으면(구버전 링크) 5분 타이머로 폴백
+      if (pending.expiresAt != null) startTimerWithExpiresAt(pending.expiresAt);
+      else timerStart();
+      void verifyAndStage(pending.email, pending.code);
+    };
+    const existing = useDeepLinkStore.getState().pendingEmailVerify;
+    if (existing) consume(existing);
+    // 이 화면이 이미 열려 있는 상태에서 링크가 도착하는 경우 — 스토어 구독으로 수신
+    return useDeepLinkStore.subscribe(state => {
+      if (state.pendingEmailVerify) consume(state.pendingEmailVerify);
+    });
+  }, [verifyAndStage, startTimerWithExpiresAt, timerStart]);
 
   // ←: 코드입력 단계 → 이메일입력 단계로, 그 외엔 계정정보(상세)로. X(닫기): 전체설정으로.
   const goBack = () => {

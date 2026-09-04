@@ -6,6 +6,7 @@ import { createWindow } from './window';
 import { createTray } from './tray';
 import { setupIpcHandlers } from './ipc';
 import { initializeAutoUpdater, registerUpdateIpc, runBootUpdateGate } from './autoUpdater';
+import { registerDeepLinkScheme, extractDeepLinkUrl, handleDeepLinkUrl, initDeepLink } from './deepLink';
 import { isDev, DEV_PORT } from './utils';
 
 // 앱 이름은 무엇보다 먼저 고정 — userData 경로(%APPDATA%/<이름>)가 여기서 결정된다.
@@ -22,6 +23,15 @@ initMainSentry();
 
 // app:// 커스텀 스킴 등록 — whenReady 이전(모듈 로드 시점) 필수
 registerStaticScheme();
+
+// hivetalk:// 딥링크 스킴 등록 (메일 '앱에서 인증 완료하기' 등)
+registerDeepLinkScheme();
+
+// macOS — 딥링크는 open-url 이벤트로 도착 (콜드 스타트 포함, 창 준비 전엔 내부 큐가 보관)
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLinkUrl(url);
+});
 
 // 시스템 테마와 관계없이 항상 Light 모드 강제
 nativeTheme.themeSource = 'light';
@@ -50,7 +60,10 @@ if (!gotTheLock) {
   app.quit();
 }
 
-app.on('second-instance', () => {
+app.on('second-instance', (_event, argv) => {
+  // 윈도우/리눅스 — 앱 실행 중 딥링크 클릭은 두 번째 인스턴스의 argv로 도착한다
+  const deepLink = extractDeepLinkUrl(argv);
+  if (deepLink) handleDeepLinkUrl(deepLink);
   if (mainWindow) {
     // 최소화 상태에서 바로가기 재실행 시 show()만으로는 윈도우에서 복원되지 않는다
     // (Electron second-instance 공식 예제와 focus-window IPC 핸들러의 동일 규칙)
@@ -193,6 +206,10 @@ app.whenReady().then(async () => {
     });
     tray = createTray(deps);
     setupIpcHandlers(deps, serverUrl);
+    // 딥링크 전달 배선 + 콜드 스타트 argv 처리 (윈도우 — 앱 꺼진 상태에서 링크 클릭)
+    initDeepLink(deps.getMainWindow);
+    const initialDeepLink = extractDeepLinkUrl(process.argv);
+    if (initialDeepLink) handleDeepLinkUrl(initialDeepLink);
 
     mainWindow.on('closed', () => { mainWindow = null; });
 

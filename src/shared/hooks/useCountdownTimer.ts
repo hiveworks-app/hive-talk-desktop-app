@@ -63,6 +63,14 @@ export const useCountdownTimer = (duration = TIMER_DURATION) => {
     setSeconds(duration);
   }, [duration]);
 
+  // 서버가 정한 절대 만료 시각으로 시작 — 딥링크 진입 시 메일 발송 시점 기준의 실제
+  // 잔여 시간을 표시한다 (RN startTimerWithExpiresAt 패리티)
+  const startWithExpiresAt = useCallback((expiresAtMs: number) => {
+    setHasStarted(true);
+    expiresAtRef.current = expiresAtMs;
+    setSeconds(remainingSecondsUntil(expiresAtMs));
+  }, []);
+
   const stop = useCallback(() => {
     expiresAtRef.current = null;
     setSeconds(0);
@@ -82,6 +90,7 @@ export const useCountdownTimer = (duration = TIMER_DURATION) => {
     isExpired: hasStarted && seconds === 0,
     isRunning,
     start,
+    startWithExpiresAt,
     stop,
   } as const;
 };

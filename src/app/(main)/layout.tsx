@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { BootScreen } from '@/shared/ui/BootScreen';
+import { DeepLinkHandler } from '@/shared/ui/DeepLinkHandler';
 import { DuplicateLoginLogoutDialog } from '@/features/auth/ui/DuplicateLoginLogoutDialog';
 import { ExternalInviteArrivalNotice } from '@/features/external-member/ExternalInviteArrivalNotice';
 import { MemberInviteConfirm } from '@/features/member-invite/MemberInviteConfirm';
@@ -112,6 +113,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {children}
         </div>
         {/* 중복 로그인 강제 종료 안내 — 화면 전환과 무관하게 확인 전까지 유지 (RN 루트 Portal 패리티) */}
+        <DeepLinkHandler />
         <DuplicateLoginLogoutDialog />
         {/* 협력멤버 초대장 도착 안내 (RN 패리티) */}
         <ExternalInviteArrivalNotice />

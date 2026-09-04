@@ -3,6 +3,13 @@ productName: HiveTalk
 artifactName: "${productName}-${arch}.${ext}"
 copyright: Copyright (c) 2026 Hiveworks
 
+# hivetalk:// 딥링크 — 맥은 Info.plist(CFBundleURLTypes), 윈도우는 NSIS 레지스트리로 등록
+# (런타임 setAsDefaultProtocolClient와 한 쌍 — electron/deepLink.ts)
+protocols:
+  - name: HiveTalk
+    schemes:
+      - hivetalk
+
 publish:
   provider: github
   owner: hiveworks-app
